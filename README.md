@@ -1,10 +1,226 @@
-# YTM — 데스크톱(맥·윈도우)과 iOS
+# YTM
 
-YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 두 앱을 관리합니다.
+**English** · [한국어](#한국어)
+
+An unofficial music player for your YouTube Music account — desktop (macOS · Windows) and iOS, managed in one repository.
+
+**Download**: [Latest release](https://github.com/hanseihee/ytm/releases/latest) — macOS (Apple silicon) `.dmg` and Windows (64-bit) installer. Release notes are in [CHANGELOG.md](CHANGELOG.md) (Korean).
+
+![YTM Desktop — the Melon TOP 100 chart matched to YouTube Music tracks](docs/screenshot-desktop.png)
+
+## English
+
+- **YTM Desktop** (macOS · Windows): Rust (Tauri 2) + React
+- **YTM** (iOS): native SwiftUI screens + the same TypeScript data code as the desktop app (run in JavaScriptCore)
+
+The screens are a player built from scratch; the sound comes from the official YouTube Music web player running in a hidden web view.
+Both apps share the same code for parsing YouTube Music responses, matching chart songs, finding lyrics, and the playback engine script.
+
+### Features
+
+- **Search**: songs, albums, artists, and playlists, with suggestions and type filters that keep loading more results.
+- **Home**: YouTube Music recommendation shelves, loading more as you scroll.
+- **Explore**: new releases, YouTube Music charts (14 countries including Korea, global, US, and Japan), and moods & genres. Album, artist, and playlist pages; artist pages show top songs, albums, singles, videos, and similar artists, and you can subscribe or unsubscribe.
+- **Library**: Playlists · Albums · Artists · Subscriptions · Recently played (your account history).
+  - Create playlists (with privacy), rename, edit the description, delete, add and remove songs, and drag to reorder.
+  - YouTube Music's suggested songs appear under your own playlists; add them with +.
+  - Save albums and playlists to your library.
+- **Playback**
+  - Picking a song starts its mix; songs in an album or playlist play within that list.
+  - Play next and add to queue (whole albums too).
+  - Now-playing tabs: Up next (queue and autoplay), Related, and Comments (20 at a time).
+  - Shuffle, repeat, volume, seeking, a sleep timer (5 minutes–2 hours or end of the current song, fading out over the last 10 seconds), and link sharing.
+- **Song ↔ video**: songs that have a music-video counterpart switch with `[Song | Video]`. YouTube Music aligns the two versions (e.g. the "Through the Night" music video starts 24 seconds later), and the lyrics carry over without reloading.
+  - Desktop: a video window (rounded video on a dark backdrop with an ambient glow in the video's colors, optional always-on-top).
+  - iOS: the cover and the video cross-fade in the same spot on the now-playing screen, and the background follows the video's colors. Landscape full screen (button or rotate the phone) and Picture in Picture.
+  - Black bars baked into cinema-ratio music videos are detected and cropped.
+- **Lyrics**: time-synced lyrics (LRCLIB and Bugs synced lyrics; Bugs first for Korean songs) highlight the current line, and clicking a line seeks to it. If neither has them, YouTube Music lyrics (no timing) are shown. Text size 70–175% (A−/A+ or ⌘= ⌘- ⌘0), per-song sync adjustment in 0.5 s steps (remembered). On desktop you can choose to show the lyrics or the album art large. iOS can translate lyrics with the system translator.
+- **Listening stats**: from songs played on this device for over 30 seconds (or over half of a short song): listening time, a daily bar chart, and top songs and artists (7 days · 30 days · 1 year · all time).
+- **Themes**: System, Dark (default), Light, Midnight, Forest, Sunset, Mono, Sakura, and Album colors (Settings ⌘, or the macOS View → Theme menu). The window title bar follows the theme.
+- **Small windows**: down to 720×560.
+  - When the center area gets narrow, the cover moves above the title and track-list columns shrink.
+  - In a narrow window the sidebar shows icons only, and the queue and EQ panels float over the content.
+  - The player bar hides the volume slider and shuffle/repeat depending on width.
+- **76 charts**
+  - Melon (real-time, daily, weekly, monthly, and 25 genres), Genie TOP 200, Bugs, FLO, VIBE (today, domestic rising, overseas rising), Circle Chart, Spotify Top 50 in 20 countries, Billboard Hot 100, and Apple Music in 19 countries, grouped by source in the picker.
+  - Each chart song is matched to a YouTube Music track automatically, and you can play from #1.
+  - "Save to my YouTube Music" creates or updates a private playlist; you can also open any public Spotify playlist link.
+- **Equalizer**: 10-band EQ (32 Hz–16 kHz) with preamp and 10 presets, showing the response curve and a live spectrum.
+- **OS integration**
+  - macOS Now Playing and media keys; Windows media controls (SMTC).
+  - Tray menu; music keeps playing when the window is closed. Korean menus on macOS.
+  - Mini player window (always on top), a notification when the song changes while you're not looking at the app, and the album-color theme.
+
+Shortcuts: Space (play/pause), ⌘/Ctrl+←→ (previous/next song), Shift+←→ (±10 s), ⌘/Ctrl+F (search), ⌘/Ctrl+L (lyrics), ⌘U (queue), ⌘/Ctrl+E (equalizer), ⌘/Ctrl+[ ] (back/forward)
+
+Global shortcuts (work while using other apps; can be turned off in Settings): ⌃⌥ / Ctrl+Alt + P play/pause, N next, B previous, L like, M mini player
+
+There is no ad blocking, audio downloading, or bypassing of paid features. The app never extracts stream URLs; it uses the official player as is.
+
+### iOS app (`ios/`)
+
+The same features on iPhone and iPad. The screens are new SwiftUI (iOS 26+, glass tab bar with a mini player above the tabs), and the data layer runs the desktop code (`src/lib`) unchanged in JavaScriptCore, so results match.
+
+- Tabs: Home · Explore · Charts · Library · Search (Settings is the gear at the top right of Home and Library).
+- Now playing (inspired by Apple Music, Spotify, Melon, and the YouTube Music app): opens by expanding from the mini player and closes by dragging down. The background is painted with colors from the cover, with two lines of the current lyrics under the cover (tap for full lyrics).
+  - A thin progress bar (thicker while dragging), shuffle · previous · play · next · repeat, and Lyrics · AirPlay · Queue (Up next · Related · Comments) at the bottom.
+  - ⋯ menu: share a link, share an image card, sleep timer, and song actions.
+  - Full lyrics: time-synced, tap a line to seek, text size 70–175%, ±0.5 s sync, translation.
+  - Video mode: `[Song | Video]`, Picture in Picture, landscape full screen (tap for controls, hidden after 3.5 s).
+- Home Screen and Lock Screen widgets (now playing: cover, title, previous/play/next), and Shortcuts/Siri (play/pause, next/previous song, play liked songs, sleep timer, open charts).
+- Long-press or ⋯ on songs and cards: play, play next, add to queue, start mix, like, add to playlist, go to album or artist.
+- Swipe rows: right to play next, left to add to queue (remove in your own playlists).
+- Lock Screen and Control Center info (with artwork) and buttons, background playback (audio background mode).
+  - WebKit, which produces the sound, publishes the Lock Screen info itself, so on iOS the engine forwards the captured `mediaSession` data (track info, artwork, previous/next actions) to the real `mediaSession` (without this, the artwork was missing).
+- The same 8 themes and lyric text sizes as the desktop app.
+
+**Not available on iOS: the equalizer.** The YouTube player's audio comes from WebKit's ManagedMediaSource, and routing it into Web Audio yields silence (simulator test, 2026-10-14). The Mac works around this with a system audio tap, which iOS does not offer.
+
+Build and install:
+
+```sh
+npm install
+npm run ios:project        # data bundle (ios/build/ytm-core.js) + Xcode project (xcodegen)
+open ios/YTM.xcodeproj     # pick your iPhone in Xcode and run (automatic signing; set your own team in ios/project.yml)
+```
+
+### Install
+
+Download from [GitHub Releases](https://github.com/hanseihee/ytm/releases).
+- macOS (Apple silicon): `YTM-Desktop-<version>-mac-arm64.dmg`
+- Windows (64-bit): `YTM-Desktop-<version>-windows-x64-setup.exe`
+- Verify downloads with `SHA256SUMS.txt`.
+
+The apps are not code-signed.
+- **macOS**: the first time, right-click the app in Finder and choose "Open".
+- **Windows**: if SmartScreen warns you, choose "More info → Run anyway".
+
+On first launch you'll see a "Sign in with your Google account" screen.
+
+**macOS equalizer permission**
+- The first time you turn it on, macOS asks for "System Audio Recording" permission. The app only processes the sound it plays itself; nothing is recorded or saved.
+- If you deny it, the app detects that and returns to normal audio. You can allow it later in System Settings → Privacy & Security → Screen & System Audio Recording.
+
+### Project layout
+
+```
+src/                      Desktop screens (React + TypeScript) and shared data code
+  lib/ytm/parse.ts        YouTube Music (InnerTube) responses → tracks, cards, shelves
+  lib/ytm/client.ts       Search, browse, library, playlist editing, playback requests
+  lib/spotify.ts          Chart list, chart song ↔ YouTube Music matching (title/artist/duration score), save as playlist
+  lib/charts/             Parsers for the 76 charts (Melon, Genie, Bugs, FLO, VIBE, Circle, Billboard, Apple Music)
+  lib/melon.ts            Melon TOP 100 page parser (shared by desktop and iOS)
+  lib/stats.ts            Listening stats (this device)
+  platform/jsc/           iOS data-bundle entry: app (Swift) bridge instead of the Tauri API; fetch/storage/timers for JavaScriptCore
+  lib/lyrics.ts           Time-synced lyrics (LRCLIB, Bugs) + YouTube Music lyrics
+  lib/eq.ts               EQ settings, presets, response curve
+  lib/theme.ts            Theme list and application (colors live in styles.css :root[data-theme])
+  views/ components/      Screens (home, search, album, artist, playlist, library, charts, lyrics, queue, EQ, settings)
+design/                   App and menu-bar icon sources (SVG, rendered to 1024 px with headless Chrome)
+src-tauri/src/
+  engine.js               Script injected into the hidden YouTube Music window (internal API, playback, queue, state, Windows EQ)
+  engine.rs               Request/response relay between the screens and the engine window
+  spotify.rs              Reads track lists from Spotify's public embed pages
+  charts.rs               Fetches chart pages (allow-listed chart sites only; parsing in lib/charts)
+  desktop.rs              Video window, mini player, song notifications, global shortcuts
+  eq.rs                   EQ filter math (shared) and commands
+  mac_tap.rs              macOS EQ: Core Audio process tap
+  media.rs                macOS Now Playing / Windows SMTC
+  lib.rs                  Windows, tray, menus, startup
+ios/                      iOS app (SwiftUI). project.yml → xcodegen
+  YTM/Core/Engine.swift   Hidden WKWebView (music.youtube.com as desktop Safari) + engine.js requests/responses
+  YTM/Core/JSCore.swift   Runs the shared data code in JavaScriptCore
+  YTM/Core/ChartPages.swift  Fetches Spotify embeds and chart pages (same allow list as charts.rs)
+  YTM/Core/NowPlayingCenter.swift  Lock Screen / Control Center, writes track info for the widget
+  YTM/State/AppModel.swift Playback, library, navigation, settings, sleep timer, full-screen state
+  YTM/State/Intents.swift  Shortcuts and Siri
+  YTM/Views/              Home, Explore, Search, Charts, Library, Stats, Settings, Album, Artist, Now playing (video, full screen)
+  YTMWidget/              Home Screen / Lock Screen widget (App Group group.dev.seihee.ytmmobile)
+  Shared/                 Shared by the app and the widget (now-playing info, widget button actions)
+```
+
+### How it works (analyzed and tested 2026-10-14)
+
+1. **Authenticated internal API calls**: the engine script calls `/youtubei/v1/…` from inside the signed-in music.youtube.com page.
+   - The `SAPISIDHASH <seconds>_<sha1(seconds SAPISID origin)>` authorization is built the same way the YouTube Music scripts do it, along with the 1P/3P cookie variants.
+   - Tokens from the page context that expire (`consistencyTokenJars`) are removed.
+   - If a request fails with 400 right after launch, it is retried shortly after.
+2. **Playback**: like YouTube Music's own components, it dispatches `yt-navigate` events carrying `watchEndpoint`/`watchPlaylistEndpoint`.
+   - A single song starts as its mix (`RDAMVM…`); sending a bare videoId got inserted into the previous session's queue, so the "current song" went out of sync.
+   - If the loaded song is paused, playback is resumed.
+   - The song switches immediately but the new queue fills a moment later (the queue is empty in between), so the engine waits until the queue is filled and the song is the current item. Without this, picking #1 on a chart started from #2 (reproduced and fixed on 2026-10-14).
+3. **Queue**: uses the Redux store attached to `<ytmusic-player-queue>` (`getState().queue`).
+   - Read: `items`, `automixItems`, `selectedItemIndex`.
+   - Play next: same as YouTube Music — fetch track data with `music/get_queue`, then dispatch `ADD_ITEMS`.
+   - Jump: dispatch `SET_INDEX`.
+4. **Track info and media keys**: the `navigator.mediaSession` the player fills in is swapped for an app-owned object (on iOS it is also forwarded to the real mediaSession).
+   - Song ↔ video: clicks `<ytmusic-av-toggle>` and reads the time offset between versions from `counterpart[0].segmentMap` of the queue item's `playlistPanelVideoWrapperRenderer`.
+   - Video view: hides the whole page with `visibility: hidden !important` and re-enables only the video boxes (to cover elements YouTube Music marks visible itself), then places the player where needed. The ambient glow blends video frames into a 48×27 canvas at 18% per frame and blurs it.
+5. **Equalizer**
+   - In the macOS WKWebView, routing the YouTube player's (MSE) audio into Web Audio produced silence (only the playback position moved). So on macOS it uses a Core Audio process tap (macOS 14.2+): it taps only this app's web-view process and mutes the original output, then Rust applies 10-band filters and soft clipping, plays to the default output device, and computes the spectrum with an FFT.
+   - Windows (WebView2/Chromium) uses Web Audio in the engine page (`createMediaElementSource` → filters → analyser).
+   - In both cases, if there's no signal right after connecting, it returns to normal audio and turns the EQ off.
+6. **Charts**
+   - Melon: reads rank, title, artist, cover, and timestamp from the chart page (`www.melon.com/chart/index.htm`). Melon has no durations, so matching uses title and artist scores only.
+   - Spotify: since 2024-11-27 the Spotify Web API no longer opens editorial playlists to new apps, so tracks are read from `__NEXT_DATA__` of the public embed page (`open.spotify.com/embed/playlist/<id>`).
+   - Matching first tries the "All" search results; if unsure, it searches again with that response's "Songs" filter (the filter value differs per query).
+   - "Songs" results include durations, which separate songs whose English and Korean titles differ.
+7. **Lyrics**: YouTube Music's web lyrics (browse `MPLY…`) carry no timing, so time-synced lyrics come from LRCLIB and from Bugs synced lyrics (`/search/track?q=` → `/player/lyrics/T/<trackId>`, fetched through the app's allow-listed fetch).
+
+### Build
+
+```sh
+npm install
+npm run dev          # development
+npm run build:mac    # .app + .dmg
+npm run build:win    # cross-build the Windows installer on a Mac (needs cargo-xwin, makensis, llvm)
+npm run version:set -- 0.3.0   # bump the version everywhere (desktop and iOS) + new CHANGELOG.md entry
+npm run release      # build macOS and Windows → tag v<version> → upload installers and SHA256SUMS to a GitHub release
+npm run check:parsers -- <response folder>   # check parsers against saved responses
+cd src-tauri && cargo test --lib       # EQ filter and Spotify parsing unit tests
+```
+
+Test hooks in development builds only (not in releases):
+- `YTM_SELFTEST=<list.json>`: sends engine requests in order after launch and writes the responses to files.
+- `YTM_DEBUG_DIR=<folder>`: runs `in/*.json` requests and writes answers to `out/`; `debugEval` can inspect the page.
+
+### Release process
+
+1. Bump the version with `npm run version:set -- <version>`.
+2. Fill in the new entry in `CHANGELOG.md`.
+3. Commit and push.
+4. Run `npm run release` (`-- --skip-build` if already built, `-- --draft` for a draft).
+
+The script first checks that all versions match, there are no uncommitted changes, everything is pushed, and the tag doesn't exist yet. It uses the GitHub account that owns the `origin` remote (`gh auth token --user <owner>`).
+
+### Tested / not yet tested (2026-10-14)
+
+Verified with a real signed-in account on macOS:
+- **API and screens**: authenticated calls (search, home, likes, library, account, album, artist, playlist, lyrics, add-to-playlist options) work, and real responses render.
+- **Playback and queue** (tested muted): mix playback, play next, add to end, inserting albums, next song, queue jumps, pause.
+- **Charts**: 199 of 200 Genie TOP 200 songs and 99 of 100 Melon songs matched with confidence (the last one as a "similar song"); Spotify Korea Top 50 matched correctly, including songs whose English and Korean titles differ.
+- **Video window and mini player**: opened as real windows (music-video playback, black-bar cropping, ambient glow).
+- Account-changing features were run on the real account and then all reverted: creating, adding to, reordering, renaming, and deleting playlists; like/unlike; subscribe/unsubscribe; saving/removing an album.
+
+On a real iPhone (iOS 27.2, signed in, tested muted): video mode layout, black-bar cropping, ambient glow and video-colored background, lyrics continuing across song/video, landscape full screen and back, Lock Screen info reaching WebKit's mediaSession, widget data written to the App Group, Bugs synced lyrics.
+
+Not yet verified: whether the EQ actually changes the sound on macOS after granting permission; Windows on real hardware (sign-in, playback, Web Audio EQ, SMTC — only cross-built so far); notification banners and real global-shortcut key presses; Lock Screen artwork actually shown, the widget buttons on a Home Screen, iOS Picture in Picture, and long background playback.
+
+### License and notice
+
+[MIT](LICENSE). This is an unofficial project, not affiliated with YouTube, YouTube Music, or Google; all trademarks belong to their owners.
+The app plays music by showing the YouTube Music web player you signed in to. It does not block ads, download audio, or bypass paid features.
+Chart data is read from the public pages of each service (Melon, Genie, Bugs, FLO, VIBE, Circle Chart, Spotify, Billboard, Apple Music) and may stop working if those pages change.
+
+---
+
+## 한국어
+
+[English](#english) · **한국어**
+
+YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 데스크톱(맥·윈도우)과 iOS 두 앱을 관리합니다.
 
 **내려받기**: [최신 릴리즈](https://github.com/hanseihee/ytm/releases/latest) — 맥(Apple 실리콘) `.dmg`, 윈도우(64비트) 설치 파일. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md).
-
-![YTM Desktop — 멜론 TOP 100을 YouTube Music 곡과 짝지어 듣는 차트 화면](docs/screenshot-desktop.png)
 
 - **YTM Desktop**(맥·윈도우): Rust(Tauri 2) + React
 - **YTM**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
@@ -12,7 +228,7 @@ YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 �
 화면은 직접 만든 플레이어이고, 소리는 숨은 웹 화면에 띄운 공식 YouTube Music 플레이어가 냅니다.
 YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스크립트는 두 앱이 같은 코드를 씁니다.
 
-## 할 수 있는 것
+### 할 수 있는 것
 
 - **검색**: 노래·앨범·아티스트·재생목록을 찾습니다. 검색어를 추천하고, 종류별 필터를 고르면 결과를 이어서 더 불러옵니다.
 - **홈**: YouTube Music 추천 묶음이 나오고, 내리면 더 불러옵니다.
@@ -30,9 +246,9 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
   - 데스크톱: 영상 창(어두운 바탕 위 둥근 영상 + 영상 색이 번지는 앰비언트 빛, 늘 위 설정).
   - iOS: 지금 재생 화면의 표지 자리에서 표지와 영상을 겹쳐 바꾸고, 배경색이 영상 색을 따라갑니다. 가로 전체 화면(단추 또는 폰을 눕히기)과 화면 속 화면이 됩니다.
   - 영상 안에 박힌 위아래 검은 띠(시네마 비율 뮤직비디오)는 감지해 잘라 냅니다.
-- **가사**: LRCLIB의 시간 맞춤 가사로 현재 줄을 크게 보여 주고, 줄을 누르면 그 위치로 갑니다. 시간 맞춤 가사가 없으면 YouTube Music 가사를 보여 줍니다. 글자 크기는 70~175%로 바꿀 수 있고(가사 화면의 가−/가+, ⌘= ⌘- ⌘0), 곡마다 싱크를 0.5초씩 맞출 수 있습니다(기억함). iOS는 가사 번역(시스템 번역)도 됩니다.
+- **가사**: 시간 맞춤 가사(LRCLIB·벅스 싱크 가사, 한글 곡은 벅스 먼저)로 지금 줄을 크게 보여 주고, 줄을 누르면 그 위치로 갑니다. 둘 다 없으면 YouTube Music 가사(시간 정보 없음)를 보여 줍니다. 데스크톱은 가사 화면에서 가사와 앨범 표지 중 크게 볼 것을 고를 수 있습니다. 글자 크기는 70~175%로 바꿀 수 있고(가사 화면의 가−/가+, ⌘= ⌘- ⌘0), 곡마다 싱크를 0.5초씩 맞출 수 있습니다(기억함). iOS는 가사 번역(시스템 번역)도 됩니다.
 - **청취 통계**: 이 기기에서 30초 넘게(짧은 곡은 절반 넘게) 들은 곡으로 들은 시간, 날짜별 막대, 많이 들은 곡·아티스트를 보여 줍니다(7일·30일·1년·전체).
-- **테마**: 시스템 설정, 다크(기본), 라이트, 미드나잇, 숲, 노을, 모노, 벚꽃 중에서 고릅니다(설정 ⌘, 또는 맥 메뉴 보기 → 테마). 창 제목 막대 밝기도 함께 바뀝니다.
+- **테마**: 시스템 설정, 다크(기본), 라이트, 미드나잇, 숲, 노을, 모노, 벚꽃, 앨범 색 중에서 고릅니다(설정 ⌘, 또는 맥 메뉴 보기 → 테마). 창 제목 막대 밝기도 함께 바뀝니다.
 - **작은 창**: 최소 720×560까지 줄일 수 있습니다.
   - 가운데 영역이 좁아지면 표지가 제목 위로 가고, 곡 목록의 칸을 줄입니다.
   - 창이 좁으면 사이드바는 아이콘만 남기고, 대기열·EQ 패널은 화면 위에 떠서 열립니다.
@@ -53,7 +269,7 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
 
 광고 차단, 음원 내려받기, 유료 기능 우회는 넣지 않았습니다. 음원 주소를 직접 뽑아 재생하지 않고, 공식 플레이어를 그대로 씁니다.
 
-## iOS 앱 (`ios/`)
+### iOS 앱 (`ios/`)
 
 데스크톱과 같은 기능을 iPhone·iPad에서 씁니다. 화면은 SwiftUI로 새로 만들었고(iOS 26 이상, 유리 탭 막대·탭 위 미니 플레이어),
 데이터 처리는 데스크톱 코드(`src/lib`)를 그대로 JavaScriptCore에서 돌려 결과가 같습니다.
@@ -79,10 +295,10 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
 ```sh
 npm install
 npm run ios:project        # 데이터 묶음(ios/build/ytm-core.js) + Xcode 프로젝트 생성(xcodegen)
-open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서명, 팀 RT556U3WKT)
+open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서명, ios/project.yml의 팀을 본인 것으로)
 ```
 
-## 설치
+### 설치
 
 [GitHub 릴리즈](https://github.com/hanseihee/ytm/releases)에서 받습니다.
 - 맥(Apple 실리콘): `YTM-Desktop-<버전>-mac-arm64.dmg`
@@ -99,7 +315,7 @@ open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서�
 - 처음 켤 때 macOS가 "시스템 오디오 녹음" 권한을 묻습니다. 이 앱이 내는 소리만 받아 처리하며, 녹음하거나 저장하지 않습니다.
 - 거부하면 앱이 감지해 원래 소리로 되돌립니다. 그 뒤에는 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 허용할 수 있습니다.
 
-## 구조
+### 구조
 
 ```
 src/                      데스크톱 화면(React + TypeScript)과 공용 데이터 코드
@@ -110,7 +326,7 @@ src/                      데스크톱 화면(React + TypeScript)과 공용 데�
   lib/melon.ts            멜론 TOP 100 페이지 해석(데스크톱·iOS 공용)
   lib/stats.ts            청취 통계(이 기기)
   platform/jsc/           iOS용 데이터 묶음 입구: Tauri API 대신 앱(Swift) 통로, JavaScriptCore에 없는 fetch·저장소·타이머 채우기
-  lib/lyrics.ts           LRCLIB 시간 맞춤 가사 + YouTube Music 가사
+  lib/lyrics.ts           시간 맞춤 가사(LRCLIB·벅스) + YouTube Music 가사
   lib/eq.ts               EQ 설정·프리셋·응답 곡선
   lib/theme.ts            테마 목록·적용(색 값은 styles.css의 :root[data-theme])
   views/ components/      화면들(홈·검색·앨범·아티스트·플레이리스트·보관함·차트·가사·대기열·EQ·설정)
@@ -137,7 +353,7 @@ ios/                      iOS 앱(SwiftUI). project.yml → xcodegen
   Shared/                 앱·위젯 공용(지금 재생 정보, 위젯 단추 동작)
 ```
 
-## 동작 원리 (2026-10-14 분석·시험 근거)
+### 동작 원리 (2026-10-14 분석·시험 근거)
 
 1. **인증된 내부 API 호출**: 엔진 스크립트가 로그인된 music.youtube.com 페이지 안에서 `/youtubei/v1/…`를 부릅니다.
    - 인증 값 `SAPISIDHASH <초>_<sha1(초 SAPISID 출처)>`는 YouTube Music 스크립트와 같은 방식으로 만듭니다. 1P·3P 쿠키 값도 같이 보냅니다.
@@ -163,8 +379,9 @@ ios/                      iOS 앱(SwiftUI). project.yml → xcodegen
    - Spotify: Spotify Web API는 2024-11-27부터 새 앱에 편집 플레이리스트를 열어 주지 않습니다. 그래서 공개 임베드 페이지(`open.spotify.com/embed/playlist/<id>`)의 `__NEXT_DATA__`에서 곡 목록을 읽습니다.
    - 짝짓기는 "전체" 검색 결과로 먼저 시도합니다. 확실하지 않으면 그 응답의 "노래" 필터로 다시 찾습니다. 이 필터 값은 검색어마다 다릅니다.
    - "노래" 결과에는 곡 길이가 있어서, 영문↔한글 표기가 다른 곡도 길이로 가려냅니다.
+7. **가사**: YouTube Music 웹 가사(browse `MPLY…`)에는 시간 정보가 없어서, 시간 맞춤 가사는 LRCLIB와 벅스 싱크 가사(`/search/track?q=` → `/player/lyrics/T/<곡 번호>`, 앱의 허용 사이트 통로로 받음)에서 가져옵니다.
 
-## 빌드
+### 빌드
 
 ```sh
 npm install
@@ -181,7 +398,7 @@ cd src-tauri && cargo test --lib       # EQ 필터·Spotify 해석 단위 시험
 - `YTM_SELFTEST=<목록.json>`: 시작 후 엔진 요청을 차례로 보내고 응답을 파일로 남깁니다.
 - `YTM_DEBUG_DIR=<폴더>`: `in/*.json` 요청을 실행하고 `out/`에 답을 씁니다. `debugEval`로 페이지 내부도 조사할 수 있습니다.
 
-## 확인한 것 / 못한 것 (2026-10-14)
+### 확인한 것 / 못한 것 (2026-10-14)
 
 맥에서 로그인된 실제 계정으로 확인한 것:
 - **API와 화면**: 인증 API 호출(검색·홈·좋아요·보관함·계정·앨범·아티스트·플레이리스트·가사·추가 가능 목록)이 되고, 실제 응답을 해석해 화면에 그립니다.
@@ -204,7 +421,7 @@ YouTube Music 화면이나 API가 바뀌면 다음 두 곳을 먼저 보면 됩�
 - `parse.ts`: 렌더러 경로
 - `melon.ts`: 멜론 차트 표 구조(`tr.lst50/lst100`, `.rank01~03`)
 
-## iOS에서 확인한 것 / 못한 것 (2026-10-14)
+### iOS에서 확인한 것 / 못한 것 (2026-10-14)
 
 시뮬레이터(iPhone 17 Pro, iOS 27): 시뮬레이터는 Google 로그인이 막혀 있어(한국에서 로그아웃 상태면 Premium 안내로 넘어감),
 개발판은 `Documents/debug/remote-engine`에 적힌 주소의 맥 시험 엔진으로 엔진 요청을 보내 실제 계정 데이터로 화면을 시험합니다.
@@ -217,7 +434,7 @@ YouTube Music 화면이나 API가 바뀌면 다음 두 곳을 먼저 보면 됩�
 
 못 한 것: 잠금 화면에 표지가 실제로 보이는지, 위젯을 홈 화면에 올려 단추 누르기, 화면 속 화면, 백그라운드 재생 오래 두기(사용자 확인 필요).
 
-## 릴리즈 순서
+### 릴리즈 순서
 
 1. `npm run version:set -- <버전>`으로 버전을 올립니다.
 2. `CHANGELOG.md`의 새 칸에 바뀐 점을 적습니다.
@@ -227,9 +444,8 @@ YouTube Music 화면이나 API가 바뀌면 다음 두 곳을 먼저 보면 됩�
 스크립트가 버전이 모두 같은지, 커밋하지 않은 변경이 없는지, 푸시했는지, 태그가 이미 있는지 먼저 확인합니다.
 GitHub 계정은 `origin` 주소의 소유자로 씁니다(`gh auth token --user <소유자>`).
 
-## 라이선스와 고지
+### 라이선스와 고지
 
 [MIT](LICENSE). YouTube, YouTube Music, Google과 관계없는 비공식 프로젝트이며, 각 상표는 해당 소유자의 것입니다.
 이 앱은 사용자가 로그인한 YouTube Music 웹 플레이어를 그대로 띄워 재생합니다. 광고 차단, 음원 내려받기, 유료 기능 우회는 하지 않습니다.
 차트 정보는 각 서비스(멜론·지니·벅스·FLO·VIBE·써클차트·Spotify·빌보드·Apple Music)의 공개 페이지에서 읽어 오며, 서비스 쪽 구조가 바뀌면 동작하지 않을 수 있습니다.
-
