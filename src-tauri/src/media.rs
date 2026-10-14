@@ -33,7 +33,7 @@ pub fn init(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
     };
 
     let config = PlatformConfig {
-        display_name: "YTM Desktop",
+        display_name: "YTMusic",
         dbus_name: "ytm_desktop",
         hwnd,
     };

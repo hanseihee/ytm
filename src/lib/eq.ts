@@ -208,7 +208,7 @@ export function responseCurve(gains: number[], preamp: number, points = 120, fs 
 export function describeEqFailure(reason: string): string {
   switch (reason) {
     case 'permission':
-      return t('소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTM Desktop을 허용한 뒤 다시 켜세요.');
+      return t('소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTMusic을 허용한 뒤 다시 켜세요.');
     case 'device':
       return t('출력 장치에서 오디오 처리를 시작하지 못해 원래 소리로 되돌렸습니다. 다시 켜 보세요.');
     case 'unsupported':

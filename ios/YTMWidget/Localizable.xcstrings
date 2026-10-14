@@ -1,118 +1,118 @@
 {
   "sourceLanguage" : "ko",
   "strings" : {
-    "YTM에서 듣는 곡과 재생 단추" : {
+    "YTMusic에서 듣는 곡과 재생 단추" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Was in YTM läuft, mit Steuerung"
+            "value" : "Was in YTMusic läuft, mit Steuerung"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What’s playing in YTM, with controls"
+            "value" : "What’s playing in YTMusic, with controls"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lo que suena en YTM, con controles"
+            "value" : "Lo que suena en YTMusic, con controles"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le titre en cours dans YTM, avec commandes"
+            "value" : "Le titre en cours dans YTMusic, avec commandes"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lagu di YTM beserta kontrolnya"
+            "value" : "Lagu di YTMusic beserta kontrolnya"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMで再生中の曲と操作ボタン"
+            "value" : "YTMusicで再生中の曲と操作ボタン"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O que toca no YTM, com controles"
+            "value" : "O que toca no YTMusic, com controles"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM 正在播放的歌曲和控制按钮"
+            "value" : "YTMusic 正在播放的歌曲和控制按钮"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM 正在播放的歌曲和控制按鈕"
+            "value" : "YTMusic 正在播放的歌曲和控制按鈕"
           }
         }
       }
     },
-    "YTM을 열어 곡을 고르세요" : {
+    "YTMusic을 열어 곡을 고르세요" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffne YTM und wähle einen Song"
+            "value" : "Öffne YTMusic und wähle einen Song"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open YTM to pick a song"
+            "value" : "Open YTMusic to pick a song"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre YTM y elige una canción"
+            "value" : "Abre YTMusic y elige una canción"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrez YTM pour choisir un titre"
+            "value" : "Ouvrez YTMusic pour choisir un titre"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka YTM untuk memilih lagu"
+            "value" : "Buka YTMusic untuk memilih lagu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMを開いて曲を選んでください"
+            "value" : "YTMusicを開いて曲を選んでください"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abra o YTM e escolha uma música"
+            "value" : "Abra o YTMusic e escolha uma música"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开 YTM 选择歌曲"
+            "value" : "打开 YTMusic 选择歌曲"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟 YTM 選擇歌曲"
+            "value" : "開啟 YTMusic 選擇歌曲"
           }
         }
       }

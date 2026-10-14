@@ -48,7 +48,7 @@ struct NowPlayingWidgetView: View {
             switch family {
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(has ? info!.title : "YTM").font(.headline).lineLimit(1)
+                    Text(has ? info!.title : "YTMusic").font(.headline).lineLimit(1)
                     Text(has ? info!.artist : L("재생 중인 곡 없음")).font(.caption).lineLimit(1)
                     if has { controls(size: 13) }
                 }
@@ -57,7 +57,7 @@ struct NowPlayingWidgetView: View {
                     cover(size: 116)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(has ? info!.title : L("재생 중인 곡이 없습니다")).font(.headline).lineLimit(2)
-                        Text(has ? info!.artist : L("YTM을 열어 곡을 고르세요")).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                        Text(has ? info!.artist : L("YTMusic을 열어 곡을 고르세요")).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                         Spacer(minLength: 6)
                         if has { controls(size: 20) }
                     }
@@ -76,7 +76,7 @@ struct NowPlayingWidgetView: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    Text(has ? info!.title : "YTM").font(.subheadline.weight(.bold)).lineLimit(2)
+                    Text(has ? info!.title : "YTMusic").font(.subheadline.weight(.bold)).lineLimit(2)
                     Text(has ? info!.artist : L("재생 중인 곡 없음")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
@@ -128,7 +128,7 @@ struct NowPlayingWidget: Widget {
             NowPlayingWidgetView(entry: entry)
         }
         .configurationDisplayName("지금 재생")
-        .description("YTM에서 듣는 곡과 재생 단추")
+        .description("YTMusic에서 듣는 곡과 재생 단추")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
     }
 }

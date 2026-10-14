@@ -809,7 +809,7 @@
   "소리 켜기": [
     "src/components/PlayerBar.tsx"
   ],
-  "소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTM Desktop을 허용한 뒤 다시 켜세요.": [
+  "소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTMusic을 허용한 뒤 다시 켜세요.": [
     "src/lib/eq.ts"
   ],
   "수면 타이머": [
@@ -1598,19 +1598,19 @@
   "YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요.": [
     "src/lib/tauri.ts"
   ],
-  "YTM 미니 플레이어": [
+  "YTMusic 가리기": [
     "src/i18n/rust.ts"
   ],
-  "YTM 영상": [
+  "YTMusic 미니 플레이어": [
     "src/i18n/rust.ts"
   ],
-  "YTM Desktop 가리기": [
+  "YTMusic 영상": [
     "src/i18n/rust.ts"
   ],
-  "YTM Desktop 종료": [
+  "YTMusic 종료": [
     "src/i18n/rust.ts"
   ],
-  "YTM Desktop에 관하여": [
+  "YTMusic에 관하여": [
     "src/i18n/rust.ts"
   ]
 }

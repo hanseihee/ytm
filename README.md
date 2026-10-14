@@ -1,17 +1,17 @@
-# YTM
+# YTMusic
 
 **English** · [한국어](#한국어)
 
-An unofficial music player for your YouTube Music account — desktop (macOS · Windows) and iOS, managed in one repository.
+An unofficial music player for your YouTube Music account — desktop (macOS · Windows) and iOS, managed in one repository. Formerly called YTM Desktop.
 
 **Download**: [Latest release](https://github.com/hanseihee/ytm/releases/latest) — macOS (Apple silicon) `.dmg` and Windows (64-bit) installer. Release notes are in [CHANGELOG.md](CHANGELOG.md) (Korean).
 
-![YTM Desktop — the Melon TOP 100 chart matched to YouTube Music tracks](docs/screenshot-desktop.png)
+![YTMusic — the Melon TOP 100 chart matched to YouTube Music tracks](docs/screenshot-desktop.png)
 
 ## English
 
-- **YTM Desktop** (macOS · Windows): Rust (Tauri 2) + React
-- **YTM** (iOS): native SwiftUI screens + the same TypeScript data code as the desktop app (run in JavaScriptCore)
+- **YTMusic** (macOS · Windows): Rust (Tauri 2) + React
+- **YTMusic** (iOS): native SwiftUI screens + the same TypeScript data code as the desktop app (run in JavaScriptCore)
 
 The screens are a player built from scratch; the sound comes from the official YouTube Music web player running in a hidden web view.
 Both apps share the same code for parsing YouTube Music responses, matching chart songs, finding lyrics, and the playback engine script.
@@ -89,8 +89,8 @@ open ios/YTM.xcodeproj     # pick your iPhone in Xcode and run (automatic signin
 ### Install
 
 Download from [GitHub Releases](https://github.com/hanseihee/ytm/releases).
-- macOS (Apple silicon): `YTM-Desktop-<version>-mac-arm64.dmg`
-- Windows (64-bit): `YTM-Desktop-<version>-windows-x64-setup.exe`
+- macOS (Apple silicon): `YTMusic-<version>-mac-arm64.dmg`
+- Windows (64-bit): `YTMusic-<version>-windows-x64-setup.exe`
 - Verify downloads with `SHA256SUMS.txt`.
 
 The apps are not code-signed.
@@ -223,12 +223,12 @@ Chart data is read from the public pages of each service (Melon, Genie, Bugs, FL
 
 [English](#english) · **한국어**
 
-YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 데스크톱(맥·윈도우)과 iOS 두 앱을 관리합니다.
+YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 데스크톱(맥·윈도우)과 iOS 두 앱을 관리합니다. 예전 이름은 YTM Desktop입니다.
 
 **내려받기**: [최신 릴리즈](https://github.com/hanseihee/ytm/releases/latest) — 맥(Apple 실리콘) `.dmg`, 윈도우(64비트) 설치 파일. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md).
 
-- **YTM Desktop**(맥·윈도우): Rust(Tauri 2) + React
-- **YTM**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
+- **YTMusic**(맥·윈도우): Rust(Tauri 2) + React
+- **YTMusic**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
 
 화면은 직접 만든 플레이어이고, 소리는 숨은 웹 화면에 띄운 공식 YouTube Music 플레이어가 냅니다.
 YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스크립트는 두 앱이 같은 코드를 씁니다.
@@ -308,8 +308,8 @@ open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서�
 ### 설치
 
 [GitHub 릴리즈](https://github.com/hanseihee/ytm/releases)에서 받습니다.
-- 맥(Apple 실리콘): `YTM-Desktop-<버전>-mac-arm64.dmg`
-- 윈도우(64비트): `YTM-Desktop-<버전>-windows-x64-setup.exe`
+- 맥(Apple 실리콘): `YTMusic-<버전>-mac-arm64.dmg`
+- 윈도우(64비트): `YTMusic-<버전>-windows-x64-setup.exe`
 - `SHA256SUMS.txt`로 받은 파일을 확인할 수 있습니다.
 
 코드 서명을 하지 않았습니다.

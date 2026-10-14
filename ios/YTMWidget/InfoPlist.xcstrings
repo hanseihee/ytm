@@ -6,55 +6,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM-Widget"
+            "value" : "YTMusic-Widget"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM Widget"
+            "value" : "YTMusic Widget"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget de YTM"
+            "value" : "Widget de YTMusic"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget YTM"
+            "value" : "Widget YTMusic"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget YTM"
+            "value" : "Widget YTMusic"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM ウィジェット"
+            "value" : "YTMusic ウィジェット"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget do YTM"
+            "value" : "Widget do YTMusic"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM 小组件"
+            "value" : "YTMusic 小组件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTM 小工具"
+            "value" : "YTMusic 小工具"
           }
         }
       }

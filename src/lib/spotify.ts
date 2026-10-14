@@ -442,7 +442,7 @@ export async function playInChartOrder(spotifyId: string, ordered: Track[], foun
 }
 
 /** 내 YouTube Music에 비공개 재생목록으로 저장하거나, 이미 있으면 순서까지 맞춰 고친다. 재생목록 id를 돌려준다. */
-export async function syncToYouTubeMusic(p: SpotifyPlaylist, tracks: Track[], appName = 'YTM Desktop'): Promise<string> {
+export async function syncToYouTubeMusic(p: SpotifyPlaylist, tracks: Track[], appName = 'YTMusic'): Promise<string> {
   const ids = tracks.map((t) => t.videoId);
   const chart = chartFor(p.id);
   const spotify = !chart || chart.source === 'spotify';

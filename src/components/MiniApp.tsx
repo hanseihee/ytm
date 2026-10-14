@@ -49,7 +49,7 @@ export function MiniApp() {
     <div className={`mini-app${mac ? ' mini-app--mac' : ''}`} style={{ '--art': artwork ? `url("${artwork}")` : 'none' } as CSSProperties}>
       <div className="mini-app__backdrop" aria-hidden="true" />
       <div className="mini-app__drag" data-tauri-drag-region>
-        <span data-tauri-drag-region>YTM</span>
+        <span data-tauri-drag-region>YTMusic</span>
       </div>
       <div className="mini-app__body">
         <Cover src={artwork} size={84} className="mini-app__art" />

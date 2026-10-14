@@ -80,13 +80,13 @@ if (!skipBuild) {
 // ── 5. 파일 모으기 ─────────────────────────────────────────────────────────
 const assets = [
   {
-    from: `src-tauri/target/release/bundle/dmg/YTM Desktop_${version}_aarch64.dmg`,
-    name: `YTM-Desktop-${version}-mac-arm64.dmg`,
+    from: `src-tauri/target/release/bundle/dmg/YTMusic_${version}_aarch64.dmg`,
+    name: `YTMusic-${version}-mac-arm64.dmg`,
     label: '맥(Apple 실리콘)',
   },
   {
-    from: `src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/YTM Desktop_${version}_x64-setup.exe`,
-    name: `YTM-Desktop-${version}-windows-x64-setup.exe`,
+    from: `src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/YTMusic_${version}_x64-setup.exe`,
+    name: `YTMusic-${version}-windows-x64-setup.exe`,
     label: '윈도우(64비트)',
   },
 ];
@@ -138,13 +138,13 @@ const notesPath = path.join(os.tmpdir(), `ytm-release-${version}.md`);
 fs.writeFileSync(notesPath, notes);
 
 console.log(`\n▶ 태그 ${tag}`);
-run('git', ['tag', '-a', tag, '-m', `YTM ${version}`]);
+run('git', ['tag', '-a', tag, '-m', `YTMusic ${version}`]);
 run('git', ['push', 'origin', tag], { stdio: 'inherit' });
 
 console.log(`\n▶ GitHub 릴리즈 ${repo} ${tag}`);
 const url = gh([
   'release', 'create', tag, ...assets.map((a) => a.path), sumsPath,
-  '--repo', repo, '--title', `YTM ${version}`, '--notes-file', notesPath, '--verify-tag',
+  '--repo', repo, '--title', `YTMusic ${version}`, '--notes-file', notesPath, '--verify-tag',
   ...(draft ? ['--draft'] : []),
 ]);
 console.log(`\n완료: ${url}`);

@@ -1,4 +1,4 @@
-// YTM iOS — 데스크톱판(YTM Desktop)과 같은 기능의 iOS 음악 플레이어(SwiftUI).
+// YTMusic iOS — 데스크톱판(YTMusic)과 같은 기능의 iOS 음악 플레이어(SwiftUI).
 //
 // - 화면: SwiftUI(이 폴더의 Views).
 // - 데이터: 데스크톱과 같은 TypeScript 코드(../src/lib)를 JavaScriptCore로 돌린다(Core/JSCore.swift).
