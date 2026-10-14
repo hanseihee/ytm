@@ -703,6 +703,7 @@ pub fn run() {
             desktop::video_window,
             desktop::mini_window,
             desktop::mini_pin,
+            desktop::keep_awake,
             desktop::show_main_window,
             desktop::set_prefs,
             engine::ui_log,

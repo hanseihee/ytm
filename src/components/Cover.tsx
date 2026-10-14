@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 
+/** YouTube Music 썸네일 주소의 크기 지정(=w120-h120…)을 크게 바꾼다. */
+export const largeArt = (url: string) => url.replace(/=w\d+-h\d+/, '=w1200-h1200');
+
 interface Props {
   src?: string;
   size?: number | string;

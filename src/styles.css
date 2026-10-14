@@ -920,3 +920,85 @@ kbd { display: inline-block; min-width: 64px; padding: 2px 8px; margin-right: 8p
 .update__actions { display: flex; gap: 6px; flex: none; }
 .btn--sm { height: 30px; padding: 0 12px; font-size: 13px; }
 
+/* ── 전체 화면 모드(모니터에 틀어 두기) ─────────────────────────────────────
+   흐린 표지 배경 + 큰 표지·글자. 크기는 화면(컨테이너) 기준이라 어떤 모니터에서도 비율이 같다. */
+.stage {
+  position: fixed; inset: 0; z-index: 1000; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: #050507; color: #fff;
+  container: stage / size;
+}
+.stage.is-idle { cursor: none; }
+.stage__bg {
+  position: absolute; inset: -12%;
+  background: var(--art) center / cover no-repeat;
+  filter: blur(90px) saturate(1.35) brightness(0.62);
+  transform: scale(1.1);
+}
+.stage__shade {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 30% 45%, rgb(0 0 0 / 0) 0%, rgb(0 0 0 / 0.35) 60%, rgb(0 0 0 / 0.72) 100%),
+    linear-gradient(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.5));
+}
+/* 고운 입자(필름 느낌) */
+.stage__shade::after {
+  content: ''; position: absolute; inset: 0; opacity: 0.07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.stage__main {
+  --stage-art: min(62cqh, 40cqw, 760px);
+  position: relative; flex: 1; min-height: 0;
+  display: grid; grid-template-columns: var(--stage-art) minmax(0, 1fr); align-items: center;
+  gap: clamp(32px, 6cqw, 120px);
+  padding: 9cqh 8cqw 3cqh;
+}
+.stage__art {
+  border-radius: clamp(10px, 1cqw, 18px); object-fit: cover;
+  box-shadow: 0 40px 120px rgb(0 0 0 / 0.55), 0 8px 24px rgb(0 0 0 / 0.35);
+  transition: transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+.stage__art.is-paused { transform: scale(0.96); }
+.stage__info { min-width: 0; max-width: 46em; display: flex; flex-direction: column; gap: 0.5em; }
+.stage__album {
+  font-size: clamp(11px, 1cqw, 17px); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgb(255 255 255 / 0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stage__title {
+  margin: 0; font-size: clamp(30px, 4cqw, 84px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.08;
+  overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.stage__artist { font-size: clamp(16px, 1.7cqw, 30px); font-weight: 500; color: rgb(255 255 255 / 0.72); }
+.stage__lyrics { margin-top: clamp(18px, 4cqh, 56px); display: flex; flex-direction: column; gap: 0.45em; }
+.stage__line { margin: 0; min-height: 1.3em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.stage__line--prev { font-size: clamp(14px, 1.35cqw, 24px); color: rgb(255 255 255 / 0.3); }
+.stage__line--now {
+  font-size: clamp(22px, 2.6cqw, 48px); font-weight: 700; line-height: 1.25;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.3);
+  animation: stage-line 0.6s ease both;
+}
+.stage__line--next { font-size: clamp(14px, 1.35cqw, 24px); color: rgb(255 255 255 / 0.45); }
+@keyframes stage-line { from { opacity: 0; transform: translateY(0.35em); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.stage__aura {
+  margin-top: clamp(16px, 3.5cqh, 44px); height: clamp(34px, 6cqh, 64px);
+  -webkit-box-reflect: below 3px linear-gradient(transparent 30%, rgb(255 255 255 / 0.2));
+}
+.stage__foot { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 0 8cqw 5cqh; }
+.stage__controls { display: flex; justify-content: center; align-items: center; gap: 22px; transition: opacity 0.4s; }
+.stage .icon-btn { width: 44px; height: 44px; color: rgb(255 255 255 / 0.82); }
+.stage .icon-btn:hover:not(:disabled) { color: #fff; background: rgb(255 255 255 / 0.1); }
+.stage__play { width: 58px; height: 58px; }
+.stage__progress { display: flex; align-items: center; gap: 14px; font-size: 12px; color: rgb(255 255 255 / 0.55); font-variant-numeric: tabular-nums; }
+.stage__bar { flex: 1; height: 2px; border-radius: 1px; background: rgb(255 255 255 / 0.16); overflow: hidden; }
+.stage__bar span { display: block; height: 100%; background: rgb(255 255 255 / 0.78); }
+.stage__exit { position: absolute; top: 3cqh; right: 3cqw; z-index: 2; transition: opacity 0.4s; }
+.stage.is-idle .stage__controls, .stage.is-idle .stage__exit { opacity: 0; pointer-events: none; }
+/* 세로 모니터: 표지 위, 글자 아래 가운데 */
+@container stage (orientation: portrait) {
+  .stage__main { --stage-art: min(44cqh, 80cqw); grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: center; text-align: center; gap: 5cqh; padding: 7cqh 8cqw 2cqh; }
+  .stage__info { align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage__line--now { animation: none; }
+  .stage__art { transition: none; }
+}

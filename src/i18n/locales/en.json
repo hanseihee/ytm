@@ -491,5 +491,7 @@
   "재생@횟수": "Plays",
   "재생@메뉴": "Controls",
   "모두 보기@목록": "See all",
-  "플레이리스트@목록 제목": "Playlists"
+  "플레이리스트@목록 제목": "Playlists",
+  "전체 화면 끝내기": "Exit full screen",
+  "전체 화면 끝내기 (Esc)": "Exit full screen (Esc)"
 }

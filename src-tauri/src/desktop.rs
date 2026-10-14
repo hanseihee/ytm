@@ -177,6 +177,9 @@ pub fn mini_window(app: AppHandle, open: bool) -> Result<(), String> {
         .resizable(false)
         .maximizable(false)
         .always_on_top(true)
+        // 다른 앱을 쓰다가 바로 누르는 창이라, 첫 클릭이 창 활성화에만 쓰이지 않고 단추까지 가게 한다
+        // (맥 기본값이면 활성화되지 않은 미니 플레이어의 단추를 한 번 눌러서는 아무 반응이 없었다).
+        .accept_first_mouse(true)
         .background_color(crate::MAIN_BACKGROUND)
         .disable_drag_drop_handler()
         .on_navigation(crate::is_app_url);
@@ -197,6 +200,29 @@ pub fn show_main_window(app: AppHandle) {
 pub fn mini_pin(app: AppHandle, on: bool) -> Result<(), String> {
     let window = app.get_webview_window(MINI).ok_or("mini_missing")?;
     window.set_always_on_top(on).map_err(|e| e.to_string())
+}
+
+/// 전체 화면 모드(모니터에 틀어 두기) 동안 화면이 꺼지지 않게 한다.
+/// 맥은 시스템의 caffeinate -d를 띄워 두고(-w: 이 앱이 끝나면 함께 끝난다), 끄면 그 프로세스를 끝낸다.
+#[tauri::command]
+pub fn keep_awake(on: bool) -> Result<(), String> {
+    static AWAKE: Mutex<Option<std::process::Child>> = Mutex::new(None);
+    let mut slot = lock(&AWAKE);
+    if let Some(mut child) = slot.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    #[cfg(target_os = "macos")]
+    if on {
+        let child = std::process::Command::new("/usr/bin/caffeinate")
+            .args(["-d", "-w", &std::process::id().to_string()])
+            .spawn()
+            .map_err(|e| format!("caffeinate {e}"))?;
+        *slot = Some(child);
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = on;
+    Ok(())
 }
 
 // ── 설정: 알림·전역 단축키 ──────────────────────────────────────────────────

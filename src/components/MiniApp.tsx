@@ -78,7 +78,7 @@ export function MiniApp() {
               aria-pressed={pinned}
               onClick={() => miniPin(!pinned).then(() => setPinned(!pinned), (err) => toastError(err))}
             >
-              <Icon name="up" size={17} />
+              <Icon name="pin" size={17} />
             </button>
             <button type="button" className="icon-btn" aria-label={t('큰 창 열기')} title={t('큰 창 열기')} onClick={() => void invoke('show_main_window').catch((err) => toastError(err))}>
               <Icon name="external" size={17} />

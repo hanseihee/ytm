@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "앱 화면·미니 플레이어: 엔진 요청·상태 조회·로그인 창 열기, 이벤트 듣기, 외부 링크 열기, 테마에 맞춘 창 제목 막대·바탕색, 차트 곡 목록 읽기, 영상 창·미니 플레이어·알림·전역 단축키 설정.",
+  "description": "앱 화면·미니 플레이어: 엔진 요청·상태 조회·로그인 창 열기, 이벤트 듣기, 외부 링크 열기, 테마에 맞춘 창 제목 막대·바탕색, 차트 곡 목록 읽기, 영상 창·미니 플레이어·알림·전역 단축키 설정, 전체 화면 모드(창 전체 화면·화면 꺼짐 막기).",
   "windows": [
     "main",
     "mini"
@@ -24,6 +24,9 @@
     "allow-video-window",
     "allow-mini-window",
     "allow-mini-pin",
+    "allow-keep-awake",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen",
     "allow-set-prefs",
     "allow-set-ui-strings",
     "core:window:allow-start-dragging",

@@ -15,6 +15,7 @@ fn main() {
                 "video_window",
                 "mini_window",
                 "mini_pin",
+                "keep_awake",
                 "show_main_window",
                 "set_prefs",
                 "set_ui_strings",

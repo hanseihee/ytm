@@ -270,6 +270,7 @@
     "src/components/QueuePanel.tsx"
   ],
   "광고": [
+    "src/components/FullStage.tsx",
     "src/components/LyricsView.tsx",
     "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx"
@@ -422,6 +423,7 @@
     "src/components/Cards.tsx"
   ],
   "다음 곡": [
+    "src/components/FullStage.tsx",
     "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx",
     "src/components/QueuePanel.tsx",
@@ -1037,6 +1039,7 @@
     "src/components/Cards.tsx"
   ],
   "이전 곡": [
+    "src/components/FullStage.tsx",
     "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx",
     "src/i18n/rust.ts",
@@ -1082,6 +1085,7 @@
     "src/components/Dialogs.tsx"
   ],
   "일시정지": [
+    "src/components/FullStage.tsx",
     "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx",
     "src/i18n/rust.ts"
@@ -1099,6 +1103,7 @@
     "src/lib/charts/melonExtra.ts"
   ],
   "재생": [
+    "src/components/FullStage.tsx",
     "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx",
     "src/components/menus.ts",
@@ -1119,6 +1124,7 @@
     "src/i18n/rust.ts"
   ],
   "재생 중인 곡이 없습니다": [
+    "src/components/FullStage.tsx",
     "src/components/LyricsView.tsx"
   ],
   "재생 편의": [
@@ -1180,7 +1186,15 @@
     "src/i18n/rust.ts"
   ],
   "전체 화면": [
+    "src/components/FullStage.tsx",
+    "src/components/LyricsView.tsx",
     "src/i18n/rust.ts"
+  ],
+  "전체 화면 끝내기": [
+    "src/components/FullStage.tsx"
+  ],
+  "전체 화면 끝내기 (Esc)": [
+    "src/components/FullStage.tsx"
   ],
   "접기": [
     "src/views/SpotifyView.tsx"
