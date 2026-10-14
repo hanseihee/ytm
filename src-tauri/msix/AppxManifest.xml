@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Microsoft Store용 MSIX 설명 파일 틀. scripts/msix.ps1이 {{…}} 자리를 identity.json·package.json 값으로 채운다.
+<!-- Microsoft Store용 MSIX 설명 파일 틀. scripts/msix.ps1이 중괄호 두 겹으로 감싼 자리를 identity.json·package.json 값으로 채운다.
      Store가 서명하므로 따로 서명하지 않는다. 데스크톱(Win32) 앱이라 runFullTrust가 필요하다. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
