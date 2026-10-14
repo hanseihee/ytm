@@ -1,5 +1,11 @@
-// 가사: 시간 맞춤 가사는 LRCLIB(공개 가사 데이터베이스, lrclib.net)에서, 없으면 YouTube Music 가사(LyricFind 등).
-// LRCLIB는 교차 출처를 허용(Access-Control-Allow-Origin: *)해서 앱 화면에서 바로 부른다(2026-10-14 확인).
+// 가사: 시간 맞춤 가사는 LRCLIB(공개 가사 데이터베이스, lrclib.net)와 벅스 싱크 가사에서, 둘 다 없으면 YouTube Music 가사.
+// - LRCLIB는 교차 출처를 허용(Access-Control-Allow-Origin: *)해서 앱 화면에서 바로 부른다(2026-10-14 확인).
+// - 벅스는 교차 출처를 허용하지 않아 앱의 chart_fetch(허용한 사이트만 받는 통로)로 받는다.
+//   검색 music.bugs.co.kr/search/track?q= → 곡 번호(trackId) → /player/lyrics/T/<번호> = {"lyrics":"6.7|가사＃9.9|가사＃…"}.
+// - YouTube Music 웹 가사(browse MPLY…)에는 시간 정보가 없다(2026-10-14 세 곡 확인). 모바일 앱 클라이언트로 보내면
+//   시간 맞춤 가사가 온다고 알려져 있지만, 로그인한 웹에서 보내면 400이 나서 쓸 수 없다.
+import { invoke } from '@tauri-apps/api/core';
+import { decode, SAFARI_HEADERS } from './charts/util';
 import { ytLyrics } from './ytm/client';
 
 export interface LyricLine {
@@ -115,24 +121,120 @@ async function fromLrclib(q: LyricsQuery): Promise<LrclibRecord | undefined> {
   return pick(byTitle ?? [], q, title);
 }
 
+// ── 벅스 싱크 가사 ─────────────────────────────────────────────────────────
+
+const BUGS = 'https://music.bugs.co.kr';
+const bugsGet = (url: string) => invoke<string>('chart_fetch', { req: { url, method: 'GET', headers: { ...SAFARI_HEADERS, Referer: `${BUGS}/` } } });
+
+interface BugsTrack {
+  id: string;
+  title: string;
+  artist: string;
+}
+
+/** 벅스 곡 검색 결과(HTML)의 곡 줄들 */
+export function parseBugsSearch(html: string): BugsTrack[] {
+  const out: BugsTrack[] = [];
+  const rows = html.split(/<tr\b/).slice(1);
+  for (const row of rows) {
+    if (!/rowType="track"/.test(row.slice(0, 400))) continue;
+    const id = row.match(/trackId="(\d+)"/)?.[1];
+    const title = row.match(/<p class="title"[^>]*>\s*<a\b[^>]*\btitle="([^"]*)"/)?.[1];
+    const artist = row.match(/<p class="artist"[^>]*>\s*<a\b[^>]*\btitle="([^"]*)"/)?.[1];
+    if (id && title) out.push({ id, title: decode(title), artist: decode(artist ?? '') });
+  }
+  return out;
+}
+
+/** "6.7|가사＃9.9|가사＃…"(＃는 전각) → 줄 목록 */
+export function parseBugsLyrics(raw: string): LyricLine[] {
+  const lines: LyricLine[] = [];
+  for (const part of raw.split('＃')) {
+    const at = part.indexOf('|');
+    if (at < 0) continue;
+    const time = Number(part.slice(0, at));
+    if (!Number.isFinite(time)) continue;
+    lines.push({ time, text: part.slice(at + 1).trim() });
+  }
+  return lines.sort((a, b) => a.time - b.time);
+}
+
+async function fromBugs(q: LyricsQuery): Promise<LyricLine[] | undefined> {
+  const title = cleanTitle(q.title);
+  const artist = q.artist.split(/,|&/)[0].trim();
+  const html = await bugsGet(`${BUGS}/search/track?q=${encodeURIComponent(`${title} ${artist}`)}`);
+  const track = parseBugsSearch(html)
+    .slice(0, 10)
+    .find((t) => (similar(cleanTitle(t.title), title) || similar(t.title, q.title)) && similar(t.artist, q.artist));
+  if (!track) return undefined;
+  const body = JSON.parse(await bugsGet(`${BUGS}/player/lyrics/T/${track.id}`)) as { lyrics?: string | null };
+  const lines = parseBugsLyrics(body?.lyrics ?? '');
+  // 다른 버전(라이브·리믹스)을 잘못 고른 경우를 거른다: 줄이 너무 적거나 마지막 줄이 곡보다 한참 뒤면 쓰지 않는다.
+  if (lines.filter((l) => l.text).length < 3) return undefined;
+  if (q.duration > 0 && lines[lines.length - 1].time > q.duration + 10) return undefined;
+  return lines;
+}
+
+/** 늦게 오는 응답을 기다리지 않는다. */
+function withTimeout<T>(task: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label}_timeout`)), ms);
+    task.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
+const HANGUL = /[\u3131-\u318e\uac00-\ud7a3]/;
+
 const cache = new Map<string, Promise<Lyrics | null>>();
 
 export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
   const hit = cache.get(q.videoId);
   if (hit) return hit;
-  // LRCLIB가 잠깐 실패(503 등)하면 이번 결과는 기억하지 않아 다음에 열 때 다시 찾는다(2026-10-14 503 관찰).
+  // LRCLIB가 잠깐 실패(503·느림)하면 이번 결과는 기억하지 않아 다음에 열 때 다시 찾는다(2026-10-14 503 관찰).
   let lrclibFailed = false;
   const task = (async (): Promise<Lyrics | null> => {
-    let record: LrclibRecord | undefined;
-    try {
-      record = await fromLrclib(q);
-    } catch (err) {
+    // 한글 곡은 벅스 싱크 가사를 먼저, 그 밖은 LRCLIB를 먼저 쓴다. 둘은 동시에 찾는다.
+    const korean = HANGUL.test(`${q.title} ${q.artist}`);
+    const lrclibTask = withTimeout(fromLrclib(q), 6000, 'lrclib').catch((err) => {
       lrclibFailed = true;
       console.warn('[lyrics] LRCLIB 실패', err);
-    }
-    if (record?.syncedLyrics) {
-      const synced = parseLrc(record.syncedLyrics);
-      if (synced.length) return { synced, plain: record.plainLyrics ?? undefined, source: 'LRCLIB' };
+      return undefined;
+    });
+    const bugsTask = () =>
+      withTimeout(fromBugs(q), 8000, 'bugs').catch((err) => {
+        console.warn('[lyrics] 벅스 싱크 가사 실패', err);
+        return undefined;
+      });
+    const bugsEarly = korean ? bugsTask() : undefined;
+    const fromLrclibSynced = (record: LrclibRecord | undefined): Lyrics | undefined => {
+      const synced = record?.syncedLyrics ? parseLrc(record.syncedLyrics) : [];
+      return synced.length ? { synced, plain: record?.plainLyrics ?? undefined, source: 'LRCLIB' } : undefined;
+    };
+    const fromBugsSynced = (lines: LyricLine[] | undefined): Lyrics | undefined =>
+      lines?.length ? { synced: lines, plain: lines.map((l) => l.text).join('\n'), source: '벅스' } : undefined;
+
+    let record: LrclibRecord | undefined;
+    if (bugsEarly) {
+      const bugs = fromBugsSynced(await bugsEarly);
+      if (bugs) return bugs;
+      record = await lrclibTask;
+      const lr = fromLrclibSynced(record);
+      if (lr) return lr;
+    } else {
+      record = await lrclibTask;
+      const lr = fromLrclibSynced(record);
+      if (lr) return lr;
+      const bugs = fromBugsSynced(await bugsTask());
+      if (bugs) return bugs;
     }
     try {
       const yt = await ytLyrics(q.videoId);
