@@ -1,4 +1,5 @@
 import { useRef, type MouseEvent } from 'react';
+import { t, tk } from '../i18n';
 import type { Card, Shelf } from '../lib/ytm/types';
 import { playEndpoint } from '../state/library';
 import { go, routeForBrowse } from '../state/nav';
@@ -8,11 +9,12 @@ import { Icon } from './Icon';
 import { cardMenu } from './menus';
 import { TrackList } from './TrackList';
 
+// 이름은 표시만 해 두고 그릴 때 번역한다.
 const KIND_LABEL: Record<string, string> = {
-  album: '앨범', single: '싱글', ep: 'EP', playlist: '플레이리스트', artist: '아티스트',
-  song: '노래', video: '영상', episode: '에피소드', podcast: '팟캐스트', profile: '프로필', other: '',
+  album: tk('앨범'), single: tk('싱글'), ep: 'EP', playlist: tk('플레이리스트'), artist: tk('아티스트'),
+  song: tk('노래'), video: tk('영상'), episode: tk('에피소드'), podcast: tk('팟캐스트'), profile: tk('프로필'), other: '',
 };
-export const kindLabel = (kind: string) => KIND_LABEL[kind] ?? '';
+export const kindLabel = (kind: string) => t(KIND_LABEL[kind] ?? '');
 
 export function CardTile({ card }: { card: Card }) {
   const open = () => {
@@ -35,7 +37,7 @@ export function CardTile({ card }: { card: Card }) {
           <button
             type="button"
             className="tile__play"
-            aria-label={`${card.title} 재생`}
+            aria-label={t('{title} 재생', { title: card.title })}
             onClick={() => playEndpoint(card.play!)}
           >
             <Icon name="play" size={20} />
@@ -54,13 +56,13 @@ export function CardRow({ cards }: { cards: Card[] }) {
   const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: 'smooth' });
   return (
     <div className="row">
-      <button type="button" className="row__nav row__nav--prev icon-btn" aria-label="이전" onClick={() => scroll(-1)}>
+      <button type="button" className="row__nav row__nav--prev icon-btn" aria-label={t('이전')} onClick={() => scroll(-1)}>
         <Icon name="back" size={18} />
       </button>
       <div className="row__track" ref={ref}>
         {cards.map((c, i) => <CardTile key={`${c.browseId ?? c.videoId}-${i}`} card={c} />)}
       </div>
-      <button type="button" className="row__nav row__nav--next icon-btn" aria-label="다음" onClick={() => scroll(1)}>
+      <button type="button" className="row__nav row__nav--next icon-btn" aria-label={t('다음')} onClick={() => scroll(1)}>
         <Icon name="forward" size={18} />
       </button>
     </div>
@@ -85,7 +87,7 @@ export function ShelfView({ shelf, grid = false, trackLimit }: { shelf: Shelf; g
           <h2 className="shelf__title">{shelf.title}</h2>
           {more && (
             <button type="button" className="link shelf__more" onClick={() => go(routeForBrowse(more.browseId, more.params, shelf.title))}>
-              모두 보기
+              {t('모두 보기@목록')}
             </button>
           )}
         </header>

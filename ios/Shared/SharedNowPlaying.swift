@@ -6,6 +6,8 @@ enum SharedNowPlaying {
     static let appGroup = "group.dev.seihee.ytmmobile"
     static let widgetKind = "NowPlaying"
     private static let key = "now-playing"
+    /// 앱에서 쓰는 화면 언어(번역 코드). 위젯도 이 언어로 그린다.
+    static let languageKey = "language"
 
     struct Info: Codable, Equatable {
         var videoId = ""

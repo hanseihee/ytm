@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '../i18n';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import type { Shelf } from '../lib/ytm/types';
@@ -19,14 +20,14 @@ export function SearchView({ query, params }: { query: string; params?: string }
   if (!query) {
     return (
       <div className="page">
-        <Empty title="무엇을 듣고 싶으세요?">
-          <p>노래 제목, 아티스트, 앨범 이름으로 찾아보세요.</p>
-          <button type="button" className="btn btn--primary" onClick={focusSearch}>검색창으로 가기</button>
+        <Empty title={t('무엇을 듣고 싶으세요?')}>
+          <p>{t('노래 제목, 아티스트, 앨범 이름으로 찾아보세요.')}</p>
+          <button type="button" className="btn btn--primary" onClick={focusSearch}>{t('검색창으로 가기')}</button>
         </Empty>
       </div>
     );
   }
-  if (result.loading && !result.data) return <div className="page"><Loading label={`'${query}' 찾는 중…`} /></div>;
+  if (result.loading && !result.data) return <div className="page"><Loading label={t("'{query}' 찾는 중…", { query })} /></div>;
   if (result.error) return <div className="page"><ErrorState message={result.error} onRetry={result.reload} /></div>;
   const data = result.data;
   if (!data) return null;
@@ -57,9 +58,9 @@ export function SearchView({ query, params }: { query: string; params?: string }
   const top = data.top;
   return (
     <div className="page">
-      <div className="chips" role="tablist" aria-label="검색 결과 종류">
+      <div className="chips" role="tablist" aria-label={t('검색 결과 종류')}>
         <button type="button" role="tab" aria-selected={!filtered} className={`chip${!filtered ? ' is-on' : ''}`} onClick={() => replace({ name: 'search', query })}>
-          전체
+          {t('전체')}
         </button>
         {data.chips.map((c) => (
           <button
@@ -77,7 +78,7 @@ export function SearchView({ query, params }: { query: string; params?: string }
 
       {!filtered && top && (top.card || top.track) && (
         <section className="top-result">
-          <h2 className="shelf__title">최상위 결과</h2>
+          <h2 className="shelf__title">{t('최상위 결과')}</h2>
           <div className="top-result__body">
             {top.card && (
               <button type="button" className="top-card" onClick={() => top.card!.browseId && go(routeForBrowse(top.card!.browseId, top.card!.params, top.card!.title))}>
@@ -91,7 +92,7 @@ export function SearchView({ query, params }: { query: string; params?: string }
                 <Cover src={top.track.thumbnail} size={112} />
                 <span className="top-card__title">{top.track.title}</span>
                 <ArtistLinks artists={top.track.artists} className="top-card__sub" />
-                <button type="button" className="play-btn top-card__play" aria-label={`${top.track.title} 재생`} onClick={() => playTrack(top.track!)}>
+                <button type="button" className="play-btn top-card__play" aria-label={t('{title} 재생', { title: top.track.title })} onClick={() => playTrack(top.track!)}>
                   <Icon name="play" size={20} />
                 </button>
               </div>
@@ -102,8 +103,8 @@ export function SearchView({ query, params }: { query: string; params?: string }
       )}
 
       {data.shelves.length === 0 && !top ? (
-        <Empty title={`'${query}' 검색 결과가 없습니다`}>
-          <p>철자를 확인하거나 다른 단어로 찾아보세요.</p>
+        <Empty title={t("'{query}' 검색 결과가 없습니다", { query })}>
+          <p>{t('철자를 확인하거나 다른 단어로 찾아보세요.')}</p>
         </Empty>
       ) : filtered && single ? (
         <section className="shelf">

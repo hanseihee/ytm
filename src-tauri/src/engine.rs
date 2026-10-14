@@ -313,6 +313,8 @@ pub fn spawn_debug_inbox(app: &AppHandle) {
                     debug_window(&app, &item["args"])
                 } else if item["method"] == "desktop" {
                     debug_desktop(&app, &item["args"]).await
+                } else if item["method"] == "menu" {
+                    debug_menu(&app, &item["args"])
                 } else {
                     call(&app, item["method"].as_str().unwrap_or_default(), item["args"].clone()).await
                 };
@@ -325,6 +327,33 @@ pub fn spawn_debug_inbox(app: &AppHandle) {
             }
         }
     });
+}
+
+/// 개발 빌드 전용: 메뉴 문구 시험. strings가 있으면 화면처럼 언어 문구를 넘기고, 맥 메뉴·트레이 글자를 돌려준다.
+#[cfg(debug_assertions)]
+fn debug_menu(app: &AppHandle, args: &Value) -> Result<Value, String> {
+    if let Some(map) = args.get("strings").and_then(|v| v.as_object()) {
+        let strings = map.iter().filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_owned()))).collect();
+        crate::apply_ui_strings(app, strings)?;
+    }
+    let mut menus = Vec::new();
+    if let Some(menu) = app.menu() {
+        for item in menu.items().map_err(|e| e.to_string())? {
+            let Some(sub) = item.as_submenu() else { continue };
+            let mut names = vec![sub.text().map_err(|e| e.to_string())?];
+            for child in sub.items().map_err(|e| e.to_string())? {
+                if let Some(m) = child.as_menuitem() {
+                    names.push(m.text().map_err(|e| e.to_string())?);
+                } else if let Some(p) = child.as_predefined_menuitem() {
+                    names.push(p.text().map_err(|e| e.to_string())?);
+                } else if let Some(s) = child.as_submenu() {
+                    names.push(format!("▸ {}", s.text().map_err(|e| e.to_string())?));
+                }
+            }
+            menus.push(names);
+        }
+    }
+    Ok(serde_json::json!({ "menus": menus, "tray": crate::tray_texts(app) }))
 }
 
 #[cfg(debug_assertions)]

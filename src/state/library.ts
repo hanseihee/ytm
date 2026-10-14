@@ -3,7 +3,7 @@ import { createStore, useStore } from '../lib/store';
 import { getEngineStatus, onEngineStatus, type EngineStatus } from '../lib/tauri';
 import * as ytm from '../lib/ytm/client';
 import type { Account, Card, Track } from '../lib/ytm/types';
-import { obj } from '../lib/ko';
+import { t } from '../i18n';
 import { toast, toastError } from './ui';
 
 interface LibraryState {
@@ -107,32 +107,40 @@ export async function toggleLike(track: Pick<Track, 'videoId' | 'title'>) {
   apply(!was);
   try {
     await ytm.setTrackLiked(track.videoId, !was);
-    toast(was ? `'${track.title}' 좋아요를 취소했습니다` : `${obj(track.title)} 좋아요 표시한 곡에 추가했습니다`);
+    toast(was ? t("'{title}' 좋아요를 취소했습니다", { title: track.title }) : t('{title|을} 좋아요 표시한 곡에 추가했습니다', { title: track.title }));
     bump();
   } catch (err) {
     apply(was);
-    toastError(err, '좋아요를 바꾸지 못했습니다');
+    toastError(err, t('좋아요를 바꾸지 못했습니다'));
   }
 }
 
 export async function addTracksToPlaylist(playlist: { playlistId: string; title: string }, tracks: Track[]) {
   try {
     await ytm.addToPlaylist(playlist.playlistId, tracks.map((t) => t.videoId));
-    toast(tracks.length === 1 ? `'${playlist.title}'에 ${obj(tracks[0].title)} 추가했습니다` : `'${playlist.title}'에 ${tracks.length}곡을 추가했습니다`);
+    toast(
+      tracks.length === 1
+        ? t("'{playlist}'에 {title|을} 추가했습니다", { playlist: playlist.title, title: tracks[0].title })
+        : t("'{playlist}'에 {n}곡을 추가했습니다", { playlist: playlist.title, n: tracks.length }),
+    );
     bump();
   } catch (err) {
-    toastError(err, '플레이리스트에 추가하지 못했습니다');
+    toastError(err, t('플레이리스트에 추가하지 못했습니다'));
   }
 }
 
 export async function removeTracksFromPlaylist(playlistId: string, tracks: Track[]) {
   try {
     await ytm.removeFromPlaylist(playlistId, tracks);
-    toast(tracks.length === 1 ? `${obj(tracks[0].title)} 플레이리스트에서 뺐습니다` : `${tracks.length}곡을 플레이리스트에서 뺐습니다`);
+    toast(
+      tracks.length === 1
+        ? t('{title|을} 플레이리스트에서 뺐습니다', { title: tracks[0].title })
+        : t('{n}곡을 플레이리스트에서 뺐습니다', { n: tracks.length }),
+    );
     bump();
     return true;
   } catch (err) {
-    toastError(err, '플레이리스트에서 빼지 못했습니다');
+    toastError(err, t('플레이리스트에서 빼지 못했습니다'));
     return false;
   }
 }
@@ -140,12 +148,12 @@ export async function removeTracksFromPlaylist(playlistId: string, tracks: Track
 export async function createPlaylist(title: string, description: string, privacy: ytm.Privacy, tracks: Track[] = []) {
   try {
     const id = await ytm.createPlaylist(title, description, privacy, tracks.map((t) => t.videoId));
-    toast(`'${title}' 플레이리스트를 만들었습니다`);
+    toast(t("'{title}' 플레이리스트를 만들었습니다", { title }));
     await loadPlaylists();
     bump();
     return id;
   } catch (err) {
-    toastError(err, '플레이리스트를 만들지 못했습니다');
+    toastError(err, t('플레이리스트를 만들지 못했습니다'));
     return undefined;
   }
 }
@@ -153,12 +161,12 @@ export async function createPlaylist(title: string, description: string, privacy
 export async function renamePlaylist(playlistId: string, title: string, description?: string) {
   try {
     await ytm.renamePlaylist(playlistId, title, description);
-    toast('플레이리스트 정보를 바꿨습니다');
+    toast(t('플레이리스트 정보를 바꿨습니다'));
     await loadPlaylists();
     bump();
     return true;
   } catch (err) {
-    toastError(err, '플레이리스트 정보를 바꾸지 못했습니다');
+    toastError(err, t('플레이리스트 정보를 바꾸지 못했습니다'));
     return false;
   }
 }
@@ -166,12 +174,12 @@ export async function renamePlaylist(playlistId: string, title: string, descript
 export async function deletePlaylist(playlistId: string, title: string) {
   try {
     await ytm.deletePlaylist(playlistId);
-    toast(`'${title}' 플레이리스트를 삭제했습니다`);
+    toast(t("'{title}' 플레이리스트를 삭제했습니다", { title }));
     await loadPlaylists();
     bump();
     return true;
   } catch (err) {
-    toastError(err, '플레이리스트를 삭제하지 못했습니다');
+    toastError(err, t('플레이리스트를 삭제하지 못했습니다'));
     return false;
   }
 }
@@ -179,12 +187,12 @@ export async function deletePlaylist(playlistId: string, title: string) {
 export async function setSaved(playlistId: string, title: string, saved: boolean) {
   try {
     await ytm.setCollectionSaved(playlistId, saved);
-    toast(saved ? `${obj(title)} 보관함에 저장했습니다` : `${obj(title)} 보관함에서 뺐습니다`);
+    toast(saved ? t('{title|을} 보관함에 저장했습니다', { title }) : t('{title|을} 보관함에서 뺐습니다', { title }));
     await loadPlaylists();
     bump();
     return true;
   } catch (err) {
-    toastError(err, '보관함을 바꾸지 못했습니다');
+    toastError(err, t('보관함을 바꾸지 못했습니다'));
     return false;
   }
 }
@@ -193,29 +201,30 @@ export async function setSaved(playlistId: string, title: string, saved: boolean
 
 export async function playTrack(track: Track) {
   if (!track.available) {
-    toast('이 곡은 지금 계정으로 재생할 수 없습니다', 'error');
+    toast(t('이 곡은 지금 계정으로 재생할 수 없습니다'), 'error');
     return;
   }
   try {
     await ytm.playTrack(track);
   } catch (err) {
-    toastError(err, '재생하지 못했습니다');
+    toastError(err, t('재생하지 못했습니다'));
   }
 }
 
-export async function playEndpoint(endpoint: Parameters<typeof ytm.play>[0], what = '재생') {
+/** what: 실패 알림에 넣을 동작 이름(부르는 쪽이 t()로 바꿔 넘긴다. 없으면 '재생') */
+export async function playEndpoint(endpoint: Parameters<typeof ytm.play>[0], what?: string) {
   try {
     await ytm.play(endpoint);
   } catch (err) {
-    toastError(err, `${what}하지 못했습니다`);
+    toastError(err, what === undefined ? t('재생하지 못했습니다') : t('{what}하지 못했습니다', { what }));
   }
 }
 
 export async function enqueue(target: { videoId?: string; playlistId?: string }, title: string, position: 'next' | 'end') {
   try {
     await ytm.queueAdd(target, position);
-    toast(position === 'next' ? `${obj(title)} 다음에 재생합니다` : `${obj(title)} 대기열 끝에 추가했습니다`);
+    toast(position === 'next' ? t('{title|을} 다음에 재생합니다', { title }) : t('{title|을} 대기열 끝에 추가했습니다', { title }));
   } catch (err) {
-    toastError(err, '대기열에 추가하지 못했습니다');
+    toastError(err, t('대기열에 추가하지 못했습니다'));
   }
 }

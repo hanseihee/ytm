@@ -1,0 +1,1602 @@
+{
+  "'{playlist}'에 {n}곡을 추가했습니다": [
+    "src/state/library.ts"
+  ],
+  "'{playlist}'에 {title|을} 추가했습니다": [
+    "src/state/library.ts"
+  ],
+  "'{query}' 검색 결과가 없습니다": [
+    "src/views/SearchView.tsx"
+  ],
+  "'{query}' 찾는 중…": [
+    "src/views/SearchView.tsx"
+  ],
+  "'{title}' 좋아요를 취소했습니다": [
+    "src/state/library.ts"
+  ],
+  "'{title}' 플레이리스트를 만들었습니다": [
+    "src/state/library.ts"
+  ],
+  "'{title}' 플레이리스트를 삭제했습니다": [
+    "src/state/library.ts"
+  ],
+  "{app}이 {source}을 YouTube Music 곡으로 옮긴 목록입니다. 마지막 갱신: {date}": [
+    "src/lib/spotify.ts"
+  ],
+  "{band}Hz 이득 (dB)": [
+    "src/components/EqPanel.tsx"
+  ],
+  "{country} 인기곡": [
+    "src/lib/charts/index.ts"
+  ],
+  "{date} 기준": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "{date} 업데이트": [
+    "src/lib/charts/apple.ts"
+  ],
+  "{date} 차트": [
+    "src/lib/charts/billboard.ts"
+  ],
+  "{h}시간": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "{h}시간 {m}분": [
+    "src/components/PlayerBar.tsx",
+    "src/views/StatsView.tsx"
+  ],
+  "{m}분": [
+    "src/components/PlayerBar.tsx",
+    "src/views/StatsView.tsx"
+  ],
+  "{minutes}분 뒤에 재생을 멈춥니다": [
+    "src/state/sleep.ts"
+  ],
+  "{n}곡": [
+    "src/views/SpotifyView.tsx",
+    "src/views/StatsView.tsx"
+  ],
+  "{n}곡 이상": [
+    "src/views/LibraryView.tsx"
+  ],
+  "{n}곡을 플레이리스트에서 뺐습니다": [
+    "src/state/library.ts"
+  ],
+  "{n}초": [
+    "src/components/LyricsView.tsx"
+  ],
+  "{n}회": [
+    "src/views/StatsView.tsx"
+  ],
+  "{name} 계정으로 로그인했습니다.": [
+    "src/views/SettingsView.tsx"
+  ],
+  "{name} 구독을 취소했습니다": [
+    "src/views/ArtistView.tsx"
+  ],
+  "{name} 페이지로 이동": [
+    "src/components/menus.ts"
+  ],
+  "{name}님을 위한 음악": [
+    "src/views/HomeView.tsx"
+  ],
+  "{name}을(를) 구독했습니다": [
+    "src/views/ArtistView.tsx"
+  ],
+  "{source} 차트 형식이 바뀌어 곡 목록을 읽지 못했습니다.": [
+    "src/lib/charts/index.ts"
+  ],
+  "{time} 기준": [
+    "src/lib/charts/bugs.ts",
+    "src/lib/charts/genie.ts",
+    "src/lib/melon.ts"
+  ],
+  "{title} (이미 있음)": [
+    "src/components/menus.ts"
+  ],
+  "{title} 이 재생목록에 넣기": [
+    "src/views/CollectionView.tsx"
+  ],
+  "{title} 재생": [
+    "src/components/Cards.tsx",
+    "src/components/TrackList.tsx",
+    "src/views/SearchView.tsx",
+    "src/views/SpotifyView.tsx"
+  ],
+  "{title|을} 다음에 재생합니다": [
+    "src/state/library.ts"
+  ],
+  "{title|을} 대기열 끝에 추가했습니다": [
+    "src/state/library.ts"
+  ],
+  "{title|을} 보관함에 저장했습니다": [
+    "src/state/library.ts"
+  ],
+  "{title|을} 보관함에서 뺐습니다": [
+    "src/state/library.ts"
+  ],
+  "{title|을} 삭제합니다. 내가 만든 플레이리스트만 삭제할 수 있고, 되돌릴 수 없습니다.": [
+    "src/components/Sidebar.tsx"
+  ],
+  "{title|을} 삭제합니다. 되돌릴 수 없습니다.": [
+    "src/views/CollectionView.tsx"
+  ],
+  "{title|을} 좋아요 표시한 곡에 추가했습니다": [
+    "src/state/library.ts"
+  ],
+  "{title|을} 플레이리스트에서 뺐습니다": [
+    "src/state/library.ts"
+  ],
+  "{what}하지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "{year}년 {week}주차": [
+    "src/lib/charts/circle.ts"
+  ],
+  "1위부터 재생": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "30초 넘게 들은 곡부터 이 기기에 기록됩니다.": [
+    "src/views/StatsView.tsx"
+  ],
+  "가": [
+    "src/components/LyricsView.tsx",
+    "src/views/SettingsView.tsx"
+  ],
+  "가사": [
+    "src/components/LyricsView.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "가사 글자 기본 크기": [
+    "src/i18n/rust.ts"
+  ],
+  "가사 글자 작게": [
+    "src/components/LyricsView.tsx",
+    "src/i18n/rust.ts",
+    "src/views/SettingsView.tsx"
+  ],
+  "가사 글자 크게": [
+    "src/components/LyricsView.tsx",
+    "src/i18n/rust.ts",
+    "src/views/SettingsView.tsx"
+  ],
+  "가사 글자 크기": [
+    "src/components/LyricsView.tsx",
+    "src/views/SettingsView.tsx"
+  ],
+  "가사 닫기": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사 보기": [
+    "src/components/LyricsView.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "가사 싱크": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사 제공: {source}": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사 제공: {source} (시간 정보 없음)": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사 화면에서 ⌘= / ⌘- / ⌘0(윈도우는 Ctrl)으로도 바꿀 수 있습니다.": [
+    "src/views/SettingsView.tsx"
+  ],
+  "가사가 늦을 때": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사가 빠를 때": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사를 0.5초 늦게": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사를 0.5초 빠르게": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사를 불러오지 못했습니다. 인터넷 연결을 확인하세요.": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가사를 찾는 중…": [
+    "src/components/LyricsView.tsx"
+  ],
+  "가장 많이 들은 아티스트": [
+    "src/views/StatsView.tsx"
+  ],
+  "검색": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "검색 결과 종류": [
+    "src/views/SearchView.tsx"
+  ],
+  "검색창으로 가기": [
+    "src/views/SearchView.tsx"
+  ],
+  "계정과 연결": [
+    "src/views/SettingsView.tsx"
+  ],
+  "고음 강조": [
+    "src/lib/eq.ts"
+  ],
+  "곡 끝": [
+    "src/state/sleep.ts"
+  ],
+  "곡 옆의 하트를 누르면 여기에 모입니다.": [
+    "src/views/CollectionView.tsx"
+  ],
+  "곡을 고르면 여기에서 재생됩니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "곡을 재생하면 가사가 여기에 나옵니다.": [
+    "src/components/LyricsView.tsx"
+  ],
+  "곡을 재생하면 다음에 나올 곡이 여기에 쌓입니다.": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "곡을 재생하면 댓글이 여기에 나옵니다.": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "곡을 재생하면 비슷한 곡과 아티스트가 여기에 나옵니다.": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "곡을 재생하면 스펙트럼이 움직입니다": [
+    "src/components/EqPanel.tsx"
+  ],
+  "곡의 ⋯ 메뉴에서 \"플레이리스트에 추가\"를 고르세요.": [
+    "src/views/CollectionView.tsx"
+  ],
+  "곡이 바뀌면 알림": [
+    "src/views/SettingsView.tsx"
+  ],
+  "곡이 없습니다": [
+    "src/views/CollectionView.tsx"
+  ],
+  "공개": [
+    "src/components/Dialogs.tsx"
+  ],
+  "공개 범위": [
+    "src/components/Dialogs.tsx"
+  ],
+  "공개 플레이리스트만 됩니다. 곡 목록은 Spotify 공개 임베드 페이지에서 읽습니다.": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "관련 항목": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "관련 항목을 불러오지 못했습니다: {error}": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "광고": [
+    "src/components/LyricsView.tsx",
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "광고가 끝나면 가사를 보여 드립니다.": [
+    "src/components/LyricsView.tsx"
+  ],
+  "구독": [
+    "src/views/ArtistView.tsx"
+  ],
+  "구독 중": [
+    "src/views/ArtistView.tsx"
+  ],
+  "구독@보관함 탭": [
+    "src/views/LibraryView.tsx"
+  ],
+  "구독을 바꾸지 못했습니다": [
+    "src/views/ArtistView.tsx"
+  ],
+  "구독한 아티스트가 없습니다": [
+    "src/views/LibraryView.tsx"
+  ],
+  "국내 음원": [
+    "src/lib/charts/index.ts"
+  ],
+  "국내종합": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "국악": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "그 곡으로 가지 못했습니다": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "글로벌": [
+    "src/lib/spotify.ts"
+  ],
+  "기간": [
+    "src/views/StatsView.tsx"
+  ],
+  "기록 지우기": [
+    "src/views/StatsView.tsx"
+  ],
+  "기본": [
+    "src/lib/eq.ts"
+  ],
+  "기본 크기로": [
+    "src/views/SettingsView.tsx"
+  ],
+  "기본 크기로 (⌘0)": [
+    "src/components/LyricsView.tsx"
+  ],
+  "기타 가리기": [
+    "src/i18n/rust.ts"
+  ],
+  "끌어서 순서 바꾸기": [
+    "src/components/TrackList.tsx"
+  ],
+  "나만 볼 수 있습니다": [
+    "src/components/Dialogs.tsx"
+  ],
+  "나중에": [
+    "src/components/UpdateBanner.tsx"
+  ],
+  "날짜별 들은 시간": [
+    "src/views/StatsView.tsx"
+  ],
+  "남색 바탕에 청록 강조": [
+    "src/lib/theme.ts"
+  ],
+  "내 음악": [
+    "src/components/Sidebar.tsx"
+  ],
+  "내 재생목록 업데이트": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "내 재생목록과 같음": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "내 YouTube Music에 '{title} (Spotify)' 재생목록을 맞췄습니다": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "내 YouTube Music에 저장": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "내려받기": [
+    "src/components/UpdateBanner.tsx"
+  ],
+  "내려받아 설치하면 새 기능과 고친 점을 쓸 수 있습니다.": [
+    "src/components/UpdateBanner.tsx"
+  ],
+  "노래": [
+    "src/components/Cards.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "노래 제목, 아티스트, 앨범 이름으로 찾아보세요.": [
+    "src/views/SearchView.tsx"
+  ],
+  "노래, 앨범, 아티스트 검색": [
+    "src/components/TopBar.tsx"
+  ],
+  "노래·영상": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "노래로 바꾸지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "노을": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "누구나 검색해서 볼 수 있습니다": [
+    "src/components/Dialogs.tsx"
+  ],
+  "뉴에이지": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "늘 위에 두기": [
+    "src/components/MiniApp.tsx"
+  ],
+  "늘 위에 두지 않기": [
+    "src/components/MiniApp.tsx"
+  ],
+  "다른 계정으로 로그인": [
+    "src/components/Sidebar.tsx",
+    "src/views/SettingsView.tsx"
+  ],
+  "다른 곡 보기": [
+    "src/views/CollectionView.tsx"
+  ],
+  "다른 앱을 쓰는 중에도 됩니다.": [
+    "src/views/SettingsView.tsx"
+  ],
+  "다른 앱이 쓰고 있어 등록하지 못했습니다": [
+    "src/views/SettingsView.tsx"
+  ],
+  "다른 Spotify 플레이리스트도 들을 수 있습니다": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "다시 시도": [
+    "src/views/common.tsx"
+  ],
+  "다시 연결": [
+    "src/components/LoginGate.tsx"
+  ],
+  "다시 찾기": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "다음": [
+    "src/components/Cards.tsx"
+  ],
+  "다음 곡": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/components/QueuePanel.tsx",
+    "src/i18n/rust.ts",
+    "src/state/prefs.ts"
+  ],
+  "다음 곡으로 가지 못했습니다": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "다음 트랙": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "다음에 재생": [
+    "src/components/menus.ts",
+    "src/views/CollectionView.tsx"
+  ],
+  "다크": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "답글 {n}": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "대기열": [
+    "src/components/PlayerBar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "대기열 끝에 추가": [
+    "src/components/menus.ts",
+    "src/views/CollectionView.tsx"
+  ],
+  "대기열 만드는 중…": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "대기열 섞기": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "대기열에 추가하지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "대기열을 만들지 못했습니다": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "대기열을 읽지 못했습니다.": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "댄스": [
+    "src/lib/charts/melonExtra.ts",
+    "src/lib/eq.ts"
+  ],
+  "댓글": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "댓글 더 보기": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "댓글을 더 불러오지 못했습니다": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "댓글을 불러오지 못했습니다: {error}": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "댓글이 없거나 댓글을 막은 곡입니다.": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "더 보기": [
+    "src/components/TrackList.tsx",
+    "src/views/CollectionView.tsx",
+    "src/views/SpotifyView.tsx"
+  ],
+  "더 불러오는 중…": [
+    "src/views/common.tsx"
+  ],
+  "둘러보기": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/rust.ts",
+    "src/views/ExploreView.tsx"
+  ],
+  "뒤로": [
+    "src/components/TopBar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "들은 시간": [
+    "src/views/StatsView.tsx"
+  ],
+  "따뜻한 갈색 바탕에 주황·산호 강조": [
+    "src/lib/theme.ts"
+  ],
+  "라디오": [
+    "src/views/ArtistView.tsx"
+  ],
+  "라디오를 시작": [
+    "src/views/ArtistView.tsx"
+  ],
+  "라이트": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "랩/힙합": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "로그인 창을 열지 못했습니다": [
+    "src/components/LoginGate.tsx"
+  ],
+  "로그인 화면 열기": [
+    "src/components/LoginGate.tsx"
+  ],
+  "로그인이 만료됐습니다. 다시 로그인하세요.": [
+    "src/lib/tauri.ts"
+  ],
+  "로그인하지 않았습니다.": [
+    "src/views/SettingsView.tsx"
+  ],
+  "록": [
+    "src/lib/eq.ts"
+  ],
+  "록/메탈": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "링크 복사": [
+    "src/components/menus.ts"
+  ],
+  "링크가 있는 사람만 볼 수 있습니다": [
+    "src/components/Dialogs.tsx"
+  ],
+  "링크를 복사하지 못했습니다": [
+    "src/components/menus.ts"
+  ],
+  "링크를 복사했습니다": [
+    "src/components/menus.ts"
+  ],
+  "만든 플레이리스트가 없습니다": [
+    "src/components/menus.ts"
+  ],
+  "만들고 {n}곡 추가": [
+    "src/components/Dialogs.tsx"
+  ],
+  "만들기": [
+    "src/components/Dialogs.tsx"
+  ],
+  "많이 들은 곡": [
+    "src/views/StatsView.tsx"
+  ],
+  "많이 들은 아티스트": [
+    "src/views/StatsView.tsx"
+  ],
+  "맥·윈도우 화면 모드를 따라 다크와 라이트를 바꿉니다": [
+    "src/lib/theme.ts"
+  ],
+  "메뉴와 화면 글자를 이 언어로 보여 줍니다. YouTube Music에서 받아 오는 곡·묶음 이름은 계정 언어를 따릅니다.": [
+    "src/views/SettingsView.tsx"
+  ],
+  "멜론": [
+    "src/lib/charts/index.ts"
+  ],
+  "멜론 {genre}": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "멜론 {period}": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "멜론 {period} TOP 100": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "멜론 실시간 차트, 매시간 갱신": [
+    "src/lib/spotify.ts"
+  ],
+  "멜론 장르": [
+    "src/lib/charts/index.ts"
+  ],
+  "멜론 차트": [
+    "src/lib/spotify.ts"
+  ],
+  "멜론 TOP 100": [
+    "src/lib/charts/index.ts",
+    "src/lib/melon.ts"
+  ],
+  "멜론 TOP 100과 Spotify 20개 나라 Top 50을 YouTube Music으로": [
+    "src/views/HomeView.tsx"
+  ],
+  "멜론·지니·Spotify·빌보드 등을 YouTube Music으로": [
+    "src/views/LibraryView.tsx"
+  ],
+  "모노": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "모두 보기": [
+    "src/i18n/rust.ts"
+  ],
+  "모두 보기@목록": [
+    "src/components/Cards.tsx"
+  ],
+  "목록": [
+    "src/views/BrowseView.tsx"
+  ],
+  "목록을 끝까지 불러온 뒤 맨 끝으로 옮길 수 있습니다": [
+    "src/views/CollectionView.tsx"
+  ],
+  "목록을 불러오지 못했습니다": [
+    "src/components/ContextMenu.tsx"
+  ],
+  "무엇을 듣고 싶으세요?": [
+    "src/views/SearchView.tsx"
+  ],
+  "뮤직비디오 음원": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "미니 플레이어": [
+    "src/components/PlayerBar.tsx",
+    "src/i18n/rust.ts",
+    "src/state/prefs.ts"
+  ],
+  "미니 플레이어 (⌃⌥M)": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "미니 플레이어 열기": [
+    "src/views/SettingsView.tsx"
+  ],
+  "미드나잇": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "믹스 시작": [
+    "src/views/CollectionView.tsx"
+  ],
+  "믹스를 시작": [
+    "src/components/menus.ts",
+    "src/views/CollectionView.tsx"
+  ],
+  "반복 안 함": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "반복: {mode}": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "반복을 바꾸지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "발라드": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "밝은 곳에서 보기 편한 흰 바탕": [
+    "src/lib/theme.ts"
+  ],
+  "밤에 듣기 좋은 짙은 자주색 (기본)": [
+    "src/lib/theme.ts"
+  ],
+  "벅스": [
+    "src/lib/charts/index.ts",
+    "src/lib/lyrics.ts"
+  ],
+  "벅스 실시간": [
+    "src/lib/charts/bugs.ts"
+  ],
+  "벅스 실시간 차트": [
+    "src/lib/charts/bugs.ts",
+    "src/lib/charts/index.ts",
+    "src/lib/spotify.ts"
+  ],
+  "벚꽃": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "보관함": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/index.ts",
+    "src/i18n/rust.ts",
+    "src/views/LibraryView.tsx"
+  ],
+  "보관함 곡의 아티스트가 없습니다": [
+    "src/views/LibraryView.tsx"
+  ],
+  "보관함에 있음": [
+    "src/views/CollectionView.tsx"
+  ],
+  "보관함에 저장": [
+    "src/views/CollectionView.tsx"
+  ],
+  "보관함에 저장한 앨범이 없습니다": [
+    "src/views/LibraryView.tsx"
+  ],
+  "보관함을 바꾸지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "보기": [
+    "src/i18n/rust.ts"
+  ],
+  "보여 줄 항목이 없습니다": [
+    "src/views/BrowseView.tsx"
+  ],
+  "보컬": [
+    "src/lib/eq.ts"
+  ],
+  "복사하기": [
+    "src/i18n/rust.ts"
+  ],
+  "분위기 및 장르": [
+    "src/views/ExploreView.tsx"
+  ],
+  "불러오는 중…": [
+    "src/components/ContextMenu.tsx",
+    "src/components/QueuePanel.tsx",
+    "src/views/common.tsx"
+  ],
+  "붙여넣기": [
+    "src/i18n/rust.ts"
+  ],
+  "비공개": [
+    "src/components/Dialogs.tsx"
+  ],
+  "비슷한 곡: {title}": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "빌보드": [
+    "src/lib/charts/index.ts"
+  ],
+  "빌보드 차트, 매주 갱신": [
+    "src/lib/spotify.ts"
+  ],
+  "빌보드 Hot 100": [
+    "src/lib/charts/billboard.ts",
+    "src/lib/charts/index.ts"
+  ],
+  "사용자 지정": [
+    "src/components/EqPanel.tsx"
+  ],
+  "삭제": [
+    "src/components/Sidebar.tsx",
+    "src/views/CollectionView.tsx"
+  ],
+  "새 버전 {version}이 나왔습니다": [
+    "src/components/UpdateBanner.tsx"
+  ],
+  "새 플레이리스트": [
+    "src/components/Dialogs.tsx",
+    "src/components/Sidebar.tsx",
+    "src/views/LibraryView.tsx"
+  ],
+  "새 플레이리스트…": [
+    "src/components/menus.ts"
+  ],
+  "새 플레이리스트를 만들거나, 마음에 드는 앨범·플레이리스트의 \"보관함에 저장\"을 누르세요.": [
+    "src/views/LibraryView.tsx"
+  ],
+  "새로 고침": [
+    "src/views/LibraryView.tsx"
+  ],
+  "색을 뺀 검정·회색": [
+    "src/lib/theme.ts"
+  ],
+  "서비스": [
+    "src/i18n/rust.ts"
+  ],
+  "섞지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "설명": [
+    "src/components/Dialogs.tsx"
+  ],
+  "설정": [
+    "src/components/Sidebar.tsx",
+    "src/views/SettingsView.tsx"
+  ],
+  "설정 화면": [
+    "src/i18n/rust.ts"
+  ],
+  "설정…": [
+    "src/i18n/rust.ts"
+  ],
+  "셔플": [
+    "src/views/CollectionView.tsx"
+  ],
+  "셔플 재생": [
+    "src/components/menus.ts",
+    "src/views/ArtistView.tsx",
+    "src/views/CollectionView.tsx"
+  ],
+  "소개": [
+    "src/views/ArtistView.tsx"
+  ],
+  "소리 켜기": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTM Desktop을 허용한 뒤 다시 켜세요.": [
+    "src/lib/eq.ts"
+  ],
+  "수면 타이머": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "수면 타이머 {left}": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "수면 타이머 끄기": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "수면 타이머로 재생을 멈췄습니다": [
+    "src/state/sleep.ts"
+  ],
+  "수면 타이머를 껐습니다": [
+    "src/state/sleep.ts"
+  ],
+  "순서를 바꾸지 못했습니다": [
+    "src/views/CollectionView.tsx"
+  ],
+  "숲": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "스펙트럼을 켜지 못했습니다. 곡을 재생한 뒤 다시 열어 보세요.": [
+    "src/lib/eq.ts"
+  ],
+  "슬라이더를 두 번 누르면 0으로 돌아갑니다. 올린 만큼 프리앰프를 낮추면 소리가 깨지지 않습니다.": [
+    "src/components/EqPanel.tsx"
+  ],
+  "시스템 설정": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "시스템 설정 따르기": [
+    "src/views/SettingsView.tsx"
+  ],
+  "실시간 스펙트럼": [
+    "src/components/EqPanel.tsx"
+  ],
+  "실행 복귀": [
+    "src/i18n/rust.ts"
+  ],
+  "실행 취소": [
+    "src/i18n/rust.ts"
+  ],
+  "싱글": [
+    "src/components/Cards.tsx"
+  ],
+  "싱크": [
+    "src/components/LyricsView.tsx"
+  ],
+  "싱크 원래대로": [
+    "src/components/LyricsView.tsx"
+  ],
+  "써클차트": [
+    "src/lib/charts/index.ts"
+  ],
+  "써클차트 디지털": [
+    "src/lib/charts/circle.ts",
+    "src/lib/charts/index.ts"
+  ],
+  "써클차트 디지털, 매주 갱신": [
+    "src/lib/spotify.ts"
+  ],
+  "써클차트 주간": [
+    "src/lib/charts/circle.ts"
+  ],
+  "아직 기록이 없습니다": [
+    "src/views/StatsView.tsx"
+  ],
+  "아직 좋아요 표시한 곡이 없습니다": [
+    "src/views/CollectionView.tsx"
+  ],
+  "아티스트": [
+    "src/components/Cards.tsx"
+  ],
+  "아티스트@보관함 탭": [
+    "src/views/LibraryView.tsx"
+  ],
+  "앞으로": [
+    "src/components/TopBar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "앨범": [
+    "src/components/Cards.tsx",
+    "src/views/CollectionView.tsx"
+  ],
+  "앨범 색": [
+    "src/i18n/rust.ts",
+    "src/lib/theme.ts"
+  ],
+  "앨범 표지": [
+    "src/components/LyricsView.tsx"
+  ],
+  "앨범@보관함 탭": [
+    "src/views/LibraryView.tsx"
+  ],
+  "앨범으로 이동": [
+    "src/components/menus.ts"
+  ],
+  "앱 창을 보고 있지 않을 때만 알립니다.": [
+    "src/views/SettingsView.tsx"
+  ],
+  "어린이/태교": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "어쿠스틱": [
+    "src/lib/eq.ts"
+  ],
+  "언어": [
+    "src/views/SettingsView.tsx"
+  ],
+  "에피소드": [
+    "src/components/Cards.tsx"
+  ],
+  "연분홍 라이트": [
+    "src/lib/theme.ts"
+  ],
+  "열기": [
+    "src/components/menus.ts",
+    "src/views/SpotifyView.tsx"
+  ],
+  "영상": [
+    "src/components/Cards.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/components/TrackList.tsx"
+  ],
+  "영상 보기": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "영상 창 닫기": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "영상 창을 늘 위에": [
+    "src/views/SettingsView.tsx"
+  ],
+  "영상 창을 열지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "영상으로 바꾸지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "예: 출근길": [
+    "src/components/Dialogs.tsx"
+  ],
+  "오려두기": [
+    "src/i18n/rust.ts"
+  ],
+  "월간": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "월드뮤직": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "윈도우": [
+    "src/i18n/rust.ts"
+  ],
+  "음량": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "음량을 바꾸지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "음소거": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "음소거를 바꾸지 못했습니다": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "음악은 내 YouTube Music 계정으로 재생되고, 좋아요와 플레이리스트도 그 계정에 저장됩니다. 로그인은 Google 화면에서 하며, 이 앱은 비밀번호를 보거나 저장하지 않습니다.": [
+    "src/components/LoginGate.tsx"
+  ],
+  "이 곡으로 믹스 시작": [
+    "src/components/menus.ts"
+  ],
+  "이 곡으로 믹스 재생": [
+    "src/views/StatsView.tsx"
+  ],
+  "이 곡은 관련 항목이 없습니다.": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "이 곡은 지금 계정으로 재생할 수 없습니다": [
+    "src/state/library.ts"
+  ],
+  "이 곡의 가사를 찾지 못했습니다.": [
+    "src/components/LyricsView.tsx"
+  ],
+  "이 기기에 남은 청취 기록을 모두 지웁니다. YouTube Music 계정의 재생 기록은 그대로입니다.": [
+    "src/views/StatsView.tsx"
+  ],
+  "이 기기에서 많이 들은 곡·아티스트": [
+    "src/views/LibraryView.tsx"
+  ],
+  "이 밤 그날의 반딧불을": [
+    "src/views/SettingsView.tsx"
+  ],
+  "이 앱이 읽지 않는 사이트입니다.": [
+    "src/lib/spotify.ts"
+  ],
+  "이 재생목록에 넣기": [
+    "src/views/CollectionView.tsx"
+  ],
+  "이 플레이리스트에서 빼기": [
+    "src/components/menus.ts"
+  ],
+  "이 환경에서는 이퀄라이저를 쓸 수 없습니다(macOS 14.2 이상 필요).": [
+    "src/lib/eq.ts"
+  ],
+  "이 PC에서는 이퀄라이저가 소리를 끊어 원래대로 되돌렸습니다. YouTube Music을 다시 불러옵니다.": [
+    "src/lib/eq.ts"
+  ],
+  "이동": [
+    "src/i18n/rust.ts"
+  ],
+  "이동하지 못했습니다": [
+    "src/components/LyricsView.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "이름": [
+    "src/components/Dialogs.tsx"
+  ],
+  "이어서 자동 재생": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "이전": [
+    "src/components/Cards.tsx"
+  ],
+  "이전 곡": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/i18n/rust.ts",
+    "src/state/prefs.ts"
+  ],
+  "이전 곡으로 가지 못했습니다": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "이퀄라이저": [
+    "src/components/EqPanel.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "이퀄라이저 (켜짐)": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "이퀄라이저 끄기": [
+    "src/components/EqPanel.tsx"
+  ],
+  "이퀄라이저 닫기": [
+    "src/components/EqPanel.tsx"
+  ],
+  "이퀄라이저 켜기": [
+    "src/components/EqPanel.tsx"
+  ],
+  "이퀄라이저를 켜지 못했습니다 ({reason}).": [
+    "src/lib/eq.ts"
+  ],
+  "인기 차트": [
+    "src/views/HomeView.tsx"
+  ],
+  "인디음악": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "일간": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "일렉트로니카": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "일부 공개": [
+    "src/components/Dialogs.tsx"
+  ],
+  "일시정지": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "자동 플레이리스트": [
+    "src/views/CollectionView.tsx"
+  ],
+  "작게 (⌘-)": [
+    "src/components/LyricsView.tsx"
+  ],
+  "작은 음량": [
+    "src/lib/eq.ts"
+  ],
+  "장르종합": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "재생": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/components/menus.ts",
+    "src/i18n/rust.ts",
+    "src/views/CollectionView.tsx"
+  ],
+  "재생 바": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "재생 위치": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "재생 중": [
+    "src/components/TrackList.tsx"
+  ],
+  "재생 중인 곡 없음": [
+    "src/components/MiniApp.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "재생 중인 곡이 없습니다": [
+    "src/components/LyricsView.tsx"
+  ],
+  "재생 편의": [
+    "src/views/SettingsView.tsx"
+  ],
+  "재생@메뉴": [
+    "src/i18n/rust.ts"
+  ],
+  "재생@횟수": [
+    "src/views/StatsView.tsx"
+  ],
+  "재생/일시정지": [
+    "src/i18n/rust.ts",
+    "src/state/prefs.ts"
+  ],
+  "재생목록": [
+    "src/views/LibraryView.tsx"
+  ],
+  "재생목록으로 저장하지 못했습니다": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "재생을 바꾸지 못했습니다": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx"
+  ],
+  "재생하지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "재즈": [
+    "src/lib/charts/melonExtra.ts",
+    "src/lib/eq.ts"
+  ],
+  "저음 강조": [
+    "src/lib/eq.ts"
+  ],
+  "저장": [
+    "src/components/Dialogs.tsx"
+  ],
+  "저장하는 중…": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "저장한 플레이리스트가 없습니다": [
+    "src/views/LibraryView.tsx"
+  ],
+  "전 세계": [
+    "src/views/ExploreView.tsx"
+  ],
+  "전역 단축키": [
+    "src/views/SettingsView.tsx"
+  ],
+  "전체": [
+    "src/views/SearchView.tsx",
+    "src/views/StatsView.tsx"
+  ],
+  "전체 반복": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "전체 선택": [
+    "src/i18n/rust.ts"
+  ],
+  "전체 화면": [
+    "src/i18n/rust.ts"
+  ],
+  "접기": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "정보 바꾸기…": [
+    "src/views/CollectionView.tsx"
+  ],
+  "종교음악": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "종료": [
+    "src/i18n/rust.ts"
+  ],
+  "좋아요": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/components/TrackList.tsx",
+    "src/components/menus.ts",
+    "src/i18n/rust.ts",
+    "src/state/prefs.ts",
+    "src/views/SpotifyView.tsx"
+  ],
+  "좋아요 취소": [
+    "src/components/MiniApp.tsx",
+    "src/components/PlayerBar.tsx",
+    "src/components/TrackList.tsx",
+    "src/components/menus.ts",
+    "src/views/SpotifyView.tsx"
+  ],
+  "좋아요 표시한 곡": [
+    "src/components/Sidebar.tsx",
+    "src/views/CollectionView.tsx",
+    "src/views/LibraryView.tsx"
+  ],
+  "좋아요를 바꾸지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "주 메뉴": [
+    "src/components/Sidebar.tsx"
+  ],
+  "주간": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "지금 곡": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "지금 곡이 끝나면": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "지금 곡이 끝나면 멈춥니다": [
+    "src/state/sleep.ts"
+  ],
+  "지금 듣는 곡의 표지 색을 따라 바뀝니다": [
+    "src/lib/theme.ts"
+  ],
+  "지금 재생": [
+    "src/components/LyricsView.tsx"
+  ],
+  "지금 재생 중": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "지니": [
+    "src/lib/charts/index.ts"
+  ],
+  "지니 실시간": [
+    "src/lib/charts/genie.ts"
+  ],
+  "지니 차트, 매시간 갱신": [
+    "src/lib/spotify.ts"
+  ],
+  "지니 TOP 200": [
+    "src/lib/charts/genie.ts",
+    "src/lib/charts/index.ts"
+  ],
+  "지우기": [
+    "src/views/StatsView.tsx"
+  ],
+  "직접 검색": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "짙은 초록 바탕에 연두 강조": [
+    "src/lib/theme.ts"
+  ],
+  "차트": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/rust.ts",
+    "src/lib/spotify.ts",
+    "src/views/LibraryView.tsx",
+    "src/views/SpotifyView.tsx"
+  ],
+  "차트 {n}곡을 차례로 재생합니다": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "차트 고르기": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "차트 곡 목록을 가져오는 중…": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "차트 나라": [
+    "src/views/ExploreView.tsx"
+  ],
+  "차트 바꾸기": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "차트 사이트에 연결하지 못했습니다. 인터넷 연결을 확인하세요.": [
+    "src/lib/spotify.ts"
+  ],
+  "창 닫기": [
+    "src/i18n/rust.ts"
+  ],
+  "창 보이기": [
+    "src/i18n/rust.ts"
+  ],
+  "찾는 중": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "처리 중…": [
+    "src/components/Dialogs.tsx"
+  ],
+  "처음 실행하면 몇 초 걸립니다.": [
+    "src/components/LoginGate.tsx"
+  ],
+  "철자를 확인하거나 다른 단어로 찾아보세요.": [
+    "src/views/SearchView.tsx"
+  ],
+  "청취 기록 지우기": [
+    "src/views/StatsView.tsx"
+  ],
+  "청취 통계": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/rust.ts",
+    "src/views/LibraryView.tsx",
+    "src/views/StatsView.tsx"
+  ],
+  "최근 1년": [
+    "src/views/StatsView.tsx"
+  ],
+  "최근 30일": [
+    "src/views/StatsView.tsx"
+  ],
+  "최근 7일": [
+    "src/views/StatsView.tsx"
+  ],
+  "최근 재생": [
+    "src/views/LibraryView.tsx"
+  ],
+  "최근에 들은 곡이 없습니다": [
+    "src/views/LibraryView.tsx"
+  ],
+  "최상위 결과": [
+    "src/views/SearchView.tsx"
+  ],
+  "최소화": [
+    "src/i18n/rust.ts"
+  ],
+  "최신 음악": [
+    "src/views/ExploreView.tsx"
+  ],
+  "추천 곡": [
+    "src/views/CollectionView.tsx"
+  ],
+  "출력 장치에서 오디오 처리를 시작하지 못해 원래 소리로 되돌렸습니다. 다시 켜 보세요.": [
+    "src/lib/eq.ts"
+  ],
+  "취소": [
+    "src/components/Dialogs.tsx"
+  ],
+  "크게 (⌘=)": [
+    "src/components/LyricsView.tsx"
+  ],
+  "크게 볼 것": [
+    "src/components/LyricsView.tsx"
+  ],
+  "큰 창 열기": [
+    "src/components/MiniApp.tsx"
+  ],
+  "큰 창에서 곡을 고르세요": [
+    "src/components/MiniApp.tsx"
+  ],
+  "클래식": [
+    "src/lib/eq.ts"
+  ],
+  "테마": [
+    "src/i18n/rust.ts",
+    "src/views/SettingsView.tsx"
+  ],
+  "트로트": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "팟캐스트": [
+    "src/components/Cards.tsx"
+  ],
+  "패널 닫기": [
+    "src/components/QueuePanel.tsx"
+  ],
+  "편집": [
+    "src/i18n/rust.ts"
+  ],
+  "포크/블루스": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "포크/블루스/컨트리": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "프로필": [
+    "src/components/Cards.tsx"
+  ],
+  "프리셋": [
+    "src/components/EqPanel.tsx"
+  ],
+  "프리앰프": [
+    "src/components/EqPanel.tsx"
+  ],
+  "프리앰프 (dB)": [
+    "src/components/EqPanel.tsx"
+  ],
+  "플레이리스트": [
+    "src/components/Cards.tsx",
+    "src/views/CollectionView.tsx"
+  ],
+  "플레이리스트 삭제": [
+    "src/components/Sidebar.tsx",
+    "src/views/CollectionView.tsx"
+  ],
+  "플레이리스트 삭제…": [
+    "src/components/Sidebar.tsx",
+    "src/views/CollectionView.tsx"
+  ],
+  "플레이리스트 정보 바꾸기": [
+    "src/components/Dialogs.tsx"
+  ],
+  "플레이리스트 정보를 바꾸지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "플레이리스트 정보를 바꿨습니다": [
+    "src/state/library.ts"
+  ],
+  "플레이리스트@목록 제목": [
+    "src/views/LibraryView.tsx"
+  ],
+  "플레이리스트를 만들지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "플레이리스트를 만들지 못했습니다.": [
+    "src/lib/ytm/client.ts"
+  ],
+  "플레이리스트를 불러오는 중…": [
+    "src/components/Sidebar.tsx"
+  ],
+  "플레이리스트를 삭제하지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "플레이리스트에 추가": [
+    "src/components/menus.ts"
+  ],
+  "플레이리스트에 추가하지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "플레이리스트에서 빼지 못했습니다": [
+    "src/state/library.ts"
+  ],
+  "하트를 누른 곡": [
+    "src/views/LibraryView.tsx"
+  ],
+  "한 곡 반복": [
+    "src/components/PlayerBar.tsx"
+  ],
+  "해외": [
+    "src/lib/charts/index.ts"
+  ],
+  "해외 {genre}": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "해외종합": [
+    "src/lib/charts/melonExtra.ts"
+  ],
+  "홈": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/rust.ts",
+    "src/views/HomeView.tsx"
+  ],
+  "확대/축소": [
+    "src/i18n/rust.ts"
+  ],
+  "Apple Music {country} 인기곡": [
+    "src/lib/charts/apple.ts",
+    "src/lib/charts/index.ts"
+  ],
+  "Apple Music 차트, 매일 갱신": [
+    "src/lib/spotify.ts"
+  ],
+  "Billboard 주간": [
+    "src/lib/charts/billboard.ts"
+  ],
+  "FLO 차트": [
+    "src/lib/charts/flo.ts",
+    "src/lib/charts/index.ts",
+    "src/lib/spotify.ts"
+  ],
+  "FLO 최근 24시간": [
+    "src/lib/charts/flo.ts"
+  ],
+  "Google 계정으로 로그인": [
+    "src/components/LoginGate.tsx",
+    "src/i18n/rust.ts"
+  ],
+  "Spotify 차트, 매일 갱신": [
+    "src/lib/spotify.ts"
+  ],
+  "Spotify 페이지 형식이 바뀌어 곡 목록을 읽지 못했습니다.": [
+    "src/lib/spotify.ts"
+  ],
+  "Spotify 플레이리스트": [
+    "src/lib/spotify.ts"
+  ],
+  "Spotify 플레이리스트 링크가 아닙니다.": [
+    "src/lib/spotify.ts"
+  ],
+  "Spotify 플레이리스트 링크를 붙여 넣으세요 (open.spotify.com/playlist/…)": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "Spotify에 연결하지 못했습니다. 인터넷 연결을 확인하세요.": [
+    "src/lib/spotify.ts"
+  ],
+  "Spotify에서 이 플레이리스트를 찾지 못했습니다(비공개일 수 있습니다).": [
+    "src/lib/spotify.ts"
+  ],
+  "VIBE 국내 급상승": [
+    "src/lib/charts/vibe.ts"
+  ],
+  "VIBE 오늘 Top 100": [
+    "src/lib/charts/vibe.ts"
+  ],
+  "VIBE 차트": [
+    "src/lib/spotify.ts"
+  ],
+  "VIBE 해외 급상승": [
+    "src/lib/charts/vibe.ts"
+  ],
+  "YouTube Music — 로그인·웹 화면": [
+    "src/i18n/rust.ts"
+  ],
+  "YouTube Music 계정으로 로그인하세요": [
+    "src/components/LoginGate.tsx"
+  ],
+  "YouTube Music 계정으로 쓰는 데스크톱 음악 플레이어 (비공식)": [
+    "src/i18n/rust.ts"
+  ],
+  "YouTube Music 계정의 재생 기록이라 다른 기기에서 들은 곡도 나옵니다.": [
+    "src/views/LibraryView.tsx"
+  ],
+  "YouTube Music 다시 연결": [
+    "src/components/Sidebar.tsx",
+    "src/views/SettingsView.tsx"
+  ],
+  "YouTube Music 서버 오류입니다. 잠시 뒤 다시 시도하세요.": [
+    "src/lib/tauri.ts"
+  ],
+  "YouTube Music 연결을 기다리는 중입니다. 잠시 뒤 다시 시도하세요.": [
+    "src/lib/tauri.ts"
+  ],
+  "YouTube Music 웹 화면 열기": [
+    "src/components/Sidebar.tsx",
+    "src/i18n/rust.ts",
+    "src/views/SettingsView.tsx"
+  ],
+  "YouTube Music 차트": [
+    "src/views/ExploreView.tsx"
+  ],
+  "YouTube Music 페이지를 다시 불러오는 중이었습니다. 다시 시도하세요.": [
+    "src/lib/tauri.ts"
+  ],
+  "YouTube Music에 로그인해야 합니다.": [
+    "src/lib/tauri.ts"
+  ],
+  "YouTube Music에 연결하는 중…": [
+    "src/components/LoginGate.tsx"
+  ],
+  "YouTube Music에서 {n}곡을 찾았습니다, {missing}곡은 찾지 못했습니다.": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "YouTube Music에서 {n}곡을 찾았습니다.": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "YouTube Music에서 같은 곡을 찾는 중… {done}/{total}": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "YouTube Music에서 다시 찾기": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "YouTube Music에서 못 찾음": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "YouTube Music으로 듣기": [
+    "src/views/SpotifyView.tsx"
+  ],
+  "YouTube Music이 요청을 거절했습니다 ({code}).": [
+    "src/lib/tauri.ts"
+  ],
+  "YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요.": [
+    "src/lib/tauri.ts"
+  ],
+  "YTM 미니 플레이어": [
+    "src/i18n/rust.ts"
+  ],
+  "YTM 영상": [
+    "src/i18n/rust.ts"
+  ],
+  "YTM Desktop 가리기": [
+    "src/i18n/rust.ts"
+  ],
+  "YTM Desktop 종료": [
+    "src/i18n/rust.ts"
+  ],
+  "YTM Desktop에 관하여": [
+    "src/i18n/rust.ts"
+  ]
+}

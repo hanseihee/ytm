@@ -1,4 +1,5 @@
 // YouTube Music 기능 모음. 요청은 숨은 엔진 창(로그인된 music.youtube.com) 안에서 나간다.
+import { t } from '../../i18n';
 import { engineCall } from '../tauri';
 import {
   parseAccount,
@@ -145,7 +146,7 @@ export async function createPlaylist(title: string, description: string, privacy
     privacyStatus: privacy,
     ...(videoIds.length ? { videoIds } : {}),
   });
-  if (!res.playlistId) throw new Error('플레이리스트를 만들지 못했습니다.');
+  if (!res.playlistId) throw new Error(t('플레이리스트를 만들지 못했습니다.'));
   return res.playlistId;
 }
 

@@ -36,6 +36,8 @@ Both apps share the same code for parsing YouTube Music responses, matching char
   - Black bars baked into cinema-ratio music videos are detected and cropped.
 - **Lyrics**: time-synced lyrics (LRCLIB and Bugs synced lyrics; Bugs first for Korean songs) highlight the current line, and clicking a line seeks to it. If neither has them, YouTube Music lyrics (no timing) are shown. Text size 70–175% (A−/A+ or ⌘= ⌘- ⌘0), per-song sync adjustment in 0.5 s steps (remembered). On desktop you can choose to show the lyrics or the album art large. iOS can translate lyrics with the system translator.
 - **Listening stats**: from songs played on this device for over 30 seconds (or over half of a short song): listening time, a daily bar chart, and top songs and artists (7 days · 30 days · 1 year · all time).
+- **Languages**: Korean, English, Japanese, Simplified Chinese, Traditional Chinese, Spanish, Portuguese (Brazil), French, German, and Indonesian — chosen in Settings (or follow the system), applied right away including the macOS menus and tray. Song and shelf names from YouTube Music follow your account language.
+- **Update notice** (desktop): on launch the app checks the latest GitHub release and offers to open the download page when a newer version is out ("Later" hides it until the next version).
 - **Themes**: System, Dark (default), Light, Midnight, Forest, Sunset, Mono, Sakura, and Album colors (Settings ⌘, or the macOS View → Theme menu). The window title bar follows the theme.
 - **Small windows**: down to 720×560.
   - When the center area gets narrow, the cover moves above the title and track-list columns shrink.
@@ -113,6 +115,8 @@ src/                      Desktop screens (React + TypeScript) and shared data c
   lib/stats.ts            Listening stats (this device)
   platform/jsc/           iOS data-bundle entry: app (Swift) bridge instead of the Tauri API; fetch/storage/timers for JavaScriptCore
   lib/lyrics.ts           Time-synced lyrics (LRCLIB, Bugs) + YouTube Music lyrics
+  lib/update.ts           New-version check against GitHub releases
+  i18n/                   Translations: Korean source text as keys, locales/<lang>.json, rust.ts (macOS menu strings), TRANSLATING.md
   lib/eq.ts               EQ settings, presets, response curve
   lib/theme.ts            Theme list and application (colors live in styles.css :root[data-theme])
   views/ components/      Screens (home, search, album, artist, playlist, library, charts, lyrics, queue, EQ, settings)
@@ -177,6 +181,7 @@ npm run build:win    # cross-build the Windows installer on a Mac (needs cargo-x
 npm run version:set -- 0.3.0   # bump the version everywhere (desktop and iOS) + new CHANGELOG.md entry
 npm run release      # build macOS and Windows → tag v<version> → upload installers and SHA256SUMS to a GitHub release
 npm run check:parsers -- <response folder>   # check parsers against saved responses
+node scripts/i18n-keys.mjs --write   # collect UI strings into src/i18n/keys.json and report missing translations
 cd src-tauri && cargo test --lib       # EQ filter and Spotify parsing unit tests
 ```
 
@@ -248,6 +253,8 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
   - 영상 안에 박힌 위아래 검은 띠(시네마 비율 뮤직비디오)는 감지해 잘라 냅니다.
 - **가사**: 시간 맞춤 가사(LRCLIB·벅스 싱크 가사, 한글 곡은 벅스 먼저)로 지금 줄을 크게 보여 주고, 줄을 누르면 그 위치로 갑니다. 둘 다 없으면 YouTube Music 가사(시간 정보 없음)를 보여 줍니다. 데스크톱은 가사 화면에서 가사와 앨범 표지 중 크게 볼 것을 고를 수 있습니다. 글자 크기는 70~175%로 바꿀 수 있고(가사 화면의 가−/가+, ⌘= ⌘- ⌘0), 곡마다 싱크를 0.5초씩 맞출 수 있습니다(기억함). iOS는 가사 번역(시스템 번역)도 됩니다.
 - **청취 통계**: 이 기기에서 30초 넘게(짧은 곡은 절반 넘게) 들은 곡으로 들은 시간, 날짜별 막대, 많이 들은 곡·아티스트를 보여 줍니다(7일·30일·1년·전체).
+- **언어**: 한국어, English, 日本語, 简体中文, 繁體中文, Español, Português (Brasil), Français, Deutsch, Bahasa Indonesia. 설정에서 고르면(또는 시스템 언어를 따르면) 맥 메뉴·트레이까지 바로 바뀝니다. YouTube Music에서 받아 오는 곡·묶음 이름은 계정 언어를 따릅니다.
+- **업데이트 알림**(데스크톱): 앱을 열 때 GitHub 최신 릴리즈를 확인해, 새 버전이 있으면 내려받기 페이지를 열어 줍니다("나중에"를 누르면 다음 버전까지 다시 알리지 않습니다).
 - **테마**: 시스템 설정, 다크(기본), 라이트, 미드나잇, 숲, 노을, 모노, 벚꽃, 앨범 색 중에서 고릅니다(설정 ⌘, 또는 맥 메뉴 보기 → 테마). 창 제목 막대 밝기도 함께 바뀝니다.
 - **작은 창**: 최소 720×560까지 줄일 수 있습니다.
   - 가운데 영역이 좁아지면 표지가 제목 위로 가고, 곡 목록의 칸을 줄입니다.
@@ -327,6 +334,8 @@ src/                      데스크톱 화면(React + TypeScript)과 공용 데�
   lib/stats.ts            청취 통계(이 기기)
   platform/jsc/           iOS용 데이터 묶음 입구: Tauri API 대신 앱(Swift) 통로, JavaScriptCore에 없는 fetch·저장소·타이머 채우기
   lib/lyrics.ts           시간 맞춤 가사(LRCLIB·벅스) + YouTube Music 가사
+  lib/update.ts           새 버전 확인(GitHub 릴리즈)
+  i18n/                   번역: 한국어 원문이 열쇠, locales/<언어>.json, rust.ts(맥 메뉴 문구), TRANSLATING.md
   lib/eq.ts               EQ 설정·프리셋·응답 곡선
   lib/theme.ts            테마 목록·적용(색 값은 styles.css의 :root[data-theme])
   views/ components/      화면들(홈·검색·앨범·아티스트·플레이리스트·보관함·차트·가사·대기열·EQ·설정)
@@ -391,6 +400,7 @@ npm run build:win    # 맥에서 윈도우 설치 파일 교차 빌드 (cargo-xw
 npm run version:set -- 0.3.0   # 버전 올리기(데스크톱·iOS 파일 모두) + CHANGELOG.md에 새 칸
 npm run release      # 맥·윈도우 빌드 → 태그 v<버전> → GitHub 릴리즈에 설치 파일·SHA256SUMS 올리기
 npm run check:parsers -- <응답 폴더>   # 받아 둔 응답으로 해석기 점검
+node scripts/i18n-keys.mjs --write   # 화면 문구를 src/i18n/keys.json에 모으고 빠진 번역 알려 주기
 cd src-tauri && cargo test --lib       # EQ 필터·Spotify 해석 단위 시험
 ```
 

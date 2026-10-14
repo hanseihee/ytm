@@ -2,6 +2,7 @@
 // 소리 처리는 맥은 Core Audio 탭(Rust), 윈도우는 엔진 페이지의 Web Audio가 맡는다(src-tauri/src/eq.rs 참고).
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { t, tk } from '../i18n';
 import { createStore, useStore } from './store';
 import { onEngineStatus, showEngine } from './tauri';
 
@@ -20,21 +21,22 @@ export interface EqSettings {
 
 export interface Preset {
   id: string;
+  /** 번역 열쇠(한국어 원문). 화면에서 t(label)로 그린다. */
   label: string;
   gains: number[];
 }
 
 export const PRESETS: Preset[] = [
-  { id: 'flat', label: '기본', gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-  { id: 'bass', label: '저음 강조', gains: [6, 5, 4, 2, 0, 0, 0, 0, 0, 0] },
-  { id: 'treble', label: '고음 강조', gains: [0, 0, 0, 0, 0, 1, 2, 4, 5, 6] },
-  { id: 'vocal', label: '보컬', gains: [-2, -2, -1, 1, 3, 4, 3, 1, 0, -1] },
-  { id: 'acoustic', label: '어쿠스틱', gains: [3, 3, 2, 1, 1, 1, 2, 3, 3, 2] },
-  { id: 'dance', label: '댄스', gains: [5, 4, 2, 0, -1, 0, 1, 2, 3, 3] },
-  { id: 'rock', label: '록', gains: [4, 3, 2, 0, -1, -1, 1, 2, 3, 4] },
-  { id: 'classical', label: '클래식', gains: [3, 2, 1, 0, 0, 0, 0, 1, 2, 3] },
-  { id: 'jazz', label: '재즈', gains: [3, 2, 1, 2, -1, -1, 0, 1, 2, 3] },
-  { id: 'quiet', label: '작은 음량', gains: [5, 4, 2, 0, 0, 0, 0, 1, 3, 4] },
+  { id: 'flat', label: tk('기본'), gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+  { id: 'bass', label: tk('저음 강조'), gains: [6, 5, 4, 2, 0, 0, 0, 0, 0, 0] },
+  { id: 'treble', label: tk('고음 강조'), gains: [0, 0, 0, 0, 0, 1, 2, 4, 5, 6] },
+  { id: 'vocal', label: tk('보컬'), gains: [-2, -2, -1, 1, 3, 4, 3, 1, 0, -1] },
+  { id: 'acoustic', label: tk('어쿠스틱'), gains: [3, 3, 2, 1, 1, 1, 2, 3, 3, 2] },
+  { id: 'dance', label: tk('댄스'), gains: [5, 4, 2, 0, -1, 0, 1, 2, 3, 3] },
+  { id: 'rock', label: tk('록'), gains: [4, 3, 2, 0, -1, -1, 1, 2, 3, 4] },
+  { id: 'classical', label: tk('클래식'), gains: [3, 2, 1, 0, 0, 0, 0, 1, 2, 3] },
+  { id: 'jazz', label: tk('재즈'), gains: [3, 2, 1, 2, -1, -1, 0, 1, 2, 3] },
+  { id: 'quiet', label: tk('작은 음량'), gains: [5, 4, 2, 0, 0, 0, 0, 1, 3, 4] },
 ];
 
 /** 올린 만큼 프리앰프를 내려 소리가 깨지지 않게 하는 권장값 */
@@ -202,16 +204,16 @@ export function responseCurve(gains: number[], preamp: number, points = 120, fs 
 export function describeEqFailure(reason: string): string {
   switch (reason) {
     case 'permission':
-      return '소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTM Desktop을 허용한 뒤 다시 켜세요.';
+      return t('소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 YTM Desktop을 허용한 뒤 다시 켜세요.');
     case 'device':
-      return '출력 장치에서 오디오 처리를 시작하지 못해 원래 소리로 되돌렸습니다. 다시 켜 보세요.';
+      return t('출력 장치에서 오디오 처리를 시작하지 못해 원래 소리로 되돌렸습니다. 다시 켜 보세요.');
     case 'unsupported':
-      return '이 환경에서는 이퀄라이저를 쓸 수 없습니다(macOS 14.2 이상 필요).';
+      return t('이 환경에서는 이퀄라이저를 쓸 수 없습니다(macOS 14.2 이상 필요).');
     case 'webaudio':
-      return '이 PC에서는 이퀄라이저가 소리를 끊어 원래대로 되돌렸습니다. YouTube Music을 다시 불러옵니다.';
+      return t('이 PC에서는 이퀄라이저가 소리를 끊어 원래대로 되돌렸습니다. YouTube Music을 다시 불러옵니다.');
     case 'visualizer':
-      return '스펙트럼을 켜지 못했습니다. 곡을 재생한 뒤 다시 열어 보세요.';
+      return t('스펙트럼을 켜지 못했습니다. 곡을 재생한 뒤 다시 열어 보세요.');
     default:
-      return `이퀄라이저를 켜지 못했습니다 (${reason}).`;
+      return t('이퀄라이저를 켜지 못했습니다 ({reason}).', { reason });
   }
 }

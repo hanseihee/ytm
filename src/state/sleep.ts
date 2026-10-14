@@ -1,4 +1,5 @@
 // 수면 타이머: 정한 시간이 지나거나 지금 곡이 끝나면 멈춘다. 시간 타이머는 마지막 10초 동안 소리를 서서히 줄인다.
+import { t } from '../i18n';
 import { createStore, useStore } from '../lib/store';
 import * as ytm from '../lib/ytm/client';
 import { currentPosition, playerStore } from './player';
@@ -26,7 +27,7 @@ export function startSleep(minutes: number) {
   restoreVolume();
   sleepStore.set({ mode: 'time', endsAt: Date.now() + minutes * 60_000 });
   run();
-  toast(`${minutes}분 뒤에 재생을 멈춥니다`);
+  toast(t('{minutes}분 뒤에 재생을 멈춥니다', { minutes }));
 }
 
 export function startSleepAfterTrack() {
@@ -35,7 +36,7 @@ export function startSleepAfterTrack() {
   restoreVolume();
   sleepStore.set({ mode: 'track', videoId });
   run();
-  toast('지금 곡이 끝나면 멈춥니다');
+  toast(t('지금 곡이 끝나면 멈춥니다'));
 }
 
 export function cancelSleep(quiet = false) {
@@ -43,7 +44,7 @@ export function cancelSleep(quiet = false) {
   timer = 0;
   restoreVolume();
   sleepStore.set({ mode: 'off' });
-  if (!quiet) toast('수면 타이머를 껐습니다');
+  if (!quiet) toast(t('수면 타이머를 껐습니다'));
 }
 
 function restoreVolume() {
@@ -64,7 +65,7 @@ async function stopNow() {
     // 다음에 틀 때는 원래 음량으로
     window.setTimeout(restoreVolume, 1200);
   }
-  toast('수면 타이머로 재생을 멈췄습니다');
+  toast(t('수면 타이머로 재생을 멈췄습니다'));
 }
 
 function run() {
@@ -92,7 +93,7 @@ function run() {
 
 /** 남은 시간 "12:30" (time) 또는 "곡 끝" (track) */
 export function sleepLabel(s: SleepState, now = Date.now()): string {
-  if (s.mode === 'track') return '곡 끝';
+  if (s.mode === 'track') return t('곡 끝');
   if (s.mode !== 'time' || !s.endsAt) return '';
   const left = Math.max(0, Math.round((s.endsAt - now) / 1000));
   const m = Math.floor(left / 60);

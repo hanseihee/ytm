@@ -5,6 +5,7 @@
 // - YouTube Music 웹 가사(browse MPLY…)에는 시간 정보가 없다(2026-10-14 세 곡 확인). 모바일 앱 클라이언트로 보내면
 //   시간 맞춤 가사가 온다고 알려져 있지만, 로그인한 웹에서 보내면 400이 나서 쓸 수 없다.
 import { invoke } from '@tauri-apps/api/core';
+import { t, tk } from '../i18n';
 import { decode, SAFARI_HEADERS } from './charts/util';
 import { ytLyrics } from './ytm/client';
 
@@ -124,6 +125,8 @@ async function fromLrclib(q: LyricsQuery): Promise<LrclibRecord | undefined> {
 // ── 벅스 싱크 가사 ─────────────────────────────────────────────────────────
 
 const BUGS = 'https://music.bugs.co.kr';
+/** 가사 출처 이름(번역 열쇠). 기억해 둔 결과에는 원문을 두고, 돌려줄 때 지금 언어로 바꾼다(localizeSource). */
+const BUGS_SOURCE = tk('벅스');
 const bugsGet = (url: string) => invoke<string>('chart_fetch', { req: { url, method: 'GET', headers: { ...SAFARI_HEADERS, Referer: `${BUGS}/` } } });
 
 interface BugsTrack {
@@ -196,9 +199,12 @@ const HANGUL = /[\u3131-\u318e\uac00-\ud7a3]/;
 
 const cache = new Map<string, Promise<Lyrics | null>>();
 
+/** 출처 이름을 지금 언어로(언어를 바꾼 뒤 다시 열어도 맞게 기억값에는 원문을 둔다) */
+const localizeSource = (l: Lyrics | null): Lyrics | null => (l && l.source === BUGS_SOURCE ? { ...l, source: t(BUGS_SOURCE) } : l);
+
 export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
   const hit = cache.get(q.videoId);
-  if (hit) return hit;
+  if (hit) return hit.then(localizeSource);
   // LRCLIB가 잠깐 실패(503·느림)하면 이번 결과는 기억하지 않아 다음에 열 때 다시 찾는다(2026-10-14 503 관찰).
   let lrclibFailed = false;
   const task = (async (): Promise<Lyrics | null> => {
@@ -220,7 +226,7 @@ export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
       return synced.length ? { synced, plain: record?.plainLyrics ?? undefined, source: 'LRCLIB' } : undefined;
     };
     const fromBugsSynced = (lines: LyricLine[] | undefined): Lyrics | undefined =>
-      lines?.length ? { synced: lines, plain: lines.map((l) => l.text).join('\n'), source: '벅스' } : undefined;
+      lines?.length ? { synced: lines, plain: lines.map((l) => l.text).join('\n'), source: BUGS_SOURCE } : undefined;
 
     let record: LrclibRecord | undefined;
     if (bugsEarly) {
@@ -251,7 +257,7 @@ export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
     () => lrclibFailed && cache.delete(q.videoId),
     () => cache.delete(q.videoId),
   );
-  return task;
+  return task.then(localizeSource);
 }
 
 /** 현재 위치(초)에 해당하는 줄 번호. 첫 줄 전이면 -1. */

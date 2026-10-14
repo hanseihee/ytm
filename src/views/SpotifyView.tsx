@@ -1,5 +1,6 @@
 // Spotify 플레이리스트(기본: 한국 Top 50)를 YouTube Music 곡으로 듣기.
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react';
+import { t } from '../i18n';
 import {
   chartFor,
   chartTitle,
@@ -19,6 +20,8 @@ import {
   syncToYouTubeMusic,
   todayLabel,
   type Match,
+  chartChipLabel,
+  chartGroupName,
 } from '../lib/spotify';
 import { useAsync } from '../lib/useAsync';
 import type { Track } from '../lib/ytm/types';
@@ -45,15 +48,15 @@ function ChartPicker({ current }: { current: string }) {
         onClick={() => setOpen((v) => !v)}
       >
         <Icon name="chart" size={16} />
-        <span className="chart-picker__current">{chart ? chartShortLabel(chart) : '차트'}</span>
-        <span className="chart-picker__hint">{open ? '접기' : '차트 바꾸기'}</span>
+        <span className="chart-picker__current">{chart ? chartShortLabel(chart) : t('차트')}</span>
+        <span className="chart-picker__hint">{open ? t('접기') : t('차트 바꾸기')}</span>
         <Icon name={open ? 'up' : 'down'} size={16} />
       </button>
       {open && (
-        <div id="chart-picker-list" className="chart-picker__groups" role="group" aria-label="차트 고르기">
+        <div id="chart-picker-list" className="chart-picker__groups" role="group" aria-label={t('차트 고르기')}>
           {CHART_GROUP_ORDER.map((group) => (
             <div key={group} className="chart-picker__group">
-              <span className="chart-picker__group-title">{group}</span>
+              <span className="chart-picker__group-title">{chartGroupName(group)}</span>
               <div className="chart-picker__list">
                 {CHARTS.filter((c) => c.group === group).map((c) => (
                   <button
@@ -66,7 +69,7 @@ function ChartPicker({ current }: { current: string }) {
                       if (c.id !== current) replace({ name: 'spotify', id: c.id });
                     }}
                   >
-                    {c.source === 'spotify' ? c.label : c.label.replace(/^(멜론|Apple Music) /, '')}
+                    {chartChipLabel(c)}
                   </button>
                 ))}
               </div>
@@ -100,7 +103,7 @@ function Row({ rank, title, artists, durationMs, match, onPlay, onRetry }: {
       <div className="chart-row__rank" role="cell">{rank}</div>
       <div className="track__lead" role="cell">
         <Cover src={track?.thumbnail} size={40} />
-        <button type="button" className="track__play" aria-label={`${title} 재생`} disabled={!track} onClick={onPlay}>
+        <button type="button" className="track__play" aria-label={t('{title} 재생', { title })} disabled={!track} onClick={onPlay}>
           <Icon name="play" size={16} />
         </button>
       </div>
@@ -110,32 +113,32 @@ function Row({ rank, title, artists, durationMs, match, onPlay, onRetry }: {
       </div>
       <div className="chart-row__match" role="cell">
         {!match ? (
-          <span className="match match--wait">찾는 중</span>
+          <span className="match match--wait">{t('찾는 중')}</span>
         ) : !track ? (
           <span className="match match--none">
-            YouTube Music에서 못 찾음
-            <button type="button" className="link" onClick={onRetry}>직접 검색</button>
+            {t('YouTube Music에서 못 찾음')}
+            <button type="button" className="link" onClick={onRetry}>{t('직접 검색')}</button>
           </span>
         ) : match.quality === 'unsure' ? (
           <span className="match match--unsure" title={`${track.title} — ${track.artists.map((a) => a.name).join(', ')}`}>
-            비슷한 곡: {track.title}
+            {t('비슷한 곡: {title}', { title: track.title })}
           </span>
         ) : track.isVideo ? (
-          <span className="match match--video">뮤직비디오 음원</span>
+          <span className="match match--video">{t('뮤직비디오 음원')}</span>
         ) : null}
       </div>
       <div className="track__tail" role="cell">
         <button
           type="button"
           className={`icon-btn track__like${liked ? ' is-on' : ''}`}
-          aria-label={liked ? '좋아요 취소' : '좋아요'}
+          aria-label={liked ? t('좋아요 취소') : t('좋아요')}
           disabled={!track}
           onClick={() => track && toggleLike(track)}
         >
           <Icon name="heart" size={17} filled={liked} />
         </button>
         <span className="track__time">{durationMs > 0 ? formatTime(durationMs / 1000) : ''}</span>
-        <button type="button" className="icon-btn track__more" aria-label="더 보기" disabled={!track} onClick={menu}>
+        <button type="button" className="icon-btn track__more" aria-label={t('더 보기')} disabled={!track} onClick={menu}>
           <Icon name="more" size={18} />
         </button>
       </div>
@@ -174,7 +177,7 @@ export function SpotifyView({ id }: { id: string }) {
   const finished = total > 0 && done === total;
 
   if (res.loading && !playlist) {
-    return <div className="page">{isChart && <ChartPicker current={id} />}<Loading label="차트 곡 목록을 가져오는 중…" /></div>;
+    return <div className="page">{isChart && <ChartPicker current={id} />}<Loading label={t('차트 곡 목록을 가져오는 중…')} /></div>;
   }
   if (res.error || !playlist) {
     return <div className="page">{isChart && <ChartPicker current={id} />}<ErrorState message={describeSpotifyError(res.error)} onRetry={res.reload} /></div>;
@@ -187,9 +190,9 @@ export function SpotifyView({ id }: { id: string }) {
     setBusy('play');
     try {
       const queued = await playInChartOrder(playlist.id, ordered, found);
-      if (queued > 1) toast(`차트 ${queued}곡을 차례로 재생합니다`);
+      if (queued > 1) toast(t('차트 {n}곡을 차례로 재생합니다', { n: queued }));
     } catch (err) {
-      toastError(err, '대기열을 만들지 못했습니다');
+      toastError(err, t('대기열을 만들지 못했습니다'));
     } finally {
       setBusy('');
     }
@@ -200,19 +203,19 @@ export function SpotifyView({ id }: { id: string }) {
     setBusy('save');
     try {
       const pid = await syncToYouTubeMusic(playlist, found);
-      toast(`내 YouTube Music에 '${chartTitle(playlist)} (Spotify)' 재생목록을 맞췄습니다`);
+      toast(t("내 YouTube Music에 '{title} (Spotify)' 재생목록을 맞췄습니다", { title: chartTitle(playlist) }));
       await loadPlaylists();
       go({ name: 'playlist', id: `VL${pid}` });
     } catch (err) {
-      toastError(err, '재생목록으로 저장하지 못했습니다');
+      toastError(err, t('재생목록으로 저장하지 못했습니다'));
     } finally {
       setBusy('');
     }
   };
 
   const retry = (i: number) => {
-    const t = playlist.tracks[i];
-    go({ name: 'search', query: `${t.title} ${t.artists.split(',')[0]}` });
+    const tr = playlist.tracks[i];
+    go({ name: 'search', query: `${tr.title} ${tr.artists.split(',')[0]}` });
   };
 
   const reMatch = async () => {
@@ -229,7 +232,7 @@ export function SpotifyView({ id }: { id: string }) {
     e.preventDefault();
     const pid = playlistIdFrom(link);
     if (!pid) {
-      toast('Spotify 플레이리스트 링크를 붙여 넣으세요 (open.spotify.com/playlist/…)', 'error');
+      toast(t('Spotify 플레이리스트 링크를 붙여 넣으세요 (open.spotify.com/playlist/…)'), 'error');
       return;
     }
     setLink('');
@@ -244,30 +247,32 @@ export function SpotifyView({ id }: { id: string }) {
       <header className="hero hero--chart">
         <Cover src={playlist.cover} size={232} className="hero__art" />
         <div className="hero__text">
-          <span className="hero__type">{chartKind(id)} · YouTube Music으로 듣기</span>
+          <span className="hero__type">{chartKind(id)} · {t('YouTube Music으로 듣기')}</span>
           <h1 className="hero__title">{chartTitle(playlist)}</h1>
           <div className="hero__meta">
             <span>{playlist.subtitle || 'Spotify'}</span>
-            <span>{total}곡</span>
-            {(!chartFor(id) || chartFor(id)?.source === 'spotify') && <span>{todayLabel()} 기준</span>}
+            <span>{t('{n}곡', { n: total })}</span>
+            {(!chartFor(id) || chartFor(id)?.source === 'spotify') && <span>{t('{date} 기준', { date: todayLabel() })}</span>}
           </div>
           <p className="hero__desc">
             {finished
-              ? `YouTube Music에서 ${found.length}곡을 찾았습니다${total - found.length ? `, ${total - found.length}곡은 찾지 못했습니다` : ''}.`
-              : `YouTube Music에서 같은 곡을 찾는 중… ${done}/${total}`}
+              ? total - found.length
+                ? t('YouTube Music에서 {n}곡을 찾았습니다, {missing}곡은 찾지 못했습니다.', { n: found.length, missing: total - found.length })
+                : t('YouTube Music에서 {n}곡을 찾았습니다.', { n: found.length })
+              : t('YouTube Music에서 같은 곡을 찾는 중… {done}/{total}', { done, total })}
           </p>
           <div className="progress" aria-hidden={finished}>
             <span style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
           </div>
           <div className="hero__actions">
             <button type="button" className="btn btn--primary btn--play" disabled={!found.length || busy !== ''} onClick={() => playFrom(0)}>
-              <Icon name="play" size={18} /> {busy === 'play' ? '대기열 만드는 중…' : '1위부터 재생'}
+              <Icon name="play" size={18} /> {busy === 'play' ? t('대기열 만드는 중…') : t('1위부터 재생')}
             </button>
             <button type="button" className="btn btn--quiet" disabled={!finished || !found.length || busy !== ''} onClick={save}>
               <Icon name="bookmark" size={17} filled={!!synced} />
-              {busy === 'save' ? '저장하는 중…' : saved ? (synced ? '내 재생목록과 같음' : '내 재생목록 업데이트') : '내 YouTube Music에 저장'}
+              {busy === 'save' ? t('저장하는 중…') : saved ? (synced ? t('내 재생목록과 같음') : t('내 재생목록 업데이트')) : t('내 YouTube Music에 저장')}
             </button>
-            <button type="button" className="icon-btn icon-btn--round" aria-label="다시 찾기" title="YouTube Music에서 다시 찾기" onClick={reMatch} disabled={!finished}>
+            <button type="button" className="icon-btn icon-btn--round" aria-label={t('다시 찾기')} title={t('YouTube Music에서 다시 찾기')} onClick={reMatch} disabled={!finished}>
               <Icon name="search" size={18} />
             </button>
           </div>
@@ -290,7 +295,7 @@ export function SpotifyView({ id }: { id: string }) {
       </div>
 
       <form className="spotify-link" onSubmit={openLink}>
-        <label htmlFor="spotify-link" className="spotify-link__label">다른 Spotify 플레이리스트도 들을 수 있습니다</label>
+        <label htmlFor="spotify-link" className="spotify-link__label">{t('다른 Spotify 플레이리스트도 들을 수 있습니다')}</label>
         <div className="spotify-link__row">
           <input
             id="spotify-link"
@@ -299,9 +304,9 @@ export function SpotifyView({ id }: { id: string }) {
             value={link}
             onChange={(e) => setLink(e.target.value)}
           />
-          <button type="submit" className="btn btn--quiet">열기</button>
+          <button type="submit" className="btn btn--quiet">{t('열기')}</button>
         </div>
-        <p className="field__hint">공개 플레이리스트만 됩니다. 곡 목록은 Spotify 공개 임베드 페이지에서 읽습니다.</p>
+        <p className="field__hint">{t('공개 플레이리스트만 됩니다. 곡 목록은 Spotify 공개 임베드 페이지에서 읽습니다.')}</p>
       </form>
     </div>
   );

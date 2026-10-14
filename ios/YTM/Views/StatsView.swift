@@ -9,7 +9,7 @@ struct StatsView: View {
     @State private var summary: StatsSummary?
     @State private var confirmClear = false
 
-    private static let ranges = [("week", "최근 7일"), ("month", "최근 30일"), ("year", "최근 1년"), ("all", "전체")]
+    private static let ranges: [(String, LocalizedStringResource)] = [("week", "최근 7일"), ("month", "최근 30일"), ("year", "최근 1년"), ("all", "전체")]
 
     var body: some View {
         List {
@@ -33,7 +33,7 @@ struct StatsView: View {
                     Section("많이 들은 곡") {
                         ForEach(Array(s.topTracks.enumerated()), id: \.element.id) { i, t in
                             Button {
-                                model.playEndpoint(Endpoints.mix(t.id), what: "믹스를 시작")
+                                model.playEndpoint(Endpoints.mix(t.id), failure: "믹스를 시작하지 못했습니다")
                             } label: {
                                 HStack(spacing: 12) {
                                     Text("\(i + 1)").font(.headline.monospacedDigit()).foregroundStyle(palette.mist).frame(width: 24)
@@ -104,13 +104,13 @@ struct StatsView: View {
     private func totals(_ s: StatsSummary) -> some View {
         HStack(alignment: .top) {
             total(Self.listen(s.totalSeconds), "들은 시간")
-            total("\(s.playCount)곡", "재생")
+            total(L("\(s.playCount)곡"), LocalizedStringResource("재생(통계)", defaultValue: "재생"))
             total(s.topArtists.first?.name ?? "-", "가장 많이 들은 아티스트")
         }
         .padding(.vertical, 6)
     }
 
-    private func total(_ value: String, _ label: String) -> some View {
+    private func total(_ value: String, _ label: LocalizedStringResource) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value).font(.title3.weight(.heavy)).foregroundStyle(palette.ink).lineLimit(1).minimumScaleFactor(0.6)
             Text(label).font(.caption).foregroundStyle(palette.mist).lineLimit(2)
@@ -135,7 +135,7 @@ struct StatsView: View {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
                 AxisGridLine()
                 if let m = value.as(Double.self) {
-                    AxisValueLabel(m == m.rounded() ? "\(Int(m))분" : String(format: "%.1f분", m))
+                    AxisValueLabel(m == m.rounded() ? L("\(Int(m))분") : String(format: L("%.1f분"), m))
                 }
             }
         }
@@ -152,6 +152,6 @@ struct StatsView: View {
 
     static func listen(_ seconds: Double) -> String {
         let m = Int((seconds / 60).rounded())
-        return m < 60 ? "\(m)분" : "\(m / 60)시간 \(m % 60)분"
+        return m < 60 ? L("\(m)분") : L("\(m / 60)시간 \(m % 60)분")
     }
 }

@@ -1,5 +1,6 @@
 // 차트 해석기 공용 도구: HTML 글자 풀기, 태그 지우기, 곡·목록 형식.
 // iOS(JavaScriptCore)에서도 돌아야 해서 DOM(DOMParser 등) 없이 정규식·문자열로만 다룬다.
+import { locale } from '../../i18n';
 import type { SpotifyPlaylist, SpotifyTrack } from '../spotify';
 import { namedEntity } from './entities';
 
@@ -101,3 +102,24 @@ export const slug = (s: string) =>
     .normalize('NFKC')
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
+
+const regionNames = new Map<string, Intl.DisplayNames>();
+
+/**
+ * 나라 이름을 지금 언어로(code: ISO 두 글자, 대소문자 무관). 한국어는 목록에 적어 둔 이름(fallback: "한국"·"미국" …)을
+ * 그대로 쓰고, Intl.DisplayNames가 없거나 실패하면(JavaScriptCore 대비) fallback을 돌려준다.
+ */
+export function regionName(code: string, fallback: string): string {
+  const lang = locale();
+  if (lang === 'ko') return fallback;
+  try {
+    let names = regionNames.get(lang);
+    if (!names) {
+      names = new Intl.DisplayNames([lang], { type: 'region' });
+      regionNames.set(lang, names);
+    }
+    return names.of(code.toUpperCase()) || fallback;
+  } catch {
+    return fallback;
+  }
+}

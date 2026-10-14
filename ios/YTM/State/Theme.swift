@@ -6,7 +6,7 @@ enum ThemeID: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var label: String {
+    var label: LocalizedStringResource {
         switch self {
         case .system: "시스템 설정"
         case .dark: "다크"
@@ -19,7 +19,7 @@ enum ThemeID: String, CaseIterable, Identifiable {
         }
     }
 
-    var description: String {
+    var description: LocalizedStringResource {
         switch self {
         case .system: "기기의 화면 모드를 따라 다크와 라이트를 바꿉니다"
         case .dark: "밤에 듣기 좋은 짙은 자주색 (기본)"

@@ -154,7 +154,7 @@ struct TrackMenu: View {
             model.enqueue(videoId: track.videoId, title: track.title, position: "end")
         }
         Button("이 곡으로 믹스 시작", systemImage: "dot.radiowaves.left.and.right") {
-            model.playEndpoint(Endpoints.mix(track.videoId), what: "믹스를 시작")
+            model.playEndpoint(Endpoints.mix(track.videoId), failure: "믹스를 시작하지 못했습니다")
         }
         Divider()
         Button(liked ? "좋아요 취소" : "좋아요", systemImage: liked ? "heart.slash" : "heart") {
@@ -185,11 +185,11 @@ struct TrackMenu: View {
 
 // MARK: 카드
 
-private let kindLabels: [String: String] = [
+private let kindLabels: [String: LocalizedStringResource] = [
     "album": "앨범", "single": "싱글", "ep": "EP", "playlist": "플레이리스트", "artist": "아티스트",
     "song": "노래", "video": "영상", "episode": "에피소드", "podcast": "팟캐스트", "profile": "프로필",
 ]
-func kindLabel(_ kind: String) -> String { kindLabels[kind] ?? "" }
+func kindLabel(_ kind: String) -> String { kindLabels[kind].map { L($0) } ?? "" }
 
 struct CardTile: View {
     @Environment(AppModel.self) private var model
@@ -257,7 +257,7 @@ struct CardMenu: View {
             Button("재생", systemImage: "play") { model.playEndpoint(play) }
         }
         if let playlistId, card.kind != "artist" {
-            Button("셔플 재생", systemImage: "shuffle") { model.playEndpoint(Endpoints.playlist(playlistId, shuffle: true), what: "셔플 재생") }
+            Button("셔플 재생", systemImage: "shuffle") { model.playEndpoint(Endpoints.playlist(playlistId, shuffle: true), failure: "셔플 재생하지 못했습니다") }
             Button("다음에 재생", systemImage: "text.line.first.and.arrowtriangle.forward") {
                 model.enqueue(playlistId: playlistId, title: card.title, position: "next")
             }
@@ -386,7 +386,7 @@ enum Loadable<T> {
 }
 
 struct LoadingView: View {
-    var label = "불러오는 중…"
+    var label: LocalizedStringKey = "불러오는 중…"
     var body: some View {
         ProgressView(label)
             .frame(maxWidth: .infinity, minHeight: 240)
@@ -421,7 +421,7 @@ struct LoadMoreRow: View {
 /// 둥근 큰 버튼(재생·셔플 등)
 struct PillButton: View {
     @Environment(\.palette) private var palette
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
     var prominent = false
     let action: () -> Void

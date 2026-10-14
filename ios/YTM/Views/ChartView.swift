@@ -34,7 +34,7 @@ struct ChartView: View {
                 if isRoot { picker }
                 switch state {
                 case .loading:
-                    LoadingView(label: "\(isSpotify ? "Spotify" : chart?.group ?? "차트")에서 곡 목록을 가져오는 중…")
+                    LoadingView(label: "\(isSpotify ? "Spotify" : chart?.group ?? L("차트"))에서 곡 목록을 가져오는 중…")
                 case .failed(let message):
                     ErrorView(message: message) { Task { await load() } }
                 case .loaded(let p):
@@ -61,7 +61,7 @@ struct ChartView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(palette.night)
-        .navigationTitle(isRoot ? "차트" : titleText)
+        .navigationTitle(isRoot ? L("차트") : titleText)
         .navigationBarTitleDisplayMode(isRoot ? .large : .inline)
         .refreshable { await load() }
         .task(id: id) { await load() }
@@ -83,11 +83,12 @@ struct ChartView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "chart.bar.fill").foregroundStyle(palette.roseSoft)
-                Text(chart.map { $0.source == "spotify" ? "Spotify \($0.label) Top 50" : $0.label } ?? "차트")
+                Text(chart.map { $0.source == "spotify" ? "Spotify \($0.label) Top 50" : $0.label } ?? L("차트"))
                     .font(.headline)
                     .foregroundStyle(palette.ink)
                     .lineLimit(1)
-                Text("차트 바꾸기").font(.subheadline).foregroundStyle(palette.mist).layoutPriority(-1)
+                // 번역이 길면 차트 이름이 줄어들고, 이 말은 한 줄로 남는다(두 줄로 쪼개지지 않게).
+                Text("차트 바꾸기").font(.subheadline).foregroundStyle(palette.mist).lineLimit(1).fixedSize()
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(palette.mist)
             }
             .padding(.horizontal, 14)
@@ -118,14 +119,22 @@ struct ChartView: View {
                         .font(.title2.bold())
                         .foregroundStyle(palette.ink)
                         .lineLimit(2)
-                    Text([p.subtitle.isEmpty ? (isSpotify ? "Spotify" : chart?.group ?? "") : p.subtitle, "\(p.tracks.count)곡", isSpotify ? "\(today) 기준" : nil].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text([p.subtitle.isEmpty ? (isSpotify ? "Spotify" : chart?.group ?? "") : p.subtitle, L("\(p.tracks.count)곡"), isSpotify ? L("\(today) 기준") : nil].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                         .font(.subheadline)
                         .foregroundStyle(palette.mist)
                 }
             }
-            Text(finished
-                 ? "YouTube Music에서 \(found.count)곡을 찾았습니다\(matches.count - found.count > 0 ? ", \(matches.count - found.count)곡은 찾지 못했습니다" : "")."
-                 : "YouTube Music에서 같은 곡을 찾는 중… \(done)/\(matches.count)")
+            Group {
+                if !finished {
+                    Text("YouTube Music에서 같은 곡을 찾는 중… \(done)/\(matches.count)")
+                } else if matches.count > found.count {
+                    Text("YouTube Music에서 \(found.count)곡을 찾았습니다, \(matches.count - found.count)곡은 찾지 못했습니다.")
+                } else {
+                    Text("YouTube Music에서 \(found.count)곡을 찾았습니다.")
+                }
+            }
                 .font(.subheadline)
                 .foregroundStyle(palette.mist)
             if !finished {

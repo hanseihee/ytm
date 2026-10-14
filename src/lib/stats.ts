@@ -1,5 +1,6 @@
 // 청취 기록·통계(이 기기에만 저장). 데스크톱 화면과 iOS(JavaScriptCore)가 같은 코드를 쓴다.
 // 재생 상태를 받을 때마다 recordState를 부르면, 곡이 바뀔 때 30초 이상(또는 곡 길이의 절반 이상) 들은 곡을 한 번으로 남긴다.
+import { locale } from '../i18n';
 
 export interface PlayRecord {
   id: string;
@@ -110,6 +111,22 @@ function rangeStart(range: StatsRange, now: number) {
   return 0;
 }
 
+/**
+ * 막대 그래프 날짜 이름 만드는 함수. 한국어는 원래 모양("10/14") 그대로, 다른 언어는 그 언어 표기(de "14.10.", fr "14/10").
+ * Intl이 없거나 실패하면(JavaScriptCore 대비) 한국어와 같은 모양.
+ */
+function dayLabeler(): (d: Date) => string {
+  const plain = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+  const lang = locale();
+  if (lang === 'ko') return plain;
+  try {
+    const fmt = new Intl.DateTimeFormat(lang, { month: 'numeric', day: 'numeric' });
+    return (d) => fmt.format(d);
+  } catch {
+    return plain;
+  }
+}
+
 /** "아이유, 성시경 & 박효신" → ["아이유", "성시경", "박효신"] */
 function splitArtists(artist: string): string[] {
   return artist.split(/\s*(?:,|&| x | X |\bfeat\.?\b|\bwith\b)\s*/).map((a) => a.trim()).filter(Boolean);
@@ -140,11 +157,12 @@ export function statsSummary(range: StatsRange, now = Date.now()): StatsSummary 
   const dayCount = range === 'week' ? 7 : 30;
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
+  const dayLabel = dayLabeler();
   const days = Array.from({ length: dayCount }, (_, i) => {
     const start = today.getTime() - (dayCount - 1 - i) * DAY;
     const d = new Date(start);
     const seconds = list.filter((p) => p.at >= start && p.at < start + DAY).reduce((sum, p) => sum + p.seconds, 0);
-    return { label: `${d.getMonth() + 1}/${d.getDate()}`, seconds };
+    return { label: dayLabel(d), seconds };
   });
   return {
     range,

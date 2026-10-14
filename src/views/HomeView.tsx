@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '../i18n';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import { lastChartId } from '../lib/spotify';
@@ -30,12 +31,12 @@ export function HomeView() {
   return (
     <div className="page">
       <header className="home-head">
-        <h1 className="home-head__title">{account ? `${account.name}님을 위한 음악` : '홈'}</h1>
+        <h1 className="home-head__title">{account ? t('{name}님을 위한 음악', { name: account.name }) : t('홈')}</h1>
         <button type="button" className="chart-chip" onClick={() => go({ name: 'spotify', id: lastChartId() })}>
           <span className="chart-chip__rank">100</span>
           <span>
-            <b>인기 차트</b>
-            <small>멜론 TOP 100과 Spotify 20개 나라 Top 50을 YouTube Music으로</small>
+            <b>{t('인기 차트')}</b>
+            <small>{t('멜론 TOP 100과 Spotify 20개 나라 Top 50을 YouTube Music으로')}</small>
           </span>
         </button>
       </header>

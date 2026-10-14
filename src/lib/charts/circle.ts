@@ -5,6 +5,7 @@
 // 그래서 두 번 받는다: ① 페이지(GET) → circleDigitalRequest로 ② POST 요청을 만든다 → parseCircleDigital(② 응답, ① 페이지).
 // 응답 { List: { "0": { SERVICE_RANKING, SONG_NAME, ARTIST_NAME, ALBUM_NAME, ALBUMIMG(/uploadDir/albumImg/thumb/…), SEQ_MOM }, … },
 // FormToMap: { hitYear, targetTime } }. 표지는 thumb만 있고(원본 주소는 404) 곡 길이는 없다.
+import { t } from '../../i18n';
 import { decode, formatChanged, json, type ChartPlaylist, type ChartRequest, type ChartTrack } from './util';
 
 export const CIRCLE_DIGITAL = 'circle-digital';
@@ -78,11 +79,11 @@ export function parseCircleDigital(text: string, pages: string[] = []): ChartPla
   // 페이지의 주 선택 상자: <option value="202640" selected >2026.09.27~2026.10.03 (40)</option>
   const period = pages[0]?.match(/<option value="\d+" selected\s*>\s*([\d.]+\s*~\s*[\d.]+)/)?.[1]?.replace(/\s+/g, '');
   const { hitYear, targetTime } = res.FormToMap ?? {};
-  const week = hitYear && targetTime ? `${hitYear}년 ${targetTime}주차` : '';
+  const week = hitYear && targetTime ? t('{year}년 {week}주차', { year: hitYear, week: targetTime }) : '';
   return {
     id: CIRCLE_DIGITAL,
-    name: '써클차트 디지털',
-    subtitle: [period, week].filter(Boolean).join(' · ') || '써클차트 주간',
+    name: t('써클차트 디지털'),
+    subtitle: [period, week].filter(Boolean).join(' · ') || t('써클차트 주간'),
     cover: tracks[0].cover,
     tracks,
   };

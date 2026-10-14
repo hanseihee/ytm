@@ -49,7 +49,7 @@ final class NowPlayingCenter {
             return
         }
         var info: [String: Any] = [
-            MPMediaItemPropertyTitle: s.ad ? "광고" : s.title,
+            MPMediaItemPropertyTitle: s.ad ? L("광고") : s.title,
             MPMediaItemPropertyArtist: s.ad ? "YouTube Music" : s.artist,
             MPMediaItemPropertyAlbumTitle: s.album,
             MPMediaItemPropertyPlaybackDuration: s.duration,
@@ -64,10 +64,16 @@ final class NowPlayingCenter {
         updateWidget(s)
     }
 
+    /// 화면 언어가 바뀌었을 때: 잠금 화면 정보를 새 언어로 다시 쓰고 위젯도 다시 그리게 한다.
+    func refresh() {
+        update(last)
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedNowPlaying.widgetKind)
+    }
+
     /// 홈 화면 위젯: 곡·재생 상태·표지가 바뀔 때만 App Group에 쓰고 다시 그리게 한다.
     private func updateWidget(_ s: PlayerState) {
         var next = SharedNowPlaying.Info(
-            videoId: s.videoId, title: s.ad ? "광고" : s.title, artist: s.ad ? "YouTube Music" : s.artist,
+            videoId: s.videoId, title: s.ad ? L("광고") : s.title, artist: s.ad ? "YouTube Music" : s.artist,
             playing: s.playing, artworkFile: widget.artworkFile
         )
         let name = "artwork-\(abs(artworkURL.hashValue)).jpg"

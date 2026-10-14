@@ -14,7 +14,7 @@ use tauri::{AppHandle, LogicalSize, Manager, Size, WebviewUrl, WebviewWindowBuil
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_notification::NotificationExt;
 
-use crate::{emit_ui, engine, lock, send_command, warn, Command, TrackState, ENGINE, MAIN};
+use crate::{emit_ui, engine, l, lock, send_command, warn, Command, TrackState, ENGINE, MAIN};
 
 pub(crate) const MINI: &str = "mini";
 
@@ -120,17 +120,28 @@ fn restore_engine_window(window: &tauri::WebviewWindow) {
     warn("엔진 창 테마 되돌리기", window.set_theme(None));
     warn("엔진 창 늘 위 풀기", window.set_always_on_top(false));
     warn("엔진 창 최소 크기", window.set_min_size(Some(Size::Logical(LogicalSize::new(ENGINE_MIN.0, ENGINE_MIN.1)))));
-    warn("엔진 창 제목", window.set_title("YouTube Music — 로그인·웹 화면"));
+    warn("엔진 창 제목", window.set_title(&l(window.app_handle(), "YouTube Music — 로그인·웹 화면")));
 }
 
 fn video_title(app: &AppHandle) -> String {
     let track = lock(&app.state::<crate::AppState>().track).clone();
     if track.title.is_empty() {
-        "YTM 영상".to_owned()
+        l(app, "YTM 영상")
     } else if track.artist.is_empty() {
         track.title
     } else {
         format!("{} – {}", track.title, track.artist)
+    }
+}
+
+/// 언어가 바뀌면 열려 있는 창 제목을 다시 단다.
+pub fn on_language_changed(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(ENGINE) {
+        let title = if video_open(app) { video_title(app) } else { l(app, "YouTube Music — 로그인·웹 화면") };
+        warn("엔진 창 제목", window.set_title(&title));
+    }
+    if let Some(window) = app.get_webview_window(MINI) {
+        warn("미니 플레이어 제목", window.set_title(&l(app, "YTM 미니 플레이어")));
     }
 }
 
@@ -161,7 +172,7 @@ pub fn mini_window(app: AppHandle, open: bool) -> Result<(), String> {
         return Ok(());
     }
     let builder = WebviewWindowBuilder::new(&app, MINI, WebviewUrl::App("index.html#mini".into()))
-        .title("YTM 미니 플레이어")
+        .title(l(&app, "YTM 미니 플레이어"))
         .inner_size(380.0, 152.0)
         .resizable(false)
         .maximizable(false)

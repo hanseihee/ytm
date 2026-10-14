@@ -1,5 +1,6 @@
 // 테마(색). 실제 색 값은 styles.css의 :root[data-theme='…'] 묶음에 있고, 여기서는 고른 값을 저장·적용한다.
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { tk } from '../i18n';
 import { createStore, useStore } from './store';
 
 export type ThemeId = 'system' | 'dark' | 'light' | 'midnight' | 'forest' | 'sunset' | 'mono' | 'sakura' | 'album';
@@ -7,7 +8,9 @@ type Resolved = Exclude<ThemeId, 'system'>;
 
 export interface ThemeInfo {
   id: ThemeId;
+  /** 번역 열쇠(한국어 원문). 화면에서 t(label)로 그린다. */
   label: string;
+  /** 번역 열쇠(한국어 원문). 화면에서 t(description)로 그린다. */
   description: string;
   kind: 'dark' | 'light' | 'auto';
   /** 고르기 화면의 미리보기 색: 바탕, 면, 글자, 강조 두 색 */
@@ -15,23 +18,23 @@ export interface ThemeInfo {
 }
 
 export const THEMES: ThemeInfo[] = [
-  { id: 'system', label: '시스템 설정', description: '맥·윈도우 화면 모드를 따라 다크와 라이트를 바꿉니다', kind: 'auto',
+  { id: 'system', label: tk('시스템 설정'), description: tk('맥·윈도우 화면 모드를 따라 다크와 라이트를 바꿉니다'), kind: 'auto',
     preview: { bg: '#140e1c', surface: '#f6f3f9', ink: '#f4eff8', accent: ['#ff4d6d', '#7b3ff2'] } },
-  { id: 'dark', label: '다크', description: '밤에 듣기 좋은 짙은 자주색 (기본)', kind: 'dark',
+  { id: 'dark', label: tk('다크'), description: tk('밤에 듣기 좋은 짙은 자주색 (기본)'), kind: 'dark',
     preview: { bg: '#140e1c', surface: '#1c1526', ink: '#f4eff8', accent: ['#ff4d6d', '#7b3ff2'] } },
-  { id: 'light', label: '라이트', description: '밝은 곳에서 보기 편한 흰 바탕', kind: 'light',
+  { id: 'light', label: tk('라이트'), description: tk('밝은 곳에서 보기 편한 흰 바탕'), kind: 'light',
     preview: { bg: '#f6f3f9', surface: '#ffffff', ink: '#1d1426', accent: ['#e8335a', '#6a2fe0'] } },
-  { id: 'midnight', label: '미드나잇', description: '남색 바탕에 청록 강조', kind: 'dark',
+  { id: 'midnight', label: tk('미드나잇'), description: tk('남색 바탕에 청록 강조'), kind: 'dark',
     preview: { bg: '#0b1120', surface: '#111a2e', ink: '#eaf1ff', accent: ['#14a3c7', '#3b5bdb'] } },
-  { id: 'forest', label: '숲', description: '짙은 초록 바탕에 연두 강조', kind: 'dark',
+  { id: 'forest', label: tk('숲'), description: tk('짙은 초록 바탕에 연두 강조'), kind: 'dark',
     preview: { bg: '#0e1512', surface: '#141e19', ink: '#ecf5ee', accent: ['#8bd450', '#1fa37a'] } },
-  { id: 'sunset', label: '노을', description: '따뜻한 갈색 바탕에 주황·산호 강조', kind: 'dark',
+  { id: 'sunset', label: tk('노을'), description: tk('따뜻한 갈색 바탕에 주황·산호 강조'), kind: 'dark',
     preview: { bg: '#17100e', surface: '#1f1613', ink: '#fbf1ec', accent: ['#ffb547', '#ff5a5f'] } },
-  { id: 'mono', label: '모노', description: '색을 뺀 검정·회색', kind: 'dark',
+  { id: 'mono', label: tk('모노'), description: tk('색을 뺀 검정·회색'), kind: 'dark',
     preview: { bg: '#101112', surface: '#17181a', ink: '#f2f2f3', accent: ['#f2f2f3', '#b9bbc0'] } },
-  { id: 'sakura', label: '벚꽃', description: '연분홍 라이트', kind: 'light',
+  { id: 'sakura', label: tk('벚꽃'), description: tk('연분홍 라이트'), kind: 'light',
     preview: { bg: '#fff6f8', surface: '#ffffff', ink: '#2b1520', accent: ['#ff6f9c', '#e0457b'] } },
-  { id: 'album', label: '앨범 색', description: '지금 듣는 곡의 표지 색을 따라 바뀝니다', kind: 'dark',
+  { id: 'album', label: tk('앨범 색'), description: tk('지금 듣는 곡의 표지 색을 따라 바뀝니다'), kind: 'dark',
     preview: { bg: '#10161c', surface: '#18222b', ink: '#eef4f8', accent: ['#3cc9d6', '#f2a94b'] } },
 ];
 

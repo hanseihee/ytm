@@ -61,7 +61,7 @@ struct PlayLikedIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        try appModel().playEndpoint(Endpoints.playlist("LM", shuffle: true), what: "좋아요 표시한 곡을 재생")
+        try appModel().playEndpoint(Endpoints.playlist("LM", shuffle: true), failure: "좋아요 표시한 곡을 재생하지 못했습니다")
         return .result()
     }
 }

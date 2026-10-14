@@ -3,10 +3,12 @@
 // → { feed: { title: "인기곡", updated: "Wed, 14 Oct 2026 06:53:43 +0000",
 //    results: [{ id, name, artistName, artworkUrl100(…/100x100bb.jpg, 크기 숫자를 바꿔 큰 표지), contentAdvisoryRating: "Explict" }] } }.
 // 앨범 이름·곡 길이는 없다. 2026-10-14 미국·캐나다·대만·인도 주소가 처음엔 502/504(Gateway)를 냈다가 다시 받으면 됐다 → 앱은 한 번 더 시도하는 게 좋다.
-import { clean, formatChanged, json, type ChartPlaylist, type ChartTrack } from './util';
+import { t } from '../../i18n';
+import { clean, formatChanged, json, regionName, type ChartPlaylist, type ChartTrack } from './util';
 
 export interface AppleCountry {
   code: string;
+  /** 한국어 나라 이름. 다른 언어는 regionName(code)(Intl.DisplayNames)으로 만든다. */
   label: string;
 }
 
@@ -70,13 +72,13 @@ export function parseAppleTopSongs(text: string, country: string): ChartPlaylist
       cover: artwork(r.artworkUrl100, 200),
     }));
   if (!tracks.length) formatChanged('apple');
-  const label = APPLE_COUNTRIES.find((c) => c.code === country)?.label ?? country.toUpperCase();
+  const label = regionName(country, APPLE_COUNTRIES.find((c) => c.code === country)?.label ?? country.toUpperCase());
   const d = feed?.updated?.match(/(\d{1,2}) ([A-Za-z]{3}) (\d{4})/);
   const month = d ? MONTHS.indexOf(d[2].toLowerCase()) + 1 : 0;
   return {
     id: appleChartId(country),
-    name: `Apple Music ${label} 인기곡`,
-    subtitle: d && month ? `${d[3]}.${String(month).padStart(2, '0')}.${d[1].padStart(2, '0')} 업데이트` : 'Apple Music',
+    name: t('Apple Music {country} 인기곡', { country: label }),
+    subtitle: d && month ? t('{date} 업데이트', { date: `${d[3]}.${String(month).padStart(2, '0')}.${d[1].padStart(2, '0')}` }) : 'Apple Music',
     cover: artwork(list[0]?.artworkUrl100, 600),
     tracks,
   };

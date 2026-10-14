@@ -1,4 +1,5 @@
 import { createElement, useState, type MouseEvent } from 'react';
+import { t } from '../i18n';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import type { Collection, Track } from '../lib/ytm/types';
@@ -13,7 +14,6 @@ import { ConfirmDialog, RenamePlaylistDialog } from '../components/Dialogs';
 import { Icon } from '../components/Icon';
 import { ArtistLinks, TrackList } from '../components/TrackList';
 import { addToPlaylistEntry } from '../components/menus';
-import { obj } from '../lib/ko';
 import { Empty, ErrorState, LoadMore, Loading } from './common';
 
 type Kind = 'album' | 'playlist' | 'liked';
@@ -27,30 +27,30 @@ function Suggestions({ playlistId, title, continuation, revision }: { playlistId
   return (
     <section className="shelf suggest-shelf">
       <header className="shelf__head">
-        <h2 className="shelf__title">추천 곡</h2>
-        <button type="button" className="link shelf__more" onClick={res.reload}>다른 곡 보기</button>
+        <h2 className="shelf__title">{t('추천 곡')}</h2>
+        <button type="button" className="link shelf__more" onClick={res.reload}>{t('다른 곡 보기')}</button>
       </header>
       {res.loading && !res.data ? (
         <Loading />
       ) : (
         <div className="tracks tracks--no-album" role="table">
-          {tracks.map((t) => (
-            <div key={t.videoId} className="track" role="row" onDoubleClick={() => playTrack(t)}>
-              <div className="track__lead" role="cell"><Cover src={t.thumbnail} size={40} /></div>
+          {tracks.map((tr) => (
+            <div key={tr.videoId} className="track" role="row" onDoubleClick={() => playTrack(tr)}>
+              <div className="track__lead" role="cell"><Cover src={tr.thumbnail} size={40} /></div>
               <div className="track__main" role="cell">
-                <span className="track__title">{t.title}</span>
-                <span className="track__artists">{t.artists.map((a) => a.name).join(', ')}</span>
+                <span className="track__title">{tr.title}</span>
+                <span className="track__artists">{tr.artists.map((a) => a.name).join(', ')}</span>
               </div>
               <div className="track__tail" role="cell">
-                <span className="track__time">{t.duration !== undefined ? formatTime(t.duration) : ''}</span>
+                <span className="track__time">{tr.duration !== undefined ? formatTime(tr.duration) : ''}</span>
                 <button
                   type="button"
                   className="icon-btn"
-                  aria-label={`${t.title} 이 재생목록에 넣기`}
-                  title="이 재생목록에 넣기"
+                  aria-label={t('{title} 이 재생목록에 넣기', { title: tr.title })}
+                  title={t('이 재생목록에 넣기')}
                   onClick={async () => {
-                    setAdded((s) => new Set(s).add(t.videoId));
-                    await addTracksToPlaylist({ playlistId, title }, [t]);
+                    setAdded((s) => new Set(s).add(tr.videoId));
+                    await addTracksToPlaylist({ playlistId, title }, [tr]);
                   }}
                 >
                   <Icon name="plus" size={18} />
@@ -83,7 +83,7 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
   const data = res.data;
   if (!data) return null;
   const h = data.header;
-  const title = kind === 'liked' ? '좋아요 표시한 곡' : h.title;
+  const title = kind === 'liked' ? t('좋아요 표시한 곡') : h.title;
   const playlistId = h.playlistId ?? (kind === 'playlist' && id.startsWith('VL') ? id.slice(2) : undefined) ?? (kind === 'liked' ? 'LM' : undefined);
   const isSaved = saved ?? h.saved;
   const editable = h.editable && kind === 'playlist';
@@ -108,8 +108,8 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
     else if (data.tracks[0]) void playTrack(data.tracks[0]);
   };
   const shuffle = () => {
-    if (h.shuffle) void playEndpoint(h.shuffle, '셔플 재생');
-    else if (playlistId) void playEndpoint({ watchPlaylistEndpoint: { playlistId, params: 'wAEB8gECKAE%3D' } }, '셔플 재생');
+    if (h.shuffle) void playEndpoint(h.shuffle, t('셔플 재생'));
+    else if (playlistId) void playEndpoint({ watchPlaylistEndpoint: { playlistId, params: 'wAEB8gECKAE%3D' } }, t('셔플 재생'));
   };
 
   const onRemoved = (track: Track) =>
@@ -123,14 +123,14 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
     list.splice(to, 0, moved);
     const successor = list[to + 1];
     if (!moved?.setVideoId || (!successor && data.continuation)) {
-      toast('목록을 끝까지 불러온 뒤 맨 끝으로 옮길 수 있습니다', 'error');
+      toast(t('목록을 끝까지 불러온 뒤 맨 끝으로 옮길 수 있습니다'), 'error');
       return;
     }
     res.setData((prev) => ({ ...prev, tracks: list }));
     try {
       await ytm.movePlaylistItem(playlistId, moved.setVideoId, successor?.setVideoId);
     } catch (err) {
-      toastError(err, '순서를 바꾸지 못했습니다');
+      toastError(err, t('순서를 바꾸지 못했습니다'));
       res.reload();
     }
   };
@@ -139,25 +139,25 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
     const entries: MenuEntry[] = [];
     if (playlistId) {
       entries.push(
-        { label: '다음에 재생', action: () => enqueue({ playlistId }, title, 'next') },
-        { label: '대기열 끝에 추가', action: () => enqueue({ playlistId }, title, 'end') },
+        { label: t('다음에 재생'), action: () => enqueue({ playlistId }, title, 'next') },
+        { label: t('대기열 끝에 추가'), action: () => enqueue({ playlistId }, title, 'end') },
       );
     }
-    if (h.radio) entries.push({ label: '믹스 시작', action: () => playEndpoint(h.radio!, '믹스를 시작') });
+    if (h.radio) entries.push({ label: t('믹스 시작'), action: () => playEndpoint(h.radio!, t('믹스를 시작')) });
     if (data.tracks.length) entries.push(addToPlaylistEntry(data.tracks.filter((t) => t.available)));
     if (editable && playlistId) {
       entries.push(
         { label: '', separator: true },
-        { label: '정보 바꾸기…', action: () => openDialog(createElement(RenamePlaylistDialog, { playlistId, title: h.title, description: h.description, onDone: res.reload })) },
+        { label: t('정보 바꾸기…'), action: () => openDialog(createElement(RenamePlaylistDialog, { playlistId, title: h.title, description: h.description, onDone: res.reload })) },
         {
-          label: '플레이리스트 삭제…',
+          label: t('플레이리스트 삭제…'),
           danger: true,
           action: () =>
             openDialog(
               createElement(ConfirmDialog, {
-                title: '플레이리스트 삭제',
-                message: `${obj(h.title)} 삭제합니다. 되돌릴 수 없습니다.`,
-                confirmLabel: '삭제',
+                title: t('플레이리스트 삭제'),
+                message: t('{title|을} 삭제합니다. 되돌릴 수 없습니다.', { title: h.title }),
+                confirmLabel: t('삭제'),
                 onConfirm: async () => {
                   const ok = await deletePlaylist(playlistId, h.title);
                   if (ok) go({ name: 'library' });
@@ -182,7 +182,7 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
           <Cover src={h.thumbnail} size={232} className="hero__art" />
         )}
         <div className="hero__text">
-          <span className="hero__type">{kind === 'liked' ? '자동 플레이리스트' : h.typeLabel || (kind === 'album' ? '앨범' : '플레이리스트')}</span>
+          <span className="hero__type">{kind === 'liked' ? t('자동 플레이리스트') : h.typeLabel || (kind === 'album' ? t('앨범') : t('플레이리스트'))}</span>
           <h1 className="hero__title">{title}</h1>
           <div className="hero__meta">
             <ArtistLinks artists={h.artists} className="hero__artists" />
@@ -192,10 +192,10 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
           {h.description && <p className="hero__desc">{h.description}</p>}
           <div className="hero__actions">
             <button type="button" className="btn btn--primary btn--play" onClick={playAll} disabled={!data.tracks.length && !h.play}>
-              <Icon name="play" size={18} /> 재생
+              <Icon name="play" size={18} /> {t('재생')}
             </button>
             <button type="button" className="btn btn--quiet" onClick={shuffle} disabled={!h.shuffle && !playlistId}>
-              <Icon name="shuffle" size={17} /> 셔플
+              <Icon name="shuffle" size={17} /> {t('셔플')}
             </button>
             {canSave && (
               <button
@@ -206,10 +206,10 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
                   if (ok) setSavedLocal(!isSaved);
                 }}
               >
-                <Icon name="bookmark" size={17} filled={!!isSaved} /> {isSaved ? '보관함에 있음' : '보관함에 저장'}
+                <Icon name="bookmark" size={17} filled={!!isSaved} /> {isSaved ? t('보관함에 있음') : t('보관함에 저장')}
               </button>
             )}
-            <button type="button" className="icon-btn icon-btn--round" aria-label="더 보기" onClick={menu}>
+            <button type="button" className="icon-btn icon-btn--round" aria-label={t('더 보기')} onClick={menu}>
               <Icon name="more" size={20} />
             </button>
           </div>
@@ -217,8 +217,8 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
       </header>
 
       {data.tracks.length === 0 ? (
-        <Empty title={kind === 'liked' ? '아직 좋아요 표시한 곡이 없습니다' : '곡이 없습니다'}>
-          <p>{kind === 'liked' ? '곡 옆의 하트를 누르면 여기에 모입니다.' : editable ? '곡의 ⋯ 메뉴에서 "플레이리스트에 추가"를 고르세요.' : ''}</p>
+        <Empty title={kind === 'liked' ? t('아직 좋아요 표시한 곡이 없습니다') : t('곡이 없습니다')}>
+          <p>{kind === 'liked' ? t('곡 옆의 하트를 누르면 여기에 모입니다.') : editable ? t('곡의 ⋯ 메뉴에서 "플레이리스트에 추가"를 고르세요.') : ''}</p>
         </Empty>
       ) : (
         <TrackList

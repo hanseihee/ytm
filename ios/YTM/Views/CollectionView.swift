@@ -57,7 +57,7 @@ struct CollectionView: View {
     }
 
     private var title: String {
-        kind == .liked ? "좋아요 표시한 곡" : (state.value?.header.title ?? "")
+        kind == .liked ? L("좋아요 표시한 곡") : (state.value?.header.title ?? "")
     }
 
     private func playlistId(_ data: CollectionPage) -> String? {
@@ -168,7 +168,7 @@ struct CollectionView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Text([kind == .liked ? "자동 플레이리스트" : (h.typeLabel.isEmpty ? (kind == .album ? "앨범" : "플레이리스트") : h.typeLabel), h.year, h.stats].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+            Text([kind == .liked ? L("자동 플레이리스트") : (h.typeLabel.isEmpty ? (kind == .album ? L("앨범") : L("플레이리스트")) : h.typeLabel), h.year, h.stats].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                 .font(.subheadline)
                 .foregroundStyle(palette.mist)
                 .multilineTextAlignment(.center)
@@ -211,7 +211,7 @@ struct CollectionView: View {
                 Button("대기열 끝에 추가", systemImage: "text.line.last.and.arrowtriangle.forward") { model.enqueue(playlistId: pid, title: title, position: "end") }
             }
             if let radio = h.radio {
-                Button("믹스 시작", systemImage: "dot.radiowaves.left.and.right") { model.playEndpoint(radio, what: "믹스를 시작") }
+                Button("믹스 시작", systemImage: "dot.radiowaves.left.and.right") { model.playEndpoint(radio, failure: "믹스를 시작하지 못했습니다") }
             }
             if !data.tracks.isEmpty {
                 Button("플레이리스트에 모두 추가…", systemImage: "text.badge.plus") { model.sheet = .addToPlaylist(data.tracks.filter(\.available)) }
@@ -234,8 +234,8 @@ struct CollectionView: View {
     }
 
     private func shuffle(_ data: CollectionPage) {
-        if let s = data.header.shuffle { model.playEndpoint(s, what: "셔플 재생") }
-        else if let pid = playlistId(data) { model.playEndpoint(Endpoints.playlist(pid, shuffle: true), what: "셔플 재생") }
+        if let s = data.header.shuffle { model.playEndpoint(s, failure: "셔플 재생하지 못했습니다") }
+        else if let pid = playlistId(data) { model.playEndpoint(Endpoints.playlist(pid, shuffle: true), failure: "셔플 재생하지 못했습니다") }
     }
 
     private func load() async {

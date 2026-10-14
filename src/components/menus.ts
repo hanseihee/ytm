@@ -1,5 +1,6 @@
 // 곡·카드 우클릭 메뉴 내용.
 import { createElement } from 'react';
+import { t } from '../i18n';
 import * as ytm from '../lib/ytm/client';
 import type { Card, Track } from '../lib/ytm/types';
 import {
@@ -18,18 +19,18 @@ import { NewPlaylistDialog } from './Dialogs';
 /** "플레이리스트에 추가" 하위 메뉴: 내가 고칠 수 있는 플레이리스트만 YouTube Music에 물어 온다. */
 export function addToPlaylistEntry(tracks: Track[]): MenuEntry {
   return {
-    label: '플레이리스트에 추가',
+    label: t('플레이리스트에 추가'),
     submenu: async () => {
       // 자동 목록(좋아요 표시한 음악 LM, Shorts 사운드 SS)은 직접 곡을 넣는 곳이 아니라 뺀다.
-      const options = (await ytm.addToPlaylistOptions(tracks.map((t) => t.videoId))).filter((p) => !['LM', 'SS'].includes(p.playlistId));
+      const options = (await ytm.addToPlaylistOptions(tracks.map((track) => track.videoId))).filter((p) => !['LM', 'SS'].includes(p.playlistId));
       const entries: MenuEntry[] = [
-        { label: '새 플레이리스트…', action: () => openDialog(createElement(NewPlaylistDialog, { tracks })) },
+        { label: t('새 플레이리스트…'), action: () => openDialog(createElement(NewPlaylistDialog, { tracks })) },
         { label: '', separator: true },
       ];
-      if (!options.length) entries.push({ label: '만든 플레이리스트가 없습니다', disabled: true });
+      if (!options.length) entries.push({ label: t('만든 플레이리스트가 없습니다'), disabled: true });
       for (const p of options) {
         entries.push({
-          label: p.contains ? `${p.title} (이미 있음)` : p.title,
+          label: p.contains ? t('{title} (이미 있음)', { title: p.title }) : p.title,
           action: () => addTracksToPlaylist({ playlistId: p.playlistId, title: p.title }, tracks),
         });
       }
@@ -52,9 +53,9 @@ export function cardUrl(card: Card): string | undefined {
 export async function copyLink(url: string) {
   try {
     await navigator.clipboard.writeText(url);
-    toast('링크를 복사했습니다');
+    toast(t('링크를 복사했습니다'));
   } catch (err) {
-    toastError(err, '링크를 복사하지 못했습니다');
+    toastError(err, t('링크를 복사하지 못했습니다'));
   }
 }
 
@@ -67,19 +68,19 @@ export interface TrackMenuContext {
 export function trackMenu(track: Track, ctx: TrackMenuContext = {}): MenuEntry[] {
   const liked = libraryStore.get().liked.has(track.videoId);
   const entries: MenuEntry[] = [
-    { label: '재생', action: () => playTrack(track), disabled: !track.available },
-    { label: '다음에 재생', action: () => enqueue({ videoId: track.videoId }, track.title, 'next') },
-    { label: '대기열 끝에 추가', action: () => enqueue({ videoId: track.videoId }, track.title, 'end') },
-    { label: '이 곡으로 믹스 시작', action: () => playEndpoint({ watchEndpoint: { videoId: track.videoId, playlistId: `RDAMVM${track.videoId}`, params: 'wAEB' } }, '믹스를 시작') },
+    { label: t('재생'), action: () => playTrack(track), disabled: !track.available },
+    { label: t('다음에 재생'), action: () => enqueue({ videoId: track.videoId }, track.title, 'next') },
+    { label: t('대기열 끝에 추가'), action: () => enqueue({ videoId: track.videoId }, track.title, 'end') },
+    { label: t('이 곡으로 믹스 시작'), action: () => playEndpoint({ watchEndpoint: { videoId: track.videoId, playlistId: `RDAMVM${track.videoId}`, params: 'wAEB' } }, t('믹스를 시작')) },
     { label: '', separator: true },
-    { label: liked ? '좋아요 취소' : '좋아요', action: () => toggleLike(track) },
+    { label: liked ? t('좋아요 취소') : t('좋아요'), action: () => toggleLike(track) },
     addToPlaylistEntry([track]),
-    { label: '링크 복사', action: () => copyLink(trackUrl(track.videoId)) },
+    { label: t('링크 복사'), action: () => copyLink(trackUrl(track.videoId)) },
   ];
   if (ctx.editablePlaylistId && track.setVideoId) {
     const playlistId = ctx.editablePlaylistId;
     entries.push({
-      label: '이 플레이리스트에서 빼기',
+      label: t('이 플레이리스트에서 빼기'),
       danger: true,
       action: async () => {
         if (await removeTracksFromPlaylist(playlistId, [track])) ctx.onRemoved?.(track);
@@ -87,9 +88,9 @@ export function trackMenu(track: Track, ctx: TrackMenuContext = {}): MenuEntry[]
     });
   }
   const nav: MenuEntry[] = [];
-  if (track.album?.id) nav.push({ label: '앨범으로 이동', action: () => go({ name: 'album', id: track.album!.id! }) });
+  if (track.album?.id) nav.push({ label: t('앨범으로 이동'), action: () => go({ name: 'album', id: track.album!.id! }) });
   for (const a of track.artists.filter((x) => x.id).slice(0, 3)) {
-    nav.push({ label: `${a.name} 페이지로 이동`, action: () => go(routeForBrowse(a.id!)) });
+    nav.push({ label: t('{name} 페이지로 이동', { name: a.name }), action: () => go(routeForBrowse(a.id!)) });
   }
   if (nav.length) entries.push({ label: '', separator: true }, ...nav);
   return entries;
@@ -98,24 +99,24 @@ export function trackMenu(track: Track, ctx: TrackMenuContext = {}): MenuEntry[]
 export function cardMenu(card: Card): MenuEntry[] {
   const entries: MenuEntry[] = [];
   const playlistId = card.playlistId ?? (card.browseId?.startsWith('VL') ? card.browseId.slice(2) : undefined);
-  if (card.play) entries.push({ label: '재생', action: () => playEndpoint(card.play!) });
+  if (card.play) entries.push({ label: t('재생'), action: () => playEndpoint(card.play!) });
   if (playlistId && card.kind !== 'artist') {
     entries.push(
-      { label: '셔플 재생', action: () => playEndpoint({ watchPlaylistEndpoint: { playlistId, params: 'wAEB8gECKAE%3D' } }, '셔플 재생') },
-      { label: '다음에 재생', action: () => enqueue({ playlistId }, card.title, 'next') },
-      { label: '대기열 끝에 추가', action: () => enqueue({ playlistId }, card.title, 'end') },
+      { label: t('셔플 재생'), action: () => playEndpoint({ watchPlaylistEndpoint: { playlistId, params: 'wAEB8gECKAE%3D' } }, t('셔플 재생')) },
+      { label: t('다음에 재생'), action: () => enqueue({ playlistId }, card.title, 'next') },
+      { label: t('대기열 끝에 추가'), action: () => enqueue({ playlistId }, card.title, 'end') },
     );
   }
   if (card.videoId) {
     entries.push(
-      { label: '다음에 재생', action: () => enqueue({ videoId: card.videoId }, card.title, 'next') },
-      { label: '대기열 끝에 추가', action: () => enqueue({ videoId: card.videoId }, card.title, 'end') },
+      { label: t('다음에 재생'), action: () => enqueue({ videoId: card.videoId }, card.title, 'next') },
+      { label: t('대기열 끝에 추가'), action: () => enqueue({ videoId: card.videoId }, card.title, 'end') },
     );
   }
   if (card.browseId) {
-    entries.push({ label: '', separator: true }, { label: '열기', action: () => go(routeForBrowse(card.browseId!, card.params, card.title)) });
+    entries.push({ label: '', separator: true }, { label: t('열기'), action: () => go(routeForBrowse(card.browseId!, card.params, card.title)) });
   }
   const url = cardUrl(card);
-  if (url) entries.push({ label: '링크 복사', action: () => copyLink(url) });
+  if (url) entries.push({ label: t('링크 복사'), action: () => copyLink(url) });
   return entries;
 }

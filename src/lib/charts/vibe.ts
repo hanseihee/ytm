@@ -4,14 +4,16 @@
 // → { response: { result: { chart: { title: "오늘 Top 100", chartDate: "10월 14일 오전 7시 업데이트",
 //    items: { tracks: [{ trackId, trackTitle, artists[{artistName}], album{albumTitle, imageUrl}, isAdult }] } } } } }.
 // 곡 길이는 목록에 없다.
+import { t, tk } from '../../i18n';
 import { clean, formatChanged, joinArtists, json, type ChartPlaylist, type ChartTrack } from './util';
 
 export type VibeChartKind = 'total' | 'domestic' | 'oversea';
 
+/** name은 번역 열쇠(한국어 원문). 화면에 낼 때는 t(name) */
 export const VIBE_CHARTS: Record<VibeChartKind, { id: string; name: string }> = {
-  total: { id: 'vibe-today', name: 'VIBE 오늘 Top 100' },
-  domestic: { id: 'vibe-domestic-rising', name: 'VIBE 국내 급상승' },
-  oversea: { id: 'vibe-oversea-rising', name: 'VIBE 해외 급상승' },
+  total: { id: 'vibe-today', name: tk('VIBE 오늘 Top 100') },
+  domestic: { id: 'vibe-domestic-rising', name: tk('VIBE 국내 급상승') },
+  oversea: { id: 'vibe-oversea-rising', name: tk('VIBE 해외 급상승') },
 };
 
 export const vibeChartUrl = (kind: VibeChartKind) =>
@@ -51,7 +53,8 @@ export function parseVibeChart(text: string, kind: VibeChartKind): ChartPlaylist
   const meta = VIBE_CHARTS[kind];
   return {
     id: meta.id,
-    name: meta.name,
+    name: t(meta.name),
+    // 기준 시각은 VIBE가 한국어로 보내 온 그대로("10월 14일 오전 7시 업데이트")
     subtitle: chart?.chartDate || 'VIBE',
     cover: tracks[0].cover,
     tracks,

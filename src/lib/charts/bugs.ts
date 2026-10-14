@@ -5,6 +5,7 @@
 // openMultiArtistSearchResultPopLayer(this, '이름||표시이름||id||OK\\n…')로 들어 있다.
 // 앨범 a.album, 표지 a.thumbnail > img(…/album/images/50/…jpg, 200·500 크기도 있다),
 // 기준 시각 <time datetime="…">2026.10.14 <em>15:00</em>…</time>. 곡 길이는 없다.
+import { t } from '../../i18n';
 import { decode, formatChanged, joinArtists, plain, until, type ChartPlaylist, type ChartTrack } from './util';
 
 export const BUGS_REALTIME = 'bugs-realtime';
@@ -54,8 +55,8 @@ export function parseBugsChart(html: string): ChartPlaylist {
   const when = time ? plain(time.replace(/<a\b[\s\S]*?<\/a>/g, '')) : '';
   return {
     id: BUGS_REALTIME,
-    name: '벅스 실시간 차트',
-    subtitle: when ? `${when} 기준` : '벅스 실시간',
+    name: t('벅스 실시간 차트'),
+    subtitle: when ? t('{time} 기준', { time: when }) : t('벅스 실시간'),
     cover: tracks[0].cover?.replace(/\/images\/\d+\//, '/images/500/').replace(/\?.*$/, ''),
     tracks,
   };

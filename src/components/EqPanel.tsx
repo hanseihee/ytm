@@ -1,5 +1,6 @@
 // 이퀄라이저 패널: 실시간 스펙트럼 + 응답 곡선 + 10밴드 슬라이더·프리앰프·프리셋.
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { t } from '../i18n';
 import {
   applyPreset,
   BAND_LABELS,
@@ -98,8 +99,8 @@ function Spectrum() {
 
   return (
     <div className="spectrum">
-      <canvas ref={canvas} className="spectrum__canvas" aria-label="실시간 스펙트럼" role="img" />
-      {!playing && <span className="spectrum__idle">곡을 재생하면 스펙트럼이 움직입니다</span>}
+      <canvas ref={canvas} className="spectrum__canvas" aria-label={t('실시간 스펙트럼')} role="img" />
+      {!playing && <span className="spectrum__idle">{t('곡을 재생하면 스펙트럼이 움직입니다')}</span>}
     </div>
   );
 }
@@ -146,7 +147,7 @@ function Slider({ index }: { index: number }) {
         value={value}
         style={style}
         disabled={!enabled}
-        aria-label={`${BAND_LABELS[index]}Hz 이득 (dB)`}
+        aria-label={t('{band}Hz 이득 (dB)', { band: BAND_LABELS[index] })}
         onChange={(e) => setBand(index, Number(e.target.value))}
         onDoubleClick={() => setBand(index, 0)}
       />
@@ -163,9 +164,9 @@ export function EqPanel() {
   const failed = useEqStatus((s) => s.failed);
 
   return (
-    <aside className="panel panel--eq" aria-label="이퀄라이저">
+    <aside className="panel panel--eq" aria-label={t('이퀄라이저')}>
       <header className="panel__head">
-        <h2 className="panel__title">이퀄라이저</h2>
+        <h2 className="panel__title">{t('이퀄라이저')}</h2>
         <div className="panel__tools">
           <button
             type="button"
@@ -175,9 +176,9 @@ export function EqPanel() {
             onClick={() => updateEq({ enabled: !enabled })}
           >
             <span className="switch__knob" />
-            <span className="sr-only">이퀄라이저 {enabled ? '끄기' : '켜기'}</span>
+            <span className="sr-only">{enabled ? t('이퀄라이저 끄기') : t('이퀄라이저 켜기')}</span>
           </button>
-          <button type="button" className="icon-btn" aria-label="이퀄라이저 닫기" onClick={() => togglePanel('eq')}>
+          <button type="button" className="icon-btn" aria-label={t('이퀄라이저 닫기')} onClick={() => togglePanel('eq')}>
             <Icon name="close" size={18} />
           </button>
         </div>
@@ -197,7 +198,7 @@ export function EqPanel() {
         </div>
 
         <label className="preamp">
-          <span className="preamp__label">프리앰프</span>
+          <span className="preamp__label">{t('프리앰프')}</span>
           <input
             type="range"
             className="range preamp__range"
@@ -208,12 +209,12 @@ export function EqPanel() {
             disabled={!enabled}
             style={{ '--fill': `${((preamp + MAX_DB) / (2 * MAX_DB)) * 100}%` } as CSSProperties}
             onChange={(e) => updateEq({ preamp: Number(e.target.value), preset: preset === 'custom' ? 'custom' : preset })}
-            aria-label="프리앰프 (dB)"
+            aria-label={t('프리앰프 (dB)')}
           />
           <span className="preamp__value">{preamp > 0 ? `+${preamp}` : preamp} dB</span>
         </label>
 
-        <div className="presets" role="radiogroup" aria-label="프리셋">
+        <div className="presets" role="radiogroup" aria-label={t('프리셋')}>
           {PRESETS.map((p) => (
             <button
               key={p.id}
@@ -224,13 +225,13 @@ export function EqPanel() {
               disabled={!enabled}
               onClick={() => applyPreset(p.id)}
             >
-              {p.label}
+              {t(p.label)}
             </button>
           ))}
-          {preset === 'custom' && <span className="chip chip--small is-on" aria-current="true">사용자 지정</span>}
+          {preset === 'custom' && <span className="chip chip--small is-on" aria-current="true">{t('사용자 지정')}</span>}
         </div>
         <p className="eq__hint">
-          슬라이더를 두 번 누르면 0으로 돌아갑니다. 올린 만큼 프리앰프를 낮추면 소리가 깨지지 않습니다.
+          {t('슬라이더를 두 번 누르면 0으로 돌아갑니다. 올린 만큼 프리앰프를 낮추면 소리가 깨지지 않습니다.')}
         </p>
       </div>
     </aside>

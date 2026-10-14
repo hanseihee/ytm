@@ -2,6 +2,7 @@
 // 가사 찾기는 데스크톱과 같은 코드(src/lib)를 그대로 돌려 결과를 맞춘다.
 // 앱은 __coreCall(id, 이름, 인자 JSON 배열)로 부르고, 결과는 __native.done으로 JSON을 받는다.
 import './polyfills';
+import { setLang } from '../../i18n';
 import { loadLyrics, lyricsOffset, setLyricsOffset } from '../../lib/lyrics';
 import { clearPlays, flushPlays, recordState, statsSummary } from '../../lib/stats';
 import * as spotify from '../../lib/spotify';
@@ -9,6 +10,8 @@ import * as ytm from '../../lib/ytm/client';
 import { native } from './native';
 
 const api: Record<string, (...args: never[]) => unknown> = {
+  // 언어(앱이 정한 언어: 'ko'·'en'·'ja'·'zh-CN'·'zh-TW'·'es'·'pt-BR'·'fr'·'de'·'id')
+  setLanguage: (lang: string) => setLang(lang),
   // 둘러보기
   home: ytm.home,
   homeMore: ytm.homeMore,
@@ -70,8 +73,8 @@ const api: Record<string, (...args: never[]) => unknown> = {
   lyricsOffset,
   setLyricsOffset,
   // 차트(멜론·지니·Spotify·빌보드 등)
-  charts: () => spotify.CHARTS,
-  chartGroups: () => spotify.CHART_GROUP_ORDER,
+  charts: () => spotify.localizedCharts(),
+  chartGroups: () => spotify.localizedChartGroups(),
   chartKind: spotify.chartKind,
   spotifyPlaylist: spotify.fetchPlaylist,
   matchTrack: spotify.matchTrack,

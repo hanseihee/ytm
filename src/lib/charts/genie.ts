@@ -4,6 +4,7 @@
 // 표지 a.cover > img(//image.genie.co.kr/…_140x140.JPG/dims/resize/Q_80,0, 같은 자리에 _600x600.JPG도 있다).
 // 기준 시각은 쪽 넘김 링크(?ditc=D&ymd=20261014&hh=15&rtm=Y&pg=2)에서 읽는다
 // (머리의 날짜 칸 #inc_date는 자바스크립트가 채워서 원문엔 2013년 자리표시만 있다). 곡 길이는 없다.
+import { t } from '../../i18n';
 import { absUrl, decode, formatChanged, plain, uniqueTracks, until, type ChartPlaylist, type ChartTrack } from './util';
 
 export const GENIE_TOP200 = 'genie-top200';
@@ -49,8 +50,8 @@ export function parseGenieTop200(text: string, more: string[] = []): ChartPlayli
   const cover = tracks[0].cover?.replace(/_\d+x\d+\.JPG.*$/i, '_600x600.JPG');
   return {
     id: GENIE_TOP200,
-    name: '지니 TOP 200',
-    subtitle: at ? `${at[1]}.${at[2]}.${at[3]} ${at[4].padStart(2, '0')}:00 기준` : '지니 실시간',
+    name: t('지니 TOP 200'),
+    subtitle: at ? t('{time} 기준', { time: `${at[1]}.${at[2]}.${at[3]} ${at[4].padStart(2, '0')}:00` }) : t('지니 실시간'),
     cover,
     tracks,
   };

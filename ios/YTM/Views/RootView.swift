@@ -14,7 +14,10 @@ struct RootView: View {
         ZStack {
             EngineLayer()
                 .zIndex(model.engineVisible ? 3 : 0)
+            // 언어를 바꾸면 탭 화면을 새로 만들어 YouTube Music 데이터도 새 언어로 다시 받는다
+            // (엔진 웹 화면은 그대로라 재생은 끊기지 않는다).
             MainTabs()
+                .id(model.language)
                 .zIndex(1)
             if !model.engineVisible && !model.devSkipLogin && (!model.status.ready || !model.status.loggedIn) {
                 LoginGate()
@@ -24,6 +27,7 @@ struct RootView: View {
         }
         .overlay(alignment: .top) { ToastStack() }
         .environment(\.palette, palette)
+        .environment(\.locale, Locale(identifier: model.language))
         .preferredColorScheme(model.theme == .system ? nil : (palette.isLight ? .light : .dark))
         .tint(palette.rose)
         .animation(.easeInOut(duration: 0.25), value: model.engineVisible)
@@ -31,6 +35,7 @@ struct RootView: View {
         .sheet(item: Binding(get: { model.showNowPlaying ? nil : model.sheet }, set: { model.sheet = $0 })) { sheet in
             SheetContent(sheet: sheet)
                 .environment(\.palette, palette)
+                .environment(\.locale, Locale(identifier: model.language))
                 .tint(palette.rose)
         }
     }
@@ -82,9 +87,11 @@ struct MainTabs: View {
             NowPlayingView()
                 .navigationTransition(.zoom(sourceID: "now-playing", in: nowPlayingSpace))
                 .environment(\.palette, palette)
+                .environment(\.locale, Locale(identifier: model.language))
                 .sheet(item: $model.sheet) { sheet in
                     SheetContent(sheet: sheet)
                         .environment(\.palette, palette)
+                        .environment(\.locale, Locale(identifier: model.language))
                         .tint(palette.rose)
                 }
         }

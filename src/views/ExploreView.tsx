@@ -1,5 +1,7 @@
 // 둘러보기: 분위기·장르 단추, 최신 음악, YouTube Music 차트(나라 고르기).
 import { useState, type CSSProperties } from 'react';
+import { t } from '../i18n';
+import { regionName } from '../lib/charts';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import { go } from '../state/nav';
@@ -7,28 +9,22 @@ import { ShelfView } from '../components/Cards';
 import { ErrorState, Loading } from './common';
 
 /** YouTube Music 차트 나라(ISO 코드, 전 세계는 ZZ) */
-export const YTM_CHART_COUNTRIES: { code: string; label: string }[] = [
-  { code: 'KR', label: '한국' },
-  { code: 'ZZ', label: '전 세계' },
-  { code: 'US', label: '미국' },
-  { code: 'JP', label: '일본' },
-  { code: 'GB', label: '영국' },
-  { code: 'FR', label: '프랑스' },
-  { code: 'DE', label: '독일' },
-  { code: 'CA', label: '캐나다' },
-  { code: 'AU', label: '호주' },
-  { code: 'BR', label: '브라질' },
-  { code: 'MX', label: '멕시코' },
-  { code: 'IN', label: '인도' },
-  { code: 'ID', label: '인도네시아' },
-  { code: 'PH', label: '필리핀' },
-];
+export const YTM_CHART_COUNTRIES: string[] = ['KR', 'ZZ', 'US', 'JP', 'GB', 'FR', 'DE', 'CA', 'AU', 'BR', 'MX', 'IN', 'ID', 'PH'];
+
+/** 한국어 화면의 나라 이름(예전 그대로: Intl은 '대한민국'·'오스트레일리아'로 써서) */
+const KO_COUNTRY: Record<string, string> = {
+  KR: '한국', ZZ: '전 세계', US: '미국', JP: '일본', GB: '영국', FR: '프랑스', DE: '독일',
+  CA: '캐나다', AU: '호주', BR: '브라질', MX: '멕시코', IN: '인도', ID: '인도네시아', PH: '필리핀',
+};
+
+/** 나라 이름을 지금 언어로(한국어는 위 이름, 전 세계(ZZ)는 번역 문구) */
+const countryName = (code: string) => (code === 'ZZ' ? t('전 세계') : regionName(code, KO_COUNTRY[code] ?? code));
 
 const COUNTRY_KEY = 'ytm-desktop:ytm-chart-country';
 function loadCountry() {
   try {
     const v = localStorage.getItem(COUNTRY_KEY);
-    return v && YTM_CHART_COUNTRIES.some((c) => c.code === v) ? v : 'KR';
+    return v && YTM_CHART_COUNTRIES.includes(v) ? v : 'KR';
   } catch {
     return 'KR';
   }
@@ -52,11 +48,11 @@ export function ExploreView() {
   return (
     <div className="page">
       <header className="page__head">
-        <h1 className="page__title">둘러보기</h1>
+        <h1 className="page__title">{t('둘러보기')}</h1>
       </header>
 
       <section className="shelf">
-        <h2 className="shelf__title">분위기 및 장르</h2>
+        <h2 className="shelf__title">{t('분위기 및 장르')}</h2>
         {moods.loading && !moods.data ? (
           <Loading />
         ) : moods.error ? (
@@ -85,12 +81,12 @@ export function ExploreView() {
 
       <section className="shelf">
         <header className="shelf__head">
-          <h2 className="shelf__title">YouTube Music 차트</h2>
+          <h2 className="shelf__title">{t('YouTube Music 차트')}</h2>
         </header>
-        <div className="chips" role="radiogroup" aria-label="차트 나라">
-          {YTM_CHART_COUNTRIES.map((c) => (
-            <button key={c.code} type="button" role="radio" aria-checked={c.code === country} className={`chip${c.code === country ? ' is-on' : ''}`} onClick={() => pick(c.code)}>
-              {c.label}
+        <div className="chips" role="radiogroup" aria-label={t('차트 나라')}>
+          {YTM_CHART_COUNTRIES.map((code) => (
+            <button key={code} type="button" role="radio" aria-checked={code === country} className={`chip${code === country ? ' is-on' : ''}`} onClick={() => pick(code)}>
+              {countryName(code)}
             </button>
           ))}
         </div>
@@ -108,7 +104,7 @@ export function ExploreView() {
       ) : releases.error ? (
         <ErrorState message={releases.error} onRetry={releases.reload} />
       ) : (
-        releases.data?.shelves.map((s, i) => <ShelfView key={`${s.title}-${i}`} shelf={{ ...s, title: s.title || '최신 음악' }} />)
+        releases.data?.shelves.map((s, i) => <ShelfView key={`${s.title}-${i}`} shelf={{ ...s, title: s.title || t('최신 음악') }} />)
       )}
     </div>
   );

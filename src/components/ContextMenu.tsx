@@ -1,5 +1,6 @@
 // 우클릭 메뉴와 알림(토스트).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { t } from '../i18n';
 import { useStore } from '../lib/store';
 import { closeMenu, menuStore, toastStore, toastError, type MenuEntry } from '../state/ui';
 import { Icon } from './Icon';
@@ -34,7 +35,7 @@ function MenuList({ entries, x, y, onDone }: { entries: MenuEntry[]; x: number; 
       setOpen((o) => (o && o.index === index ? { ...o, entries: list } : o));
     } catch (err) {
       setOpen(null);
-      toastError(err, '목록을 불러오지 못했습니다');
+      toastError(err, t('목록을 불러오지 못했습니다'));
     }
   };
 
@@ -72,7 +73,7 @@ function MenuList({ entries, x, y, onDone }: { entries: MenuEntry[]; x: number; 
       </div>
       {open &&
         (open.entries === 'loading' ? (
-          <div className="menu menu--loading" style={{ left: open.x, top: open.y }}>불러오는 중…</div>
+          <div className="menu menu--loading" style={{ left: open.x, top: open.y }}>{t('불러오는 중…')}</div>
         ) : (
           <MenuList entries={open.entries} x={open.x} y={open.y} onDone={onDone} />
         ))}
@@ -110,8 +111,8 @@ export function Toasts() {
   const toasts = useStore(toastStore, (s) => s);
   return (
     <div className="toasts" role="status" aria-live="polite">
-      {toasts.map((t) => (
-        <div key={t.id} className={`toast toast--${t.tone}`}>{t.text}</div>
+      {toasts.map((item) => (
+        <div key={item.id} className={`toast toast--${item.tone}`}>{item.text}</div>
       ))}
     </div>
   );

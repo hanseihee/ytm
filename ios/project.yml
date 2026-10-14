@@ -6,6 +6,7 @@
 name: YTM
 options:
   bundleIdPrefix: dev.seihee
+  developmentLanguage: ko
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -14,8 +15,11 @@ settings:
     DEVELOPMENT_TEAM: RT556U3WKT
     SWIFT_VERSION: "5.0"
     SWIFT_STRICT_CONCURRENCY: minimal
-    MARKETING_VERSION: "0.2.1"
-    CURRENT_PROJECT_VERSION: "2"
+    # 화면 문구는 문자열 카탈로그(Localizable.xcstrings, 한국어 문구가 키)로 번역한다.
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    MARKETING_VERSION: "0.2.2"
+    CURRENT_PROJECT_VERSION: "3"
 targets:
   YTM:
     type: application

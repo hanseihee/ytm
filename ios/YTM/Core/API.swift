@@ -91,6 +91,8 @@ struct API {
     func setLyricsOffset(_ videoId: String, _ seconds: Double) async -> Double { (try? await core.call("setLyricsOffset", [videoId, seconds])) ?? 0 }
 
     // MARK: 차트(멜론 TOP 100·Spotify)
+    /// 공용 데이터 코드(차트 이름·오류 문장 등)의 언어. 데이터 묶음이 아직 모르면 무시한다.
+    func setLanguage(_ code: String) async { try? await core.run("setLanguage", [code]) }
     func charts() async throws -> [ChartInfo] { try await core.call("charts") }
     func chartGroups() async throws -> [String] { try await core.call("chartGroups") }
     func chartPlaylist(_ id: String) async throws -> ChartPlaylist { try await core.call("spotifyPlaylist", [id]) }

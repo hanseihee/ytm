@@ -1,4 +1,5 @@
 // 데스크톱 설정: 곡 알림, 전역 단축키, 영상 창 늘 위. 화면 저장소에 두고 시작할 때와 바꿀 때 Rust에 알린다.
+import { tk } from '../i18n';
 import { createStore, useStore } from '../lib/store';
 import { sendPrefs, type Prefs } from '../lib/tauri';
 
@@ -39,11 +40,14 @@ export function startPrefsSync() {
   push();
 }
 
-/** 전역 단축키 목록(desktop.rs SHORTCUTS와 같다). 맥은 ⌃⌥, 윈도우는 Ctrl+Alt. */
+/**
+ * 전역 단축키 목록(desktop.rs SHORTCUTS와 같다). 맥은 ⌃⌥, 윈도우는 Ctrl+Alt.
+ * label은 번역 열쇠(한국어 원문) — 화면에서 t(label)로 그린다.
+ */
 export const SHORTCUT_LIST: { key: string; label: string }[] = [
-  { key: 'P', label: '재생/일시정지' },
-  { key: 'N', label: '다음 곡' },
-  { key: 'B', label: '이전 곡' },
-  { key: 'L', label: '좋아요' },
-  { key: 'M', label: '미니 플레이어' },
+  { key: 'P', label: tk('재생/일시정지') },
+  { key: 'N', label: tk('다음 곡') },
+  { key: 'B', label: tk('이전 곡') },
+  { key: 'L', label: tk('좋아요') },
+  { key: 'M', label: tk('미니 플레이어') },
 ];

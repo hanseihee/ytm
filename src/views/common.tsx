@@ -1,7 +1,8 @@
 // 화면 공통 조각: 불러오는 중·오류·빈 화면, 끝까지 내리면 더 불러오기.
 import { useEffect, useRef } from 'react';
+import { t } from '../i18n';
 
-export function Loading({ label = '불러오는 중…' }: { label?: string }) {
+export function Loading({ label = t('불러오는 중…') }: { label?: string }) {
   return (
     <div className="state" role="status">
       <span className="spinner" aria-hidden="true" />
@@ -15,7 +16,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
     <div className="state state--error" role="alert">
       <p>{message}</p>
       {onRetry && (
-        <button type="button" className="btn btn--quiet" onClick={onRetry}>다시 시도</button>
+        <button type="button" className="btn btn--quiet" onClick={onRetry}>{t('다시 시도')}</button>
       )}
     </div>
   );
@@ -42,5 +43,5 @@ export function LoadMore({ onReach, busy }: { onReach: () => void; busy: boolean
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  return <div ref={ref} className="load-more">{busy ? <Loading label="더 불러오는 중…" /> : null}</div>;
+  return <div ref={ref} className="load-more">{busy ? <Loading label={t('더 불러오는 중…')} /> : null}</div>;
 }

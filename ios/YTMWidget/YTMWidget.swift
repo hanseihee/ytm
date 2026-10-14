@@ -30,6 +30,13 @@ struct NowPlayingProvider: TimelineProvider {
     }
 }
 
+/// 앱에서 고른 화면 언어로 문구를 만든다(앱이 App Group에 남긴 언어, 없으면 기기 언어).
+private func L(_ resource: LocalizedStringResource) -> String {
+    var resource = resource
+    if let code = SharedNowPlaying.defaults?.string(forKey: SharedNowPlaying.languageKey) { resource.locale = Locale(identifier: code) }
+    return String(localized: resource)
+}
+
 struct NowPlayingWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: NowPlayingEntry
@@ -42,15 +49,15 @@ struct NowPlayingWidgetView: View {
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 1) {
                     Text(has ? info!.title : "YTM").font(.headline).lineLimit(1)
-                    Text(has ? info!.artist : "재생 중인 곡 없음").font(.caption).lineLimit(1)
+                    Text(has ? info!.artist : L("재생 중인 곡 없음")).font(.caption).lineLimit(1)
                     if has { controls(size: 13) }
                 }
             case .systemMedium:
                 HStack(spacing: 14) {
                     cover(size: 116)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(has ? info!.title : "재생 중인 곡이 없습니다").font(.headline).lineLimit(2)
-                        Text(has ? info!.artist : "YTM을 열어 곡을 고르세요").font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                        Text(has ? info!.title : L("재생 중인 곡이 없습니다")).font(.headline).lineLimit(2)
+                        Text(has ? info!.artist : L("YTM을 열어 곡을 고르세요")).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                         Spacer(minLength: 6)
                         if has { controls(size: 20) }
                     }
@@ -70,7 +77,7 @@ struct NowPlayingWidgetView: View {
                     }
                     Spacer(minLength: 0)
                     Text(has ? info!.title : "YTM").font(.subheadline.weight(.bold)).lineLimit(2)
-                    Text(has ? info!.artist : "재생 중인 곡 없음").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(has ? info!.artist : L("재생 중인 곡 없음")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
         }

@@ -4,6 +4,7 @@
 // basedOnUpdate: "24시간 집계 (15시 기준)", trackList: [{ id, name, artistList[{name}], album{title, imgList[{size,url}]}, adultAuthYn }] } }.
 // flomuz.io는 주소가 없다(DNS 없음·404). 곡 길이는 목록에 없다.
 // 차트 2·3번("일간 종합"·"주간 종합")도 열리지만 둘의 곡이 같고 기간 표시가 어긋나 쓰지 않는다.
+import { t } from '../../i18n';
 import { clean, formatChanged, joinArtists, json, type ChartPlaylist, type ChartTrack } from './util';
 
 export const FLO_CHART = 'flo-chart';
@@ -50,8 +51,9 @@ export function parseFloChart(text: string): ChartPlaylist {
   if (!tracks.length) formatChanged('flo');
   return {
     id: FLO_CHART,
-    name: res.data?.name || 'FLO 차트',
-    subtitle: res.data?.basedOnUpdate || 'FLO 최근 24시간',
+    // 이름·기준 시각은 FLO가 한국어로 보내 온 그대로 쓴다(없을 때만 우리 문구).
+    name: res.data?.name || t('FLO 차트'),
+    subtitle: res.data?.basedOnUpdate || t('FLO 최근 24시간'),
     cover: imageOf(list[0]?.album?.imgList, 500),
     tracks,
   };

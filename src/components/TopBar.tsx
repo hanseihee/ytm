@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { t } from '../i18n';
 import * as ytm from '../lib/ytm/client';
 import type { Suggestions } from '../lib/ytm/types';
 import { playTrack } from '../state/library';
@@ -67,7 +68,7 @@ function SearchBox() {
         id="search-input"
         className="searchbox__input"
         type="search"
-        placeholder="노래, 앨범, 아티스트 검색"
+        placeholder={t('노래, 앨범, 아티스트 검색')}
         autoComplete="off"
         spellCheck={false}
         value={value}
@@ -105,19 +106,19 @@ function SearchBox() {
               <span><b>{c.title}</b><small>{c.subtitle}</small></span>
             </button>
           ))}
-          {sugg!.tracks.slice(0, 3).map((t) => (
+          {sugg!.tracks.slice(0, 3).map((track) => (
             <button
-              key={t.videoId}
+              key={track.videoId}
               type="button"
               className="suggest__item"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 setOpen(false);
-                void playTrack(t);
+                void playTrack(track);
               }}
             >
-              <Cover src={t.thumbnail} size={36} />
-              <span><b>{t.title}</b><small>{t.artists.map((a) => a.name).join(', ')}</small></span>
+              <Cover src={track.thumbnail} size={36} />
+              <span><b>{track.title}</b><small>{track.artists.map((a) => a.name).join(', ')}</small></span>
             </button>
           ))}
         </div>
@@ -131,10 +132,10 @@ export function TopBar() {
   return (
     <div className="topbar" data-tauri-drag-region>
       <div className="topbar__nav">
-        <button type="button" className="icon-btn icon-btn--round" aria-label="뒤로" disabled={!(can & 1)} onClick={back}>
+        <button type="button" className="icon-btn icon-btn--round" aria-label={t('뒤로')} disabled={!(can & 1)} onClick={back}>
           <Icon name="back" size={18} />
         </button>
-        <button type="button" className="icon-btn icon-btn--round" aria-label="앞으로" disabled={!(can & 2)} onClick={forward}>
+        <button type="button" className="icon-btn icon-btn--round" aria-label={t('앞으로')} disabled={!(can & 2)} onClick={forward}>
           <Icon name="forward" size={18} />
         </button>
       </div>

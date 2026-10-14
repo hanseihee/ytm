@@ -10,7 +10,7 @@ struct ExploreView: View {
     @State private var charts: Loadable<BrowsePage> = .loading
 
     /// YouTube Music 차트 나라(ExploreView.tsx YTM_CHART_COUNTRIES와 같다)
-    static let countries: [(code: String, label: String)] = [
+    static let countries: [(code: String, label: LocalizedStringResource)] = [
         ("KR", "한국"), ("ZZ", "전 세계"), ("US", "미국"), ("JP", "일본"), ("GB", "영국"), ("FR", "프랑스"), ("DE", "독일"),
         ("CA", "캐나다"), ("AU", "호주"), ("BR", "브라질"), ("MX", "멕시코"), ("IN", "인도"), ("ID", "인도네시아"), ("PH", "필리핀"),
     ]
@@ -46,7 +46,7 @@ struct ExploreView: View {
         .padding(.horizontal, 16)
     }
 
-    private func shortcut(_ title: String, symbol: String, sub: String, action: @escaping () -> Void) -> some View {
+    private func shortcut(_ title: LocalizedStringKey, symbol: String, sub: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: symbol)
@@ -55,7 +55,8 @@ struct ExploreView: View {
                     .frame(width: 40, height: 40)
                     .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(palette.accent))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.subheadline.weight(.bold)).foregroundStyle(palette.ink)
+                    // 번역이 길어도 두 카드 높이가 같게 한 줄로(조금 줄여서라도) 맞춘다.
+                    Text(title).font(.subheadline.weight(.bold)).foregroundStyle(palette.ink).lineLimit(1).minimumScaleFactor(0.75)
                     Text(sub).font(.caption2).foregroundStyle(palette.mist).lineLimit(1)
                 }
                 Spacer(minLength: 0)
@@ -126,7 +127,7 @@ struct ExploreView: View {
     }
 
     @ViewBuilder
-    private func section<V: View>(_ state: Loadable<BrowsePage>, empty: String, @ViewBuilder content: (BrowsePage) -> V) -> some View {
+    private func section<V: View>(_ state: Loadable<BrowsePage>, empty: LocalizedStringKey, @ViewBuilder content: (BrowsePage) -> V) -> some View {
         switch state {
         case .loading:
             LoadingView()

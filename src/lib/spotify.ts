@@ -3,7 +3,19 @@
 // - 멜론·지니·벅스·FLO·VIBE·써클차트·빌보드·Apple Music은 앱이 페이지를 받아(chart_fetch) charts/가 해석한다.
 // 곡마다 YouTube Music 검색 결과 중 제목·아티스트·길이가 가장 잘 맞는 음원을 고른다.
 import { invoke } from '@tauri-apps/api/core';
-import { CHART_GROUPS, CHART_LIST, chartEntry, describeChartError, headersFor, loadChart, type ChartRequest } from './charts';
+import { locale, t, tk } from '../i18n';
+import {
+  CHART_GROUPS,
+  CHART_LIST,
+  chartChipName,
+  chartEntry,
+  chartName,
+  describeChartError,
+  headersFor,
+  loadChart,
+  regionName,
+  type ChartRequest,
+} from './charts';
 import { MELON_TOP100 } from './melon';
 import * as ytm from './ytm/client';
 import type { Track } from './ytm/types';
@@ -12,18 +24,22 @@ export const KOREA_TOP50 = '37i9dQZEVXbNxXF4SkHj9F';
 
 export interface ChartInfo {
   code: string;
+  /** 한국어 이름(번역 열쇠 겸 기본 이름, Spotify는 나라 이름). 화면 이름은 chartLabel(c) */
   label: string;
   id: string;
   /** 'spotify' 또는 charts/의 출처(melon, genie …) */
   source: string;
-  /** 고르기 화면의 묶음 이름 */
+  /** 고르기 화면의 묶음 이름(번역 열쇠). 화면 이름은 chartGroupName(group) */
   group: string;
 }
 
-/** Spotify "Top 50 - 나라"(매일 갱신). id는 2026-10-14 임베드 페이지로 모두 확인. */
+/**
+ * Spotify "Top 50 - 나라"(매일 갱신). id는 2026-10-14 임베드 페이지로 모두 확인.
+ * label은 한국어 나라 이름 — 다른 언어는 code로 regionName(Intl.DisplayNames)을 쓴다('글로벌'만 번역 열쇠).
+ */
 const SPOTIFY_TOP50: ChartInfo[] = [
   { code: 'KR', label: '한국', id: KOREA_TOP50, source: 'spotify', group: 'Spotify Top 50' },
-  { code: 'GLOBAL', label: '글로벌', id: '37i9dQZEVXbMDoHDwVN2tF', source: 'spotify', group: 'Spotify Top 50' },
+  { code: 'GLOBAL', label: tk('글로벌'), id: '37i9dQZEVXbMDoHDwVN2tF', source: 'spotify', group: 'Spotify Top 50' },
   { code: 'JP', label: '일본', id: '37i9dQZEVXbKXQ4mDTEBXq', source: 'spotify', group: 'Spotify Top 50' },
   { code: 'US', label: '미국', id: '37i9dQZEVXbLRQDuF5jeBp', source: 'spotify', group: 'Spotify Top 50' },
   { code: 'GB', label: '영국', id: '37i9dQZEVXbLnolsZ8PSNw', source: 'spotify', group: 'Spotify Top 50' },
@@ -54,10 +70,31 @@ export const CHARTS: ChartInfo[] = [
   ...CHART_LIST.filter((c) => c.group !== '멜론').map((c) => ({ code: c.id, label: c.label, id: c.id, source: c.source, group: c.group })),
 ];
 
-/** 고르기 화면 묶음 순서 */
+/** 고르기 화면 묶음 순서(번역 열쇠 — CHARTS의 group과 그대로 비교한다). 화면 이름은 chartGroupName(group) */
 export const CHART_GROUP_ORDER = ['멜론', 'Spotify Top 50', ...CHART_GROUPS.filter((g) => g !== '멜론')];
 
 export const chartFor = (id: string) => CHARTS.find((c) => c.id === id);
+
+/** 묶음 이름(지금 언어) */
+export const chartGroupName = (group: string) => t(group);
+
+/** 차트 이름(지금 언어): Spotify는 나라 이름("한국" → en "South Korea"), 그 밖은 "멜론 일간 TOP 100" 같은 목록 이름 */
+export function chartLabel(c: ChartInfo): string {
+  if (c.source === 'spotify') return c.code === 'GLOBAL' ? t(c.label) : regionName(c.code, c.label);
+  return chartName(c.id) ?? t(c.label);
+}
+
+/** 고르기 칩 이름(지금 언어): Spotify는 나라 이름, 멜론·Apple Music은 묶음 이름과 겹치는 앞말을 뺀 것("일간 TOP 100", "한국 인기곡") */
+export function chartChipLabel(c: ChartInfo): string {
+  if (c.source === 'spotify') return chartLabel(c);
+  return chartChipName(c.id) ?? chartLabel(c);
+}
+
+/** CHARTS를 그대로 그리는 쪽(iOS)에 줄 목록: 이름·묶음 이름을 지금 언어로 바꾼 것(id·code·source는 그대로) */
+export const localizedCharts = (): ChartInfo[] => CHARTS.map((c) => ({ ...c, label: chartLabel(c), group: chartGroupName(c.group) }));
+
+/** localizedCharts와 짝: 묶음 순서(지금 언어) */
+export const localizedChartGroups = (): string[] => CHART_GROUP_ORDER.map(chartGroupName);
 
 const LAST_CHART_KEY = 'ytm-desktop:last-chart';
 /** 마지막으로 본 차트(없으면 한국) */
@@ -103,13 +140,13 @@ export interface Match {
 
 export function describeSpotifyError(err: unknown): string {
   const m = String(err instanceof Error ? err.message : err);
-  if (m.startsWith('spotify_bad_id')) return 'Spotify 플레이리스트 링크가 아닙니다.';
-  if (m.startsWith('spotify_not_found')) return 'Spotify에서 이 플레이리스트를 찾지 못했습니다(비공개일 수 있습니다).';
-  if (m.startsWith('spotify_format_changed')) return 'Spotify 페이지 형식이 바뀌어 곡 목록을 읽지 못했습니다.';
-  if (m.startsWith('spotify_network')) return 'Spotify에 연결하지 못했습니다. 인터넷 연결을 확인하세요.';
+  if (m.startsWith('spotify_bad_id')) return t('Spotify 플레이리스트 링크가 아닙니다.');
+  if (m.startsWith('spotify_not_found')) return t('Spotify에서 이 플레이리스트를 찾지 못했습니다(비공개일 수 있습니다).');
+  if (m.startsWith('spotify_format_changed')) return t('Spotify 페이지 형식이 바뀌어 곡 목록을 읽지 못했습니다.');
+  if (m.startsWith('spotify_network')) return t('Spotify에 연결하지 못했습니다. 인터넷 연결을 확인하세요.');
   if (/^[a-z]+_format_changed/.test(m)) return describeChartError(m);
-  if (/^[a-z]+_(network|http|read)/.test(m)) return '차트 사이트에 연결하지 못했습니다. 인터넷 연결을 확인하세요.';
-  if (m.startsWith('chart_not_allowed')) return '이 앱이 읽지 않는 사이트입니다.';
+  if (/^[a-z]+_(network|http|read)/.test(m)) return t('차트 사이트에 연결하지 못했습니다. 인터넷 연결을 확인하세요.');
+  if (m.startsWith('chart_not_allowed')) return t('이 앱이 읽지 않는 사이트입니다.');
   return m;
 }
 
@@ -337,37 +374,41 @@ export function forgetSavedPlaylist(spotifyId: string) {
 
 // ── 차트 이름·날짜 ─────────────────────────────────────────────────────────
 
-/** 화면에 보일 이름: "멜론 TOP 100", "지니 TOP 200", 나라별 Spotify는 "Spotify 한국 Top 50", 그 밖은 플레이리스트 이름 */
+/** 화면에 보일 이름(지금 언어): "멜론 TOP 100", "지니 TOP 200", 나라별 Spotify는 "Spotify 한국 Top 50", 그 밖은 플레이리스트 이름 */
 export function chartTitle(p: Pick<SpotifyPlaylist, 'id' | 'name'>) {
   const chart = chartFor(p.id);
   if (!chart) return p.name;
-  return chart.source === 'spotify' ? `Spotify ${chart.label} Top 50` : chart.label;
+  return chart.source === 'spotify' ? `Spotify ${chartLabel(chart)} Top 50` : chartLabel(chart);
 }
 
-/** 고르기 목록에 쓰는 짧은 이름 */
-export const chartShortLabel = (c: ChartInfo) => (c.source === 'spotify' ? `Spotify ${c.label}` : c.label);
+/** 고르기 목록에 쓰는 짧은 이름(지금 언어) */
+export const chartShortLabel = (c: ChartInfo) => (c.source === 'spotify' ? `Spotify ${chartLabel(c)}` : chartLabel(c));
 
+/** 출처별 설명(번역 열쇠) */
 const KIND: Record<string, string> = {
-  melon: '멜론 차트',
-  genie: '지니 차트, 매시간 갱신',
-  bugs: '벅스 실시간 차트',
-  flo: 'FLO 차트',
-  vibe: 'VIBE 차트',
-  circle: '써클차트 디지털, 매주 갱신',
-  billboard: '빌보드 차트, 매주 갱신',
-  apple: 'Apple Music 차트, 매일 갱신',
+  melon: tk('멜론 차트'),
+  genie: tk('지니 차트, 매시간 갱신'),
+  bugs: tk('벅스 실시간 차트'),
+  flo: tk('FLO 차트'),
+  vibe: tk('VIBE 차트'),
+  circle: tk('써클차트 디지털, 매주 갱신'),
+  billboard: tk('빌보드 차트, 매주 갱신'),
+  apple: tk('Apple Music 차트, 매일 갱신'),
 };
 
-/** 화면 머리 설명: 어디서 온 목록인지 */
+/** 화면 머리 설명(지금 언어): 어디서 온 목록인지 */
 export function chartKind(id: string) {
   const chart = chartFor(id);
-  if (!chart) return 'Spotify 플레이리스트';
-  if (chart.id === MELON_TOP100) return '멜론 실시간 차트, 매시간 갱신';
-  return chart.source === 'spotify' ? 'Spotify 차트, 매일 갱신' : KIND[chart.source] ?? '차트';
+  if (!chart) return t('Spotify 플레이리스트');
+  if (chart.id === MELON_TOP100) return t('멜론 실시간 차트, 매시간 갱신');
+  if (chart.source === 'spotify') return t('Spotify 차트, 매일 갱신');
+  const kind = KIND[chart.source];
+  return kind ? t(kind) : t('차트');
 }
 
+/** 오늘 날짜(지금 언어 표기): ko "2026년 10월 14일", en "October 14, 2026" */
 export function todayLabel() {
-  return new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date().toLocaleDateString(locale(), { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 // ── 차트 순서대로 재생·내 재생목록으로 맞추기 ──────────────────────────────
@@ -406,9 +447,12 @@ export async function syncToYouTubeMusic(p: SpotifyPlaylist, tracks: Track[], ap
   const chart = chartFor(p.id);
   const spotify = !chart || chart.source === 'spotify';
   const title = spotify ? `${chartTitle(p)} (Spotify)` : chartTitle(p);
-  const description = spotify
-    ? `${appName}이 Spotify '${p.name}'을 YouTube Music 곡으로 옮긴 목록입니다. 마지막 갱신: ${todayLabel()}`
-    : `${appName}이 ${chartTitle(p)}${p.subtitle ? `(${p.subtitle})` : ''}을 YouTube Music 곡으로 옮긴 목록입니다. 마지막 갱신: ${todayLabel()}`;
+  // 재생목록 설명은 만들 때(또는 곡이 바뀌어 고칠 때)의 언어로 남는다.
+  const description = t('{app}이 {source}을 YouTube Music 곡으로 옮긴 목록입니다. 마지막 갱신: {date}', {
+    app: appName,
+    source: spotify ? `Spotify '${p.name}'` : `${chartTitle(p)}${p.subtitle ? `(${p.subtitle})` : ''}`,
+    date: todayLabel(),
+  });
   let existing = savedPlaylistId(p.id);
   if (existing) {
     try {

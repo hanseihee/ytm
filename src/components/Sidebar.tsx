@@ -1,4 +1,5 @@
 import { createElement, type MouseEvent } from 'react';
+import { t } from '../i18n';
 import { lastChartId } from '../lib/spotify';
 import { Logo } from './Logo';
 import { showEngine } from '../lib/tauri';
@@ -33,14 +34,14 @@ export function Sidebar() {
     if (card.browseId) {
       const id = card.browseId;
       entries.push({
-        label: '플레이리스트 삭제…',
+        label: t('플레이리스트 삭제…'),
         danger: true,
         action: () =>
           openDialog(
             createElement(ConfirmDialog, {
-              title: '플레이리스트 삭제',
-              message: `'${card.title}'을(를) 삭제합니다. 내가 만든 플레이리스트만 삭제할 수 있고, 되돌릴 수 없습니다.`,
-              confirmLabel: '삭제',
+              title: t('플레이리스트 삭제'),
+              message: t('{title|을} 삭제합니다. 내가 만든 플레이리스트만 삭제할 수 있고, 되돌릴 수 없습니다.', { title: card.title }),
+              confirmLabel: t('삭제'),
               onConfirm: async () => {
                 const ok = await deletePlaylist(id, card.title);
                 if (ok && navStore.get().stack[navStore.get().index]?.name === 'playlist') go({ name: 'library' });
@@ -56,33 +57,33 @@ export function Sidebar() {
   const accountMenu = (e: MouseEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     openMenu(r.left, r.top - 120, [
-      { label: 'YouTube Music 웹 화면 열기', action: () => showEngine('web').catch((err) => toastError(err)) },
-      { label: '다른 계정으로 로그인', action: () => showEngine('login').catch((err) => toastError(err)) },
-      { label: 'YouTube Music 다시 연결', action: () => showEngine('reload').catch((err) => toastError(err)) },
+      { label: t('YouTube Music 웹 화면 열기'), action: () => showEngine('web').catch((err) => toastError(err)) },
+      { label: t('다른 계정으로 로그인'), action: () => showEngine('login').catch((err) => toastError(err)) },
+      { label: t('YouTube Music 다시 연결'), action: () => showEngine('reload').catch((err) => toastError(err)) },
     ]);
   };
 
   return (
-    <nav className="side" aria-label="주 메뉴">
+    <nav className="side" aria-label={t('주 메뉴')}>
       <div className="side__brand" data-tauri-drag-region>
         <Logo size={24} />
         <span className="side__brand-text">YTM Desktop</span>
       </div>
       <div className="side__group">
-        <NavItem icon="home" label="홈" active={route.name === 'home'} onClick={() => go({ name: 'home' })} />
-        <NavItem icon="compass" label="둘러보기" active={route.name === 'explore' || route.name === 'mood'} onClick={() => go({ name: 'explore' })} />
-        <NavItem icon="search" label="검색" active={route.name === 'search'} onClick={() => go({ name: 'search', query: '' })} />
-        <NavItem icon="library" label="보관함" active={route.name === 'library'} onClick={() => go({ name: 'library' })} />
-        <NavItem icon="chart" label="차트" active={route.name === 'spotify'} onClick={() => go({ name: 'spotify', id: lastChartId() })} />
-        <NavItem icon="stats" label="청취 통계" active={route.name === 'stats'} onClick={() => go({ name: 'stats' })} />
+        <NavItem icon="home" label={t('홈')} active={route.name === 'home'} onClick={() => go({ name: 'home' })} />
+        <NavItem icon="compass" label={t('둘러보기')} active={route.name === 'explore' || route.name === 'mood'} onClick={() => go({ name: 'explore' })} />
+        <NavItem icon="search" label={t('검색')} active={route.name === 'search'} onClick={() => go({ name: 'search', query: '' })} />
+        <NavItem icon="library" label={t('보관함')} active={route.name === 'library'} onClick={() => go({ name: 'library' })} />
+        <NavItem icon="chart" label={t('차트')} active={route.name === 'spotify'} onClick={() => go({ name: 'spotify', id: lastChartId() })} />
+        <NavItem icon="stats" label={t('청취 통계')} active={route.name === 'stats'} onClick={() => go({ name: 'stats' })} />
       </div>
 
       <div className="side__section">
-        <span>내 음악</span>
+        <span>{t('내 음악')}</span>
         <button
           type="button"
           className="icon-btn"
-          aria-label="새 플레이리스트"
+          aria-label={t('새 플레이리스트')}
           disabled={!loggedIn}
           onClick={() => openDialog(createElement(NewPlaylistDialog, { onCreated: (id: string) => go({ name: 'playlist', id: `VL${id}` }) }))}
         >
@@ -90,13 +91,13 @@ export function Sidebar() {
         </button>
       </div>
       <div className="side__list">
-        <button type="button" className={`side__pl${route.name === 'liked' ? ' is-active' : ''}`} title="좋아요 표시한 곡" onClick={() => go({ name: 'liked' })}>
+        <button type="button" className={`side__pl${route.name === 'liked' ? ' is-active' : ''}`} title={t('좋아요 표시한 곡')} onClick={() => go({ name: 'liked' })}>
           <span className="side__liked" aria-hidden="true"><Icon name="heart" size={16} filled /></span>
           <span className="side__pl-text">
-            <span className="side__pl-title">좋아요 표시한 곡</span>
+            <span className="side__pl-title">{t('좋아요 표시한 곡')}</span>
           </span>
         </button>
-        {loggedIn && !loaded && <p className="side__hint">플레이리스트를 불러오는 중…</p>}
+        {loggedIn && !loaded && <p className="side__hint">{t('플레이리스트를 불러오는 중…')}</p>}
         {playlists.map((p) => (
           <button
             key={p.browseId}
@@ -115,9 +116,9 @@ export function Sidebar() {
         ))}
       </div>
 
-      <button type="button" className={`side__nav side__settings${route.name === 'settings' ? ' is-active' : ''}`} title="설정" onClick={() => go({ name: 'settings' })}>
+      <button type="button" className={`side__nav side__settings${route.name === 'settings' ? ' is-active' : ''}`} title={t('설정')} onClick={() => go({ name: 'settings' })}>
         <Icon name="settings" size={20} />
-        <span>설정</span>
+        <span>{t('설정')}</span>
       </button>
       {account && (
         <button type="button" className="side__account" title={account.name} onClick={accountMenu}>

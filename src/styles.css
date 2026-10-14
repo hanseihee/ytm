@@ -702,11 +702,14 @@ button.top-card:hover { background: var(--plum); }
 .sleep-btn__left { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ── 오른쪽 패널 탭(다음 트랙·관련 항목·댓글) ─────────────────────────── */
-.panel__tabs { display: flex; gap: 4px; }
-.panel__tab { height: 32px; padding: 0 12px; border-radius: 16px; font-weight: 700; font-size: 13px; color: var(--mist); }
+/* 탭 이름이 긴 언어(스페인어 "A continuación" 등)도 한 줄로: 줄바꿈하지 않고, 넘치면 탭 줄만 옆으로 밀린다(닫기 단추는 그대로) */
+.panel__tabs { display: flex; gap: 2px; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.panel__tabs::-webkit-scrollbar { display: none; }
+.panel__tab { flex: none; height: 32px; padding: 0 10px; border-radius: 16px; font-weight: 700; font-size: 13px; color: var(--mist); white-space: nowrap; }
 .panel__tab:hover { color: var(--ink); background: rgb(var(--fg-rgb) / 0.06); }
 .panel__tab.is-on { color: var(--night); background: var(--ink); }
-.panel__head { padding-left: 12px; }
+.panel__head { padding-left: 12px; gap: 6px; }
+.panel__head > .icon-btn { flex: none; }
 .psection { margin-bottom: 8px; }
 .pcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; padding: 4px 10px 8px; }
 .pcard { display: flex; flex-direction: column; gap: 4px; text-align: left; min-width: 0; }
@@ -866,3 +869,20 @@ kbd { display: inline-block; min-width: 64px; padding: 2px 8px; margin-right: 8p
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* ── 새 버전 알림 ───────────────────────────────────────────────────────── */
+/* 재생 바 바로 위 오른쪽(화면 위쪽 단추를 가리지 않게) */
+.update {
+  position: fixed; right: 20px; bottom: calc(var(--player-h) + 16px); z-index: 100;
+  display: flex; align-items: center; gap: 12px;
+  max-width: min(460px, calc(100vw - 40px)); padding: 12px 14px;
+  border-radius: 14px; background: var(--plum); color: var(--ink);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.35); border: 1px solid rgb(var(--fg-rgb) / 0.08);
+}
+.update__icon { flex: none; color: var(--rose-soft); }
+.update__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.update__text b { font-size: 14px; }
+.update__text span { font-size: 12px; color: var(--mist); }
+.update__actions { display: flex; gap: 6px; flex: none; }
+.btn--sm { height: 30px; padding: 0 12px; font-size: 13px; }
+

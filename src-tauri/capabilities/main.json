@@ -25,6 +25,7 @@
     "allow-mini-window",
     "allow-mini-pin",
     "allow-set-prefs",
+    "allow-set-ui-strings",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "core:window:allow-set-focus",

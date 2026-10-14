@@ -1,4 +1,6 @@
 import { memo, useState, type DragEvent, type MouseEvent } from 'react';
+import { t } from '../i18n';
+import { useLang } from '../i18n/react';
 import type { Ref, Track } from '../lib/ytm/types';
 import { toggleLike, playTrack, useLiked } from '../state/library';
 import { go, routeForBrowse } from '../state/nav';
@@ -30,7 +32,7 @@ export function ArtistLinks({ artists, className = '' }: { artists: Ref[]; class
 
 function Bars() {
   return (
-    <span className="bars" aria-label="재생 중">
+    <span className="bars" aria-label={t('재생 중')}>
       <i /><i /><i />
     </span>
   );
@@ -58,6 +60,8 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
   const isCurrent = usePlayer((s) => s.videoId === track.videoId);
   const isPlaying = usePlayer((s) => s.videoId === track.videoId && s.playing);
   const liked = useLiked(track.videoId);
+  // memo라 부모가 다시 그려도 건너뛰므로, 언어가 바뀌면 직접 다시 그린다.
+  useLang();
   const menu = (e: MouseEvent) => {
     e.preventDefault();
     openMenu(e.clientX, e.clientY, trackMenu(track, { editablePlaylistId, onRemoved }));
@@ -71,11 +75,11 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
       onContextMenu={menu}
       {...drag}
     >
-      {drag && <span className="track__grip" aria-hidden="true" title="끌어서 순서 바꾸기"><Icon name="grip" size={14} /></span>}
+      {drag && <span className="track__grip" aria-hidden="true" title={t('끌어서 순서 바꾸기')}><Icon name="grip" size={14} /></span>}
       <div className="track__lead" role="cell">
         {showCover && <Cover src={track.thumbnail} size={40} />}
         {lead !== null && !showCover && <span className="track__num">{isPlaying ? <Bars /> : lead}</span>}
-        <button type="button" className="track__play" aria-label={`${track.title} 재생`} onClick={() => playTrack(track)} disabled={!track.available}>
+        <button type="button" className="track__play" aria-label={t('{title} 재생', { title: track.title })} onClick={() => playTrack(track)} disabled={!track.available}>
           <Icon name="play" size={16} />
         </button>
         {showCover && isPlaying && <span className="track__cover-bars"><Bars /></span>}
@@ -83,7 +87,7 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
       <div className="track__main" role="cell">
         <span className="track__title" title={track.title}>
           {track.title}
-          {track.isVideo && <span className="track__badge">영상</span>}
+          {track.isVideo && <span className="track__badge">{t('영상')}</span>}
         </span>
         <ArtistLinks artists={track.artists} className="track__artists" />
       </div>
@@ -100,14 +104,14 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
         <button
           type="button"
           className={`icon-btn track__like${liked ? ' is-on' : ''}`}
-          aria-label={liked ? '좋아요 취소' : '좋아요'}
+          aria-label={liked ? t('좋아요 취소') : t('좋아요')}
           aria-pressed={liked}
           onClick={() => toggleLike(track)}
         >
           <Icon name="heart" size={17} filled={liked} />
         </button>
         <span className="track__time">{track.duration !== undefined ? formatTime(track.duration) : ''}</span>
-        <button type="button" className="icon-btn track__more" aria-label="더 보기" onClick={menu}>
+        <button type="button" className="icon-btn track__more" aria-label={t('더 보기')} onClick={menu}>
           <Icon name="more" size={18} />
         </button>
       </div>

@@ -68,7 +68,7 @@ private struct PlaylistsTab: View {
             }
             .listRowBackground(palette.dusk)
 
-            Section("플레이리스트") {
+            Section(L(LocalizedStringResource("플레이리스트(목록 제목)", defaultValue: "플레이리스트"))) {
                 if !model.playlistsLoaded {
                     ProgressView().frame(maxWidth: .infinity)
                 } else if model.playlists.isEmpty {
@@ -114,11 +114,11 @@ private struct PlaylistsTab: View {
                 Task { _ = await model.deletePlaylist(id, title: card.title) }
             }
         } message: {
-            Text("'\(deleting?.title ?? "")'을(를) 삭제합니다. 내가 만든 플레이리스트만 삭제할 수 있고, 되돌릴 수 없습니다.")
+            Text("\(Korean.object(deleting?.title ?? "")) 삭제합니다. 내가 만든 플레이리스트만 삭제할 수 있고, 되돌릴 수 없습니다.")
         }
     }
 
-    private func pin(icon: AnyView, title: String, subtitle: String) -> some View {
+    private func pin(icon: AnyView, title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
         HStack(spacing: 12) {
             icon
                 .frame(width: 52, height: 52)
@@ -150,7 +150,7 @@ private struct CardsTab: View {
                 ErrorView(message: message) { Task { await load() } }
             case .loaded(let cards):
                 if cards.isEmpty {
-                    ContentUnavailableView(emptyText, systemImage: tab == .albums ? "square.stack" : "person.2")
+                    ContentUnavailableView(L(emptyText), systemImage: tab == .albums ? "square.stack" : "person.2")
                         .padding(.top, 40)
                 } else {
                     VStack(spacing: 0) {
@@ -165,7 +165,7 @@ private struct CardsTab: View {
         .task(id: "\(tab.rawValue)#\(model.revision)") { await load() }
     }
 
-    private var emptyText: String {
+    private var emptyText: LocalizedStringResource {
         switch tab {
         case .albums: "보관함에 저장한 앨범이 없습니다"
         case .artists: "보관함 곡의 아티스트가 없습니다"
@@ -247,6 +247,9 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            LanguageSection()
+                .listRowBackground(palette.dusk)
+
             Section("테마") {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                     ForEach(ThemeID.allCases) { theme in
@@ -291,8 +294,15 @@ struct SettingsView: View {
             .listRowBackground(palette.dusk)
 
             Section("계정과 연결") {
-                Text(model.account.map { "\($0.name)\($0.handle.map { " (\($0))" } ?? "") 계정으로 로그인했습니다." } ?? "로그인하지 않았습니다.")
-                    .foregroundStyle(palette.mist)
+                Group {
+                    if let account = model.account {
+                        let who = account.handle.map { "\(account.name) (\($0))" } ?? account.name
+                        Text("\(who) 계정으로 로그인했습니다.")
+                    } else {
+                        Text("로그인하지 않았습니다.")
+                    }
+                }
+                .foregroundStyle(palette.mist)
                 Button("YouTube Music 웹 화면 열기") { model.showEngine("web") }
                 Button("다른 계정으로 로그인") { model.showEngine("login") }
                 Button("YouTube Music 다시 연결") { model.showEngine("reload") }
@@ -310,6 +320,33 @@ struct SettingsView: View {
         .background(palette.night)
         .navigationTitle("설정")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// 언어 고르기. 고르면 바로 바뀌고, 다음 실행에도 남는다(iOS 설정 앱의 이 앱 → 언어와 같은 설정이다).
+private struct LanguageSection: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
+    @State private var selection = AppLanguage.chosen ?? "system"
+
+    var body: some View {
+        Section {
+            Picker("언어", selection: $selection) {
+                Text("시스템 설정 따르기").tag("system")
+                ForEach(AppLanguage.options) { option in
+                    Text(verbatim: option.name).tag(option.code)
+                }
+            }
+            // 바로 바뀐다(탭 화면을 새 언어로 다시 그린다).
+            .onChange(of: selection) { _, value in
+                model.setLanguage(value == "system" ? nil : value)
+            }
+            Button("iOS 설정에서 바꾸기") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            }
+        } header: {
+            Text("언어")
+        }
     }
 }
 
@@ -443,7 +480,7 @@ struct NewPlaylistSheet: View {
                     .pickerStyle(.segmented)
                 }
                 if !tracks.isEmpty {
-                    Section { Text(tracks.count == 1 ? "'\(tracks[0].title)'을(를) 넣어 만듭니다." : "\(tracks.count)곡을 넣어 만듭니다.").foregroundStyle(.secondary) }
+                    Section { Text(tracks.count == 1 ? "\(Korean.object(tracks[0].title)) 넣어 만듭니다." : "\(tracks.count)곡을 넣어 만듭니다.").foregroundStyle(.secondary) }
                 }
             }
             .navigationTitle("새 플레이리스트")

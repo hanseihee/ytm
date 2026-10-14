@@ -17,6 +17,7 @@ fn main() {
                 "mini_pin",
                 "show_main_window",
                 "set_prefs",
+                "set_ui_strings",
                 "ui_log",
                 "eq_set",
                 "eq_visualizer",

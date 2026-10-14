@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { t } from '../i18n';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import { playEndpoint } from '../state/library';
@@ -15,16 +16,16 @@ function SubscribeButton({ channelId, name, initial, params }: { channelId: stri
     try {
       await ytm.setSubscribed(channelId, !on, params);
       setOn(!on);
-      toast(on ? `${name} 구독을 취소했습니다` : `${name}을(를) 구독했습니다`);
+      toast(on ? t('{name} 구독을 취소했습니다', { name }) : t('{name}을(를) 구독했습니다', { name }));
     } catch (err) {
-      toastError(err, '구독을 바꾸지 못했습니다');
+      toastError(err, t('구독을 바꾸지 못했습니다'));
     } finally {
       setBusy(false);
     }
   };
   return (
     <button type="button" className={`btn btn--quiet${on ? ' is-on' : ''}`} aria-pressed={on} disabled={busy} onClick={toggle}>
-      <Icon name="bell" size={17} /> {on ? '구독 중' : '구독'}
+      <Icon name="bell" size={17} /> {on ? t('구독 중') : t('구독')}
     </button>
   );
 }
@@ -45,13 +46,13 @@ export function ArtistView({ id }: { id: string }) {
           {a.subscribers && <p className="artist-hero__subs">{a.subscribers}</p>}
           <div className="hero__actions">
             {a.shuffle && (
-              <button type="button" className="btn btn--primary btn--play" onClick={() => playEndpoint(a.shuffle!, '셔플 재생')}>
-                <Icon name="shuffle" size={17} /> 셔플 재생
+              <button type="button" className="btn btn--primary btn--play" onClick={() => playEndpoint(a.shuffle!, t('셔플 재생'))}>
+                <Icon name="shuffle" size={17} /> {t('셔플 재생')}
               </button>
             )}
             {a.radio && (
-              <button type="button" className="btn btn--quiet" onClick={() => playEndpoint(a.radio!, '라디오를 시작')}>
-                <Icon name="radio" size={17} /> 라디오
+              <button type="button" className="btn btn--quiet" onClick={() => playEndpoint(a.radio!, t('라디오를 시작'))}>
+                <Icon name="radio" size={17} /> {t('라디오')}
               </button>
             )}
             {a.channelId && <SubscribeButton key={a.channelId} channelId={a.channelId} name={a.name} initial={!!a.subscribed} params={a.subscribeParams} />}
@@ -62,7 +63,7 @@ export function ArtistView({ id }: { id: string }) {
         {a.shelves.map((s, i) => <ShelfView key={`${s.title}-${i}`} shelf={s} trackLimit={5} />)}
         {a.description && (
           <section className="shelf">
-            <h2 className="shelf__title">소개</h2>
+            <h2 className="shelf__title">{t('소개')}</h2>
             <p className="about">{a.description}</p>
           </section>
         )}

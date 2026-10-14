@@ -11,12 +11,13 @@ enum AppTab: Hashable {
 enum LibraryTab: String, CaseIterable, Identifiable {
     case playlists, albums, artists, subscriptions, history
     var id: String { rawValue }
-    var label: String {
+    var label: LocalizedStringResource {
         switch self {
         case .playlists: "재생목록"
-        case .albums: "앨범"
-        case .artists: "아티스트"
-        case .subscriptions: "구독"
+        // 한국어로는 같은 말이라도 번역은 갈리는 것(앨범 종류·구독 단추)과 열쇠를 나눈다.
+        case .albums: LocalizedStringResource("앨범(보관함 탭)", defaultValue: "앨범")
+        case .artists: LocalizedStringResource("아티스트(보관함 탭)", defaultValue: "아티스트")
+        case .subscriptions: LocalizedStringResource("구독(보관함 탭)", defaultValue: "구독")
         case .history: "최근 재생"
         }
     }
@@ -135,6 +136,9 @@ final class AppModel {
     /// 바깥(차트의 "직접 검색" 등)에서 검색을 시킬 때
     var searchRequest: String?
 
+    /// 화면 언어(번역 코드). 바뀌면 RootView가 화면을 새 언어로 다시 그린다.
+    private(set) var language = AppLanguage.current
+
     // 설정(다음 실행에도 유지)
     var theme: ThemeID {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: Keys.theme) }
@@ -187,6 +191,10 @@ final class AppModel {
             self?.toast("로그인했습니다")
         }
         nowPlayingCenter.onCommand = { [weak self] name, value in self?.engineControl(name, value) }
+        // 공용 데이터 코드도 화면과 같은 언어로(다른 core 요청보다 먼저 보낸다). 위젯에도 언어를 알린다.
+        let api = api
+        Task { await api.setLanguage(AppLanguage.coreCode) }
+        AppLanguage.share()
         engine.start()
         #if DEBUG
         debugInbox.start(model: self)
@@ -365,7 +373,24 @@ final class AppModel {
 
     // MARK: 알림
 
-    func toast(_ text: String, error: Bool = false) {
+    /// 화면 알림. 글자 그대로는 번역 표의 문구로 바뀐다(이미 만든 문장은 toast(message:)).
+    /// 화면 언어 바꾸기(nil이면 기기 언어). 공용 데이터 코드의 언어를 먼저 바꾼 뒤 화면을 새로 그려
+    /// 홈·차트 같은 YouTube Music 데이터도 새 언어로 다시 받는다. 앱을 다시 열지 않아도 된다.
+    func setLanguage(_ code: String?) {
+        let next = AppLanguage.choose(code)
+        let api = api
+        Task {
+            await api.setLanguage(AppLanguage.coreCode)
+            language = next
+            nowPlayingCenter.refresh()
+        }
+    }
+
+    func toast(_ text: LocalizedStringResource, error: Bool = false) {
+        toast(message: L(text), error: error)
+    }
+
+    func toast(message text: String, error: Bool = false) {
         let item = Toast(text: text, isError: error)
         toasts = Array(toasts.suffix(2)) + [item]
         Task {
@@ -374,24 +399,26 @@ final class AppModel {
         }
     }
 
-    func toastError(_ error: Error, _ prefix: String? = nil) {
+    func toastError(_ error: Error, _ prefix: LocalizedStringResource? = nil) {
         let message = Self.describe(error)
-        log("[ytm] \(prefix ?? "") \(error)")
-        toast(prefix.map { "\($0): \(message)" } ?? message, error: true)
+        let head = prefix.map { L($0) }
+        log("[ytm] \(head ?? "") \(error)")
+        toast(message: head.map { "\($0): \(message)" } ?? message, error: true)
     }
 
     /// 엔진 오류를 사람이 읽을 문장으로(src/lib/tauri.ts describeError와 같다).
     static func describe(_ error: Error) -> String {
         let message = (error as? BridgeError)?.message ?? error.localizedDescription
-        if message.hasPrefix("engine_not_ready") { return "YouTube Music 연결을 기다리는 중입니다. 잠시 뒤 다시 시도하세요." }
-        if message.hasPrefix("engine_timeout") { return "YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요." }
-        if message.hasPrefix("engine_navigating") { return "YouTube Music 페이지를 다시 불러오는 중이었습니다. 다시 시도하세요." }
-        if message.hasPrefix("not_on_music") { return "YouTube Music에 로그인해야 합니다." }
-        if message.hasPrefix("http_401") || message.hasPrefix("http_403") { return "로그인이 만료됐습니다. 다시 로그인하세요." }
+        if message.hasPrefix("engine_not_ready") { return L("YouTube Music 연결을 기다리는 중입니다. 잠시 뒤 다시 시도하세요.") }
+        if message.hasPrefix("engine_timeout") { return L("YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요.") }
+        if message.hasPrefix("engine_navigating") { return L("YouTube Music 페이지를 다시 불러오는 중이었습니다. 다시 시도하세요.") }
+        if message.hasPrefix("not_on_music") { return L("YouTube Music에 로그인해야 합니다.") }
+        if message.hasPrefix("http_401") || message.hasPrefix("http_403") { return L("로그인이 만료됐습니다. 다시 로그인하세요.") }
         if message.hasPrefix("http_4"), message.count >= 8 {
-            return "YouTube Music이 요청을 거절했습니다 (\(message.dropFirst(5).prefix(3)))."
+            let code = String(message.dropFirst(5).prefix(3))
+            return L("YouTube Music이 요청을 거절했습니다 (\(code)).")
         }
-        if message.hasPrefix("http_5") { return "YouTube Music 서버 오류입니다. 잠시 뒤 다시 시도하세요." }
+        if message.hasPrefix("http_5") { return L("YouTube Music 서버 오류입니다. 잠시 뒤 다시 시도하세요.") }
         return message
     }
 
@@ -404,7 +431,7 @@ final class AppModel {
         return player.duration > 0 ? min(pos, player.duration) : pos
     }
 
-    func control(_ command: String, _ value: Double? = nil, failure: String = "재생을 바꾸지 못했습니다") {
+    func control(_ command: String, _ value: Double? = nil, failure: LocalizedStringResource = "재생을 바꾸지 못했습니다") {
         Task {
             do {
                 var args: [String: Any] = ["command": command]
@@ -439,9 +466,9 @@ final class AppModel {
         }
     }
 
-    func playEndpoint(_ endpoint: JSONValue, what: String = "재생") {
+    func playEndpoint(_ endpoint: JSONValue, failure: LocalizedStringResource = "재생하지 못했습니다") {
         Task {
-            do { try await api.play(endpoint) } catch { toastError(error, "\(what)하지 못했습니다") }
+            do { try await api.play(endpoint) } catch { toastError(error, failure) }
         }
     }
 
@@ -529,7 +556,7 @@ final class AppModel {
     func sleepLabel(at now: Date = Date()) -> String {
         switch sleep {
         case .off: return ""
-        case .track: return "곡 끝"
+        case .track: return L("곡 끝")
         case .time(let end):
             let left = max(0, Int((end.timeIntervalSince(now)).rounded()))
             return String(format: "%d:%02d", left / 60, left % 60)
@@ -794,6 +821,10 @@ final class AppModel {
         case "theme":
             theme = ThemeID(rawValue: item["value"] as? String ?? "") ?? .dark
             return true
+        case "language":
+            // 설정 화면에서 언어를 고른 것과 같다(값이 없으면 기기 언어)
+            setLanguage(item["value"] as? String)
+            return true
         case "chart":
             openCharts(item["value"] as? String)
             return true
@@ -843,12 +874,29 @@ final class AppModel {
             func scrollViews(_ v: UIView) -> [UIScrollView] {
                 (v as? UIScrollView).map { [$0] }.map { $0 + v.subviews.flatMap(scrollViews) } ?? v.subviews.flatMap(scrollViews)
             }
-            let visible = windows.flatMap { w in scrollViews(w).filter { !$0.isHidden && $0.alpha > 0 && $0.window != nil && $0.contentSize.height > $0.bounds.height && $0.bounds.width > 200 } }
+            // 다른 탭에 숨은 스크롤 영역은 빼도록 조상까지 보이는지 본다.
+            func shown(_ v: UIView) -> Bool {
+                var view: UIView? = v
+                while let current = view {
+                    if current.isHidden || current.alpha < 0.01 { return false }
+                    view = current.superview
+                }
+                return true
+            }
+            let visible = windows.flatMap { w in scrollViews(w).filter { shown($0) && $0.window != nil && $0.contentSize.height > $0.bounds.height && $0.bounds.width > 200 } }
             let target = item["index"] as? Int
+            // 맨 앞에 보이는 것(가운데를 누르면 그 안이 눌리는 것)을 먼저 고른다.
+            func onTop(_ sv: UIScrollView) -> Bool {
+                guard let window = sv.window else { return false }
+                let frame = sv.convert(sv.bounds, to: window)
+                return window.hitTest(CGPoint(x: frame.midX, y: frame.midY), with: nil)?.isDescendant(of: sv) == true
+            }
             let candidates = visible.filter { sv in
                 let frame = sv.convert(sv.bounds, to: nil)
                 return frame.intersects(sv.window?.bounds ?? .zero)
-            }.sorted { $0.bounds.height * $0.bounds.width > $1.bounds.height * $1.bounds.width }
+            }.sorted { a, b in
+                onTop(a) != onTop(b) ? onTop(a) : a.bounds.height * a.bounds.width > b.bounds.height * b.bounds.width
+            }
             guard let sv = target.map({ $0 < candidates.count ? candidates[$0] : nil }) ?? candidates.first else { return "no_scroll" }
             let maxY = max(0, sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
             let y = item["to"] as? Double ?? min(maxY, max(-sv.adjustedContentInset.top, sv.contentOffset.y + dy))
@@ -871,9 +919,10 @@ enum Korean {
         return nil
     }
 
-    /// '밤편지'를 / 'Celebrity'을(를)
+    /// '밤편지'를 / 'Celebrity'을(를). 한국어가 아닌 화면에서는 따옴표만 붙인다(번역 문장이 자리를 정한다).
     static func object(_ title: String) -> String {
-        switch hasBatchim(title) {
+        guard AppLanguage.isKorean else { return "‘\(title)’" }
+        return switch hasBatchim(title) {
         case .none: "'\(title)'을(를)"
         case .some(true): "'\(title)'을"
         case .some(false): "'\(title)'를"

@@ -123,6 +123,8 @@ impl TrackState {
 #[derive(Default)]
 pub(crate) struct AppState {
     pub(crate) track: Mutex<TrackState>,
+    /// 화면이 보내 준 지금 언어의 메뉴·창 문구(한국어 원문 → 번역). 없으면 한국어 그대로.
+    ui_strings: Mutex<std::collections::HashMap<String, String>>,
     tray_items: Mutex<Option<TrayItems>>,
     quitting: AtomicBool,
 }
@@ -130,6 +132,15 @@ pub(crate) struct AppState {
 struct TrayItems {
     now_playing: MenuItem<Wry>,
     toggle: MenuItem<Wry>,
+}
+
+/// 메뉴·창 문구를 지금 언어로(화면의 src/i18n/rust.ts와 같은 한국어 원문을 열쇠로 쓴다).
+pub(crate) fn l(app: &AppHandle, ko: &str) -> String {
+    // 번역이 없으면 한국어 원문('재생@메뉴'처럼 뜻을 나눈 꼬리 '@…'는 뗀다)
+    lock(&app.state::<AppState>().ui_strings)
+        .get(ko)
+        .cloned()
+        .unwrap_or_else(|| ko.rsplit_once('@').map_or(ko, |(text, _)| text).to_owned())
 }
 
 pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -178,6 +189,40 @@ pub(crate) fn on_track_state(app: &AppHandle, state: TrackState) {
     media::update(app, prev, next);
 }
 
+/// 화면이 언어를 정하거나 바꾸면 메뉴·트레이·창 제목 문구를 받아 다시 만든다.
+#[tauri::command]
+fn set_ui_strings(app: AppHandle, strings: std::collections::HashMap<String, String>) -> Result<(), String> {
+    apply_ui_strings(&app, strings)
+}
+
+pub(crate) fn apply_ui_strings(app: &AppHandle, strings: std::collections::HashMap<String, String>) -> Result<(), String> {
+    // 너무 큰 값은 받지 않는다(메뉴 문구 수십 개면 충분하다).
+    if strings.len() > 500 || strings.iter().any(|(k, v)| k.len() > 300 || v.len() > 300) {
+        return Err("too_many_strings".into());
+    }
+    *lock(&app.state::<AppState>().ui_strings) = strings;
+    #[cfg(target_os = "macos")]
+    app.set_menu(build_app_menu(app).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    if let Some(tray) = app.tray_by_id(TRAY) {
+        let (menu, items) = tray_menu(app).map_err(|e| e.to_string())?;
+        tray.set_menu(Some(menu)).map_err(|e| e.to_string())?;
+        *lock(&app.state::<AppState>().tray_items) = Some(items);
+    }
+    let track = lock(&app.state::<AppState>().track).clone();
+    update_labels(app, &track);
+    desktop::on_language_changed(app);
+    Ok(())
+}
+
+/// 개발 빌드 시험용: 트레이 메뉴의 곡 이름·재생 단추 글자
+#[cfg(debug_assertions)]
+pub(crate) fn tray_texts(app: &AppHandle) -> Vec<String> {
+    lock(&app.state::<AppState>().tray_items)
+        .as_ref()
+        .map(|items| vec![items.now_playing.text().unwrap_or_default(), items.toggle.text().unwrap_or_default()])
+        .unwrap_or_default()
+}
+
 fn update_labels(app: &AppHandle, track: &TrackState) {
     let label = track.label();
     if let Some(window) = app.get_webview_window(MAIN) {
@@ -199,14 +244,14 @@ fn update_labels(app: &AppHandle, track: &TrackState) {
                 format!("{}…", text.chars().take(TRAY_TITLE_CHARS).collect::<String>())
             }
             Some(text) => text.clone(),
-            None => "재생 중인 곡 없음".to_owned(),
+            None => l(app, "재생 중인 곡 없음"),
         };
         warn("트레이 곡 이름 바꾸기", items.now_playing.set_text(now));
         warn(
             "트레이 재생 버튼 바꾸기",
             items
                 .toggle
-                .set_text(if track.playing { "일시정지" } else { "재생" }),
+                .set_text(l(app, if track.playing { "일시정지" } else { "재생" })),
         );
     }
 }
@@ -328,7 +373,7 @@ fn build_engine_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     let load_handle = app.clone();
     let home = Url::parse(HOME_URL).expect("HOME_URL은 고정된 올바른 주소");
     let mut builder = WebviewWindowBuilder::new(app, ENGINE, WebviewUrl::External(home))
-        .title("YouTube Music — 로그인·웹 화면")
+        .title(l(app, "YouTube Music — 로그인·웹 화면"))
         .inner_size(1100.0, 780.0)
         .min_inner_size(820.0, 560.0)
         .visible(false)
@@ -407,23 +452,29 @@ fn hide_engine(app: AppHandle) {
 
 // ── 트레이·메뉴 ────────────────────────────────────────────────────────────
 
-fn build_tray(app: &AppHandle) -> tauri::Result<TrayItems> {
-    let now_playing = MenuItem::with_id(app, "now", "재생 중인 곡 없음", false, None::<&str>)?;
-    let toggle = MenuItem::with_id(app, "toggle", "재생", true, None::<&str>)?;
+/// 트레이 메뉴(언어를 바꾸면 다시 만든다)
+fn tray_menu(app: &AppHandle) -> tauri::Result<(Menu<Wry>, TrayItems)> {
+    let now_playing = MenuItem::with_id(app, "now", l(app, "재생 중인 곡 없음"), false, None::<&str>)?;
+    let toggle = MenuItem::with_id(app, "toggle", l(app, "재생"), true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
             &now_playing,
             &PredefinedMenuItem::separator(app)?,
             &toggle,
-            &MenuItem::with_id(app, "next", "다음 곡", true, None::<&str>)?,
-            &MenuItem::with_id(app, "previous", "이전 곡", true, None::<&str>)?,
+            &MenuItem::with_id(app, "next", l(app, "다음 곡"), true, None::<&str>)?,
+            &MenuItem::with_id(app, "previous", l(app, "이전 곡"), true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "show", "창 보이기", true, None::<&str>)?,
+            &MenuItem::with_id(app, "show", l(app, "창 보이기"), true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?,
+            &MenuItem::with_id(app, "quit", l(app, "종료"), true, None::<&str>)?,
         ],
     )?;
+    Ok((menu, TrayItems { now_playing, toggle }))
+}
+
+fn build_tray(app: &AppHandle) -> tauri::Result<TrayItems> {
+    let (menu, items) = tray_menu(app)?;
 
     // 맥 메뉴 막대는 검은색 템플릿 아이콘(밝기 모드에 맞춰 자동 반전), 윈도우는 앱 아이콘.
     #[cfg(target_os = "macos")]
@@ -453,10 +504,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<TrayItems> {
         })
         .build(app)?;
 
-    Ok(TrayItems {
-        now_playing,
-        toggle,
-    })
+    Ok(items)
 }
 
 /// 맥 메뉴 막대(한국어). 윈도우는 창에 메뉴 막대를 달지 않고 화면 안의 단축키를 쓴다.
@@ -467,7 +515,7 @@ fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let about = AboutMetadata {
         name: Some(APP_NAME.to_owned()),
         version: Some(app.package_info().version.to_string()),
-        comments: Some("YouTube Music 계정으로 쓰는 데스크톱 음악 플레이어 (비공식)".to_owned()),
+        comments: Some(l(app, "YouTube Music 계정으로 쓰는 데스크톱 음악 플레이어 (비공식)")),
         ..Default::default()
     };
     let app_menu = Submenu::with_items(
@@ -475,66 +523,66 @@ fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         APP_NAME,
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("YTM Desktop에 관하여"), Some(about))?,
+            &PredefinedMenuItem::about(app, Some(l(app, "YTM Desktop에 관하여").as_str()), Some(about))?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "ui:settings", "설정…", true, Some("CmdOrCtrl+,"))?,
+            &MenuItem::with_id(app, "ui:settings", l(app, "설정…"), true, Some("CmdOrCtrl+,"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::services(app, Some("서비스"))?,
+            &PredefinedMenuItem::services(app, Some(l(app, "서비스").as_str()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::hide(app, Some("YTM Desktop 가리기"))?,
-            &PredefinedMenuItem::hide_others(app, Some("기타 가리기"))?,
-            &PredefinedMenuItem::show_all(app, Some("모두 보기"))?,
+            &PredefinedMenuItem::hide(app, Some(l(app, "YTM Desktop 가리기").as_str()))?,
+            &PredefinedMenuItem::hide_others(app, Some(l(app, "기타 가리기").as_str()))?,
+            &PredefinedMenuItem::show_all(app, Some(l(app, "모두 보기").as_str()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::quit(app, Some("YTM Desktop 종료"))?,
+            &PredefinedMenuItem::quit(app, Some(l(app, "YTM Desktop 종료").as_str()))?,
         ],
     )?;
     let edit = Submenu::with_items(
         app,
-        "편집",
+        l(app, "편집"),
         true,
         &[
-            &PredefinedMenuItem::undo(app, Some("실행 취소"))?,
-            &PredefinedMenuItem::redo(app, Some("실행 복귀"))?,
+            &PredefinedMenuItem::undo(app, Some(l(app, "실행 취소").as_str()))?,
+            &PredefinedMenuItem::redo(app, Some(l(app, "실행 복귀").as_str()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::cut(app, Some("오려두기"))?,
-            &PredefinedMenuItem::copy(app, Some("복사하기"))?,
-            &PredefinedMenuItem::paste(app, Some("붙여넣기"))?,
-            &PredefinedMenuItem::select_all(app, Some("전체 선택"))?,
+            &PredefinedMenuItem::cut(app, Some(l(app, "오려두기").as_str()))?,
+            &PredefinedMenuItem::copy(app, Some(l(app, "복사하기").as_str()))?,
+            &PredefinedMenuItem::paste(app, Some(l(app, "붙여넣기").as_str()))?,
+            &PredefinedMenuItem::select_all(app, Some(l(app, "전체 선택").as_str()))?,
         ],
     )?;
     let playback = Submenu::with_items(
         app,
-        "재생",
+        l(app, "재생@메뉴"),
         true,
         &[
-            &MenuItem::with_id(app, "toggle", "재생/일시정지", true, None::<&str>)?,
-            &MenuItem::with_id(app, "next", "다음 곡", true, None::<&str>)?,
-            &MenuItem::with_id(app, "previous", "이전 곡", true, None::<&str>)?,
+            &MenuItem::with_id(app, "toggle", l(app, "재생/일시정지"), true, None::<&str>)?,
+            &MenuItem::with_id(app, "next", l(app, "다음 곡"), true, None::<&str>)?,
+            &MenuItem::with_id(app, "previous", l(app, "이전 곡"), true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "ui:lyrics", "가사", true, Some("CmdOrCtrl+L"))?,
-            &MenuItem::with_id(app, "ui:lyrics-bigger", "가사 글자 크게", true, Some("CmdOrCtrl+="))?,
-            &MenuItem::with_id(app, "ui:lyrics-smaller", "가사 글자 작게", true, Some("CmdOrCtrl+-"))?,
-            &MenuItem::with_id(app, "ui:lyrics-reset", "가사 글자 기본 크기", true, Some("CmdOrCtrl+0"))?,
-            &MenuItem::with_id(app, "ui:queue", "대기열", true, Some("CmdOrCtrl+U"))?,
-            &MenuItem::with_id(app, "ui:eq", "이퀄라이저", true, Some("CmdOrCtrl+E"))?,
+            &MenuItem::with_id(app, "ui:lyrics", l(app, "가사"), true, Some("CmdOrCtrl+L"))?,
+            &MenuItem::with_id(app, "ui:lyrics-bigger", l(app, "가사 글자 크게"), true, Some("CmdOrCtrl+="))?,
+            &MenuItem::with_id(app, "ui:lyrics-smaller", l(app, "가사 글자 작게"), true, Some("CmdOrCtrl+-"))?,
+            &MenuItem::with_id(app, "ui:lyrics-reset", l(app, "가사 글자 기본 크기"), true, Some("CmdOrCtrl+0"))?,
+            &MenuItem::with_id(app, "ui:queue", l(app, "대기열"), true, Some("CmdOrCtrl+U"))?,
+            &MenuItem::with_id(app, "ui:eq", l(app, "이퀄라이저"), true, Some("CmdOrCtrl+E"))?,
         ],
     )?;
     let go = Submenu::with_items(
         app,
-        "이동",
+        l(app, "이동"),
         true,
         &[
-            &MenuItem::with_id(app, "ui:home", "홈", true, Some("CmdOrCtrl+Shift+H"))?,
-            &MenuItem::with_id(app, "ui:explore", "둘러보기", true, Some("CmdOrCtrl+Shift+E"))?,
-            &MenuItem::with_id(app, "ui:stats", "청취 통계", true, None::<&str>)?,
-            &MenuItem::with_id(app, "ui:search", "검색", true, Some("CmdOrCtrl+F"))?,
-            &MenuItem::with_id(app, "ui:library", "보관함", true, Some("CmdOrCtrl+Shift+L"))?,
-            &MenuItem::with_id(app, "ui:spotify", "차트", true, Some("CmdOrCtrl+Shift+S"))?,
-            &MenuItem::with_id(app, "ui:back", "뒤로", true, Some("CmdOrCtrl+["))?,
-            &MenuItem::with_id(app, "ui:forward", "앞으로", true, Some("CmdOrCtrl+]"))?,
+            &MenuItem::with_id(app, "ui:home", l(app, "홈"), true, Some("CmdOrCtrl+Shift+H"))?,
+            &MenuItem::with_id(app, "ui:explore", l(app, "둘러보기"), true, Some("CmdOrCtrl+Shift+E"))?,
+            &MenuItem::with_id(app, "ui:stats", l(app, "청취 통계"), true, None::<&str>)?,
+            &MenuItem::with_id(app, "ui:search", l(app, "검색"), true, Some("CmdOrCtrl+F"))?,
+            &MenuItem::with_id(app, "ui:library", l(app, "보관함"), true, Some("CmdOrCtrl+Shift+L"))?,
+            &MenuItem::with_id(app, "ui:spotify", l(app, "차트"), true, Some("CmdOrCtrl+Shift+S"))?,
+            &MenuItem::with_id(app, "ui:back", l(app, "뒤로"), true, Some("CmdOrCtrl+["))?,
+            &MenuItem::with_id(app, "ui:forward", l(app, "앞으로"), true, Some("CmdOrCtrl+]"))?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "engine:web", "YouTube Music 웹 화면 열기", true, None::<&str>)?,
-            &MenuItem::with_id(app, "engine:login", "Google 계정으로 로그인", true, None::<&str>)?,
+            &MenuItem::with_id(app, "engine:web", l(app, "YouTube Music 웹 화면 열기"), true, None::<&str>)?,
+            &MenuItem::with_id(app, "engine:login", l(app, "Google 계정으로 로그인"), true, None::<&str>)?,
         ],
     )?;
     // 보기 → 테마(화면의 설정과 같은 목록, lib/theme.ts THEMES)
@@ -550,31 +598,31 @@ fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         ("album", "앨범 색"),
     ]
     .iter()
-    .map(|(id, label)| MenuItem::with_id(app, format!("ui:theme:{id}"), *label, true, None::<&str>))
+    .map(|(id, label)| MenuItem::with_id(app, format!("ui:theme:{id}"), l(app, label), true, None::<&str>))
     .collect::<tauri::Result<_>>()?;
     let theme_refs: Vec<&dyn tauri::menu::IsMenuItem<Wry>> = themes.iter().map(|m| m as &dyn tauri::menu::IsMenuItem<Wry>).collect();
-    let theme_menu = Submenu::with_items(app, "테마", true, &theme_refs)?;
+    let theme_menu = Submenu::with_items(app, l(app, "테마"), true, &theme_refs)?;
     let view = Submenu::with_items(
         app,
-        "보기",
+        l(app, "보기"),
         true,
         &[
             &theme_menu,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "ui:settings", "설정 화면", true, None::<&str>)?,
+            &MenuItem::with_id(app, "ui:settings", l(app, "설정 화면"), true, None::<&str>)?,
         ],
     )?;
     let window = Submenu::with_items(
         app,
-        "윈도우",
+        l(app, "윈도우"),
         true,
         &[
-            &PredefinedMenuItem::minimize(app, Some("최소화"))?,
-            &PredefinedMenuItem::maximize(app, Some("확대/축소"))?,
-            &PredefinedMenuItem::fullscreen(app, Some("전체 화면"))?,
+            &PredefinedMenuItem::minimize(app, Some(l(app, "최소화").as_str()))?,
+            &PredefinedMenuItem::maximize(app, Some(l(app, "확대/축소").as_str()))?,
+            &PredefinedMenuItem::fullscreen(app, Some(l(app, "전체 화면").as_str()))?,
             &PredefinedMenuItem::separator(app)?,
             // 창을 닫으면 숨기기만 한다(on_window_event).
-            &PredefinedMenuItem::close_window(app, Some("창 닫기"))?,
+            &PredefinedMenuItem::close_window(app, Some(l(app, "창 닫기").as_str()))?,
         ],
     )?;
     window.set_as_windows_menu_for_nsapp()?;
@@ -642,6 +690,7 @@ pub fn run() {
         .manage(Engine::default())
         .manage(desktop::Extras::default())
         .invoke_handler(tauri::generate_handler![
+            set_ui_strings,
             engine::engine_call,
             engine::engine_reply,
             engine::engine_event,

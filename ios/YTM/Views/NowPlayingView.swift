@@ -23,7 +23,7 @@ struct MiniPlayer: View {
         HStack(spacing: 10) {
             CoverImage(url: has ? p.artwork : nil, size: 32, corner: 6)
             VStack(alignment: .leading, spacing: 0) {
-                Text(has ? (p.ad ? "광고" : p.title) : "재생 중인 곡 없음")
+                Text(has ? (p.ad ? L("광고") : p.title) : L("재생 중인 곡 없음"))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                 if has && placement != .inline {
@@ -244,7 +244,7 @@ struct NowPlayingView: View {
         }
     }
 
-    private func barButton(_ label: String, symbol: String, on: Bool, action: @escaping () -> Void) -> some View {
+    private func barButton(_ label: LocalizedStringKey, symbol: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: symbol).font(.system(size: 17, weight: .semibold))
@@ -288,7 +288,7 @@ private struct TrackInfo: View {
         let liked = model.liked.contains(p.videoId)
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(p.ad ? "광고" : (p.title.isEmpty ? "재생 중인 곡이 없습니다" : p.title))
+                Text(p.ad ? L("광고") : (p.title.isEmpty ? L("재생 중인 곡이 없습니다") : p.title))
                     .font(.title2.weight(.bold))
                     .lineLimit(1)
                 Text(p.ad ? "YouTube Music" : p.artist)
@@ -321,7 +321,7 @@ private struct CompactTrack: View {
         HStack(spacing: 12) {
             CoverImage(url: p.artwork, size: 48, corner: 6)
             VStack(alignment: .leading, spacing: 2) {
-                Text(p.ad ? "광고" : p.title).font(.headline).lineLimit(1)
+                Text(p.ad ? L("광고") : p.title).font(.headline).lineLimit(1)
                 Text(p.ad ? "YouTube Music" : p.artist).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -671,8 +671,8 @@ private struct LyricPreview: View {
                     }
                 } else {
                     let plain = (lyrics.plain ?? "").split(separator: "\n").map(String.init).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-                    Text(plain.first ?? "가사 보기").font(.callout.weight(.bold)).lineLimit(1)
-                    Text(plain.count > 1 ? plain[1] : "전체 가사 보기")
+                    Text(plain.first ?? L("가사 보기")).font(.callout.weight(.bold)).lineLimit(1)
+                    Text(plain.count > 1 ? plain[1] : L("전체 가사 보기"))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(1)
@@ -681,7 +681,7 @@ private struct LyricPreview: View {
         }
     }
 
-    private func line(_ text: String, dim: Bool) -> some View {
+    private func line(_ text: LocalizedStringKey, dim: Bool) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "quote.bubble").font(.footnote.weight(.semibold))
             Text(text).font(.footnote.weight(.semibold)).lineLimit(1)
@@ -715,7 +715,7 @@ private struct LyricsPane: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             if let lyrics {
-                Text("가사 제공: \(lyrics.source)\(lyrics.synced == nil ? " (시간 정보 없음)" : "")")
+                Text(lyrics.synced == nil ? "가사 제공: \(lyrics.source) (시간 정보 없음)" : "가사 제공: \(lyrics.source)")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.45))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -733,7 +733,7 @@ private struct LyricsPane: View {
             .disabled(loader.offset <= -LyricsLoader.offsetMax)
             .accessibilityLabel("가사를 0.5초 늦게")
             Button { loader.nudge(model, 0) } label: {
-                Text(loader.offset == 0 ? "싱크" : String(format: "%@%.1f초", loader.offset > 0 ? "+" : "", loader.offset))
+                Text(loader.offset == 0 ? L("싱크") : String(format: L("%@%.1f초"), loader.offset > 0 ? "+" : "", loader.offset))
                     .font(.caption.weight(.bold).monospacedDigit())
                     .frame(minWidth: 44, minHeight: 30)
             }
@@ -805,7 +805,7 @@ private struct LyricsPane: View {
         }
     }
 
-    private func message(_ text: String) -> some View {
+    private func message(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.title3.weight(.semibold))
             .foregroundStyle(.white.opacity(0.65))
@@ -897,7 +897,7 @@ private struct AVToggle: View {
         }
     }
 
-    private func segment(_ label: String, on: Bool, action: @escaping () -> Void) -> some View {
+    private func segment(_ label: LocalizedStringKey, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.subheadline.weight(.bold))
@@ -1082,7 +1082,7 @@ private struct VideoFullscreenView: View {
         }
     }
 
-    private func button(_ label: String, _ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+    private func button(_ label: LocalizedStringKey, _ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button {
             action()
             touched = Date()
@@ -1183,7 +1183,7 @@ private struct ShareCardView: View {
 private struct UpNextPane: View {
     enum Tab: String, CaseIterable {
         case queue, related, comments
-        var label: String {
+        var label: LocalizedStringResource {
             switch self {
             case .queue: "다음 트랙"
             case .related: "관련 항목"
@@ -1201,6 +1201,8 @@ private struct UpNextPane: View {
                     Button { model.upNextTab = t.rawValue } label: {
                         Text(t.label)
                             .font(.subheadline.weight(.bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                             .padding(.horizontal, 12)
                             .frame(height: 32)
                             .foregroundStyle(tab == t ? Color.black : Color.white.opacity(0.85))
@@ -1232,7 +1234,7 @@ private struct RelatedPane: View {
                 case .loading:
                     note("불러오는 중…")
                 case .failed(let message):
-                    note(message)
+                    note("\(message)")
                 case .loaded(let page):
                     if page.shelves.isEmpty { note("관련 항목이 없습니다.") }
                     ForEach(Array(page.shelves.enumerated()), id: \.offset) { _, shelf in
@@ -1252,7 +1254,7 @@ private struct RelatedPane: View {
         }
     }
 
-    private func note(_ text: String) -> some View {
+    private func note(_ text: LocalizedStringKey) -> some View {
         Text(text).foregroundStyle(.white.opacity(0.6)).padding(.top, 30)
     }
 }
@@ -1268,7 +1270,7 @@ private struct CommentsPane: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 if let failed, page == nil {
-                    note(failed)
+                    note("\(failed)")
                 } else if let page {
                     if let count = page.countText { Text(count).font(.subheadline.weight(.bold)).foregroundStyle(.white.opacity(0.6)) }
                     if page.comments.isEmpty { note("댓글이 없거나 댓글을 쓸 수 없는 곡입니다.") }
@@ -1311,7 +1313,7 @@ private struct CommentsPane: View {
         }
     }
 
-    private func note(_ text: String) -> some View {
+    private func note(_ text: LocalizedStringKey) -> some View {
         Text(text).foregroundStyle(.white.opacity(0.6)).padding(.top, 30)
     }
 }
@@ -1415,11 +1417,11 @@ private struct QueuePane: View {
         }
     }
 
-    private func note(_ text: String) -> some View {
+    private func note(_ text: LocalizedStringKey) -> some View {
         Text(text).foregroundStyle(.white.opacity(0.6)).padding(.top, 30)
     }
 
-    private func section(_ title: String) -> some View {
+    private func section(_ title: LocalizedStringKey) -> some View {
         Text(title)
             .font(.subheadline.weight(.bold))
             .foregroundStyle(.white.opacity(0.6))

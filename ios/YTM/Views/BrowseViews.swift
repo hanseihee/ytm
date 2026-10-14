@@ -208,7 +208,7 @@ struct SearchView: View {
     private func chips(_ data: SearchResult) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
-                chip("전체", on: params == nil) { params = nil }
+                chip(L("전체"), on: params == nil) { params = nil }
                 ForEach(data.chips, id: \.label) { c in
                     chip(c.label, on: c.selected) { params = c.selected ? nil : c.params }
                 }
@@ -354,10 +354,10 @@ struct ArtistView: View {
                 if let subs = a.subscribers { Text(subs).foregroundStyle(palette.mist) }
                 HStack(spacing: 10) {
                     if let shuffle = a.shuffle {
-                        PillButton(title: "셔플 재생", systemImage: "shuffle", prominent: true) { model.playEndpoint(shuffle, what: "셔플 재생") }
+                        PillButton(title: "셔플 재생", systemImage: "shuffle", prominent: true) { model.playEndpoint(shuffle, failure: "셔플 재생하지 못했습니다") }
                     }
                     if let radio = a.radio {
-                        PillButton(title: "라디오", systemImage: "dot.radiowaves.left.and.right") { model.playEndpoint(radio, what: "라디오를 시작") }
+                        PillButton(title: "라디오", systemImage: "dot.radiowaves.left.and.right") { model.playEndpoint(radio, failure: "라디오를 시작하지 못했습니다") }
                     }
                     if let channelId = a.channelId {
                         let on = subscribed ?? a.subscribed ?? false
@@ -424,7 +424,7 @@ struct BrowseView: View {
             }
         }
         .background(palette.night)
-        .navigationTitle(state.value?.title.isEmpty == false ? state.value!.title : (title ?? "목록"))
+        .navigationTitle(state.value?.title.isEmpty == false ? state.value!.title : (title ?? L("목록")))
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(id)\(params ?? "")") { await load() }
     }

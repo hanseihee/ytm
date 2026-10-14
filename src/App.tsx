@@ -1,4 +1,8 @@
 import { useEffect, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { LangKeyed, useLang } from './i18n/react';
+import { rustStrings } from './i18n/rust';
+import { UpdateBanner } from './components/UpdateBanner';
 import * as ytm from './lib/ytm/client';
 import { onMenuAction } from './lib/tauri';
 import { startLibrarySync } from './state/library';
@@ -125,7 +129,13 @@ export function App() {
   const lyrics = useLayout((s) => s.lyrics);
   const panel = useLayout((s) => s.panel);
   const main = useRef<HTMLElement>(null);
+  const lang = useLang();
   useShortcuts();
+
+  // 맥 메뉴·트레이·창 제목도 지금 언어로(Rust가 다시 만든다).
+  useEffect(() => {
+    invoke('set_ui_strings', { strings: rustStrings() }).catch((err) => console.warn('[i18n] 메뉴 문구 보내기 실패', err));
+  }, [lang]);
 
   useEffect(() => {
     const stops: Promise<() => void>[] = [
@@ -173,20 +183,23 @@ export function App() {
   }, [route]);
 
   return (
-    <div className={`app${panel !== 'none' ? ' app--panel' : ''}`}>
-      <Sidebar />
-      <main className="main" ref={main}>
-        <TopBar />
-        <View route={route} />
-      </main>
-      {lyrics && <LyricsView />}
-      {panel === 'queue' && <QueuePanel />}
-      {panel === 'eq' && <EqPanel />}
-      <PlayerBar />
-      <LoginGate />
-      <ContextMenuHost />
-      <DialogHost />
-      <Toasts />
-    </div>
+    <LangKeyed>
+      <div className={`app${panel !== 'none' ? ' app--panel' : ''}`}>
+        <Sidebar />
+        <main className="main" ref={main}>
+          <TopBar />
+          <View route={route} />
+        </main>
+        {lyrics && <LyricsView />}
+        {panel === 'queue' && <QueuePanel />}
+        {panel === 'eq' && <EqPanel />}
+        <PlayerBar />
+        <LoginGate />
+        <ContextMenuHost />
+        <DialogHost />
+        <Toasts />
+        <UpdateBanner />
+      </div>
+    </LangKeyed>
   );
 }

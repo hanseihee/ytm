@@ -1,6 +1,7 @@
 // Tauri 명령·이벤트 얇은 포장. 화면 나머지 코드는 이 파일만 통해 Rust와 이야기한다.
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { t } from '../i18n';
 
 export interface EngineStatus {
   ready: boolean;
@@ -44,13 +45,13 @@ export type EngineMethod = 'api' | 'status' | 'state' | 'play' | 'queueAdd' | 'q
 /** 엔진 오류를 사람이 읽을 문장으로. */
 export function describeError(err: unknown): string {
   const message = typeof err === 'string' ? err : err instanceof Error ? err.message : String(err);
-  if (message.startsWith('engine_not_ready')) return 'YouTube Music 연결을 기다리는 중입니다. 잠시 뒤 다시 시도하세요.';
-  if (message.startsWith('engine_timeout')) return 'YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요.';
-  if (message.startsWith('engine_navigating')) return 'YouTube Music 페이지를 다시 불러오는 중이었습니다. 다시 시도하세요.';
-  if (message.startsWith('not_on_music')) return 'YouTube Music에 로그인해야 합니다.';
-  if (/^http_401|^http_403/.test(message)) return '로그인이 만료됐습니다. 다시 로그인하세요.';
-  if (/^http_4\d\d/.test(message)) return `YouTube Music이 요청을 거절했습니다 (${message.slice(5, 8)}).`;
-  if (/^http_5\d\d/.test(message)) return 'YouTube Music 서버 오류입니다. 잠시 뒤 다시 시도하세요.';
+  if (message.startsWith('engine_not_ready')) return t('YouTube Music 연결을 기다리는 중입니다. 잠시 뒤 다시 시도하세요.');
+  if (message.startsWith('engine_timeout')) return t('YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요.');
+  if (message.startsWith('engine_navigating')) return t('YouTube Music 페이지를 다시 불러오는 중이었습니다. 다시 시도하세요.');
+  if (message.startsWith('not_on_music')) return t('YouTube Music에 로그인해야 합니다.');
+  if (/^http_401|^http_403/.test(message)) return t('로그인이 만료됐습니다. 다시 로그인하세요.');
+  if (/^http_4\d\d/.test(message)) return t('YouTube Music이 요청을 거절했습니다 ({code}).', { code: message.slice(5, 8) });
+  if (/^http_5\d\d/.test(message)) return t('YouTube Music 서버 오류입니다. 잠시 뒤 다시 시도하세요.');
   return message;
 }
 
