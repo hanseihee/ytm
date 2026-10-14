@@ -488,6 +488,8 @@ struct Manager {
     app: Option<AppHandle>,
     settings: EqSettings,
     visualizer_until: Option<Instant>,
+    /// 권한 창을 띄워도 되는 시각화(이퀄라이저 패널)가 켜 둔 기한. 앨범 표지 화면은 권한을 묻지 않는다.
+    prompt_until: Option<Instant>,
     running: Option<Running>,
     /// 실패하면 사용자가 설정을 다시 바꿀 때까지 다시 시도하지 않는다.
     failed: Option<&'static str>,
@@ -501,6 +503,7 @@ fn manager() -> &'static Mutex<Manager> {
             app: None,
             settings: EqSettings::default(),
             visualizer_until: None,
+            prompt_until: None,
             running: None,
             failed: None,
             shared: Arc::new(Shared {
@@ -527,12 +530,25 @@ pub fn set_settings(settings: EqSettings) {
     *lock(&m.shared.coefs) = coefficients(&settings, rate);
 }
 
-pub fn set_visualizer(on: bool) {
+/// prompt: 오디오 캡처 권한을 아직 정하지 않았으면 물어도 되는지(이퀄라이저 패널은 예, 앨범 표지 화면은 아니오).
+pub fn set_visualizer(on: bool, prompt: bool) {
     let mut m = lock(manager());
-    if on && m.visualizer_until.is_none() {
-        m.failed = None;
+    if !on {
+        // 탭은 바로 끄지 않고 기한(8초)이 지나면 멈춘다. 앨범 표지 화면이 함께 보고 있으면
+        // 끄고 다시 켜느라 소리가 잠깐 끊기지 않게.
+        m.prompt_until = None;
+        return;
     }
-    m.visualizer_until = on.then(|| Instant::now() + Duration::from_secs(8));
+    let now = Instant::now();
+    let until = Some(now + Duration::from_secs(8));
+    if prompt {
+        // 패널을 새로 열면 지난 실패를 지우고 다시 시도한다.
+        if !m.prompt_until.is_some_and(|t| t > now) {
+            m.failed = None;
+        }
+        m.prompt_until = until;
+    }
+    m.visualizer_until = until;
 }
 
 pub fn status_json() -> serde_json::Value {
@@ -559,7 +575,7 @@ fn fail(m: &mut Manager, reason: &'static str) -> Option<Running> {
 enum Action {
     None,
     Stop(Running),
-    Start { processes: Vec<AudioObjectID>, settings: EqSettings, shared: Arc<Shared> },
+    Start { processes: Vec<AudioObjectID>, settings: EqSettings, shared: Arc<Shared>, may_prompt: bool },
 }
 
 /// 0.5초마다: 켜야 하면 탭을 만들고, 꺼야 하거나 문제가 생기면 없앤다.
@@ -594,17 +610,24 @@ fn tick(app: &AppHandle) {
                 }
                 // 아직 소리를 낸 적이 없으면 오디오 프로세스가 없다. 재생이 시작되면 다음 확인 때 만든다.
                 None if processes.is_empty() => Action::None,
-                None => Action::Start { processes, settings: m.settings, shared: m.shared.clone() },
+                None => Action::Start {
+                    processes,
+                    settings: m.settings,
+                    shared: m.shared.clone(),
+                    may_prompt: m.settings.enabled || m.prompt_until.is_some_and(|t| t > now),
+                },
             }
         }
     };
     match action {
         Action::None => {}
         Action::Stop(r) => stop(r),
-        Action::Start { processes, settings, shared } => {
+        Action::Start { processes, settings, shared, may_prompt } => {
             // 권한부터: 거부돼 있으면 소리를 건드리지 않고 알린다. 아직이면 묻고 답을 기다린다.
+            // 앨범 표지 화면만 스펙트럼을 보고 있으면 묻지도 알리지도 않는다(허용돼 있을 때만 움직인다).
             let allowed = match permission() {
                 Permission::Granted => true,
+                _ if !may_prompt => return,
                 Permission::Denied => false,
                 Permission::Unknown => request_permission().unwrap_or(true),
             };

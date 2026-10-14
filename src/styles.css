@@ -504,22 +504,51 @@ button.top-card:hover { background: var(--plum); }
 .seg__btn { height: 26px; padding: 0 12px; border-radius: 13px; font-size: 13px; font-weight: 700; color: var(--mist); white-space: nowrap; }
 .seg__btn:hover:not(.is-on) { color: var(--ink); }
 .seg__btn.is-on { background: rgb(var(--fg-rgb) / 0.16); color: var(--ink-strong); }
-/* 앨범 표지 크게 */
+/* 앨범 표지 크게: 표지 크기는 창이 아니라 이 화면이 쓸 수 있는 크기(컨테이너)로 정하고,
+   낮아지면 다음 가사 줄 → 가사 미리보기 → 스펙트럼 순서로 줄인다. */
 .lyrics__cover {
-  position: relative; flex: 1; min-height: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
-  padding: 8px 40px 32px; text-align: center;
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: 8px 40px 32px;
+  container: cover / size;
+}
+.lyrics__cover-inner {
+  /* 위아래 auto 여백: 공간이 남으면 가운데, 모자라면 위에 붙어 헤더 쪽으로 넘치지 않는다 */
+  margin: auto 0;
+  display: flex; flex-direction: column; align-items: center; gap: var(--cover-gap);
+  text-align: center;
+  /* 표지 아래(스펙트럼·제목·가수·가사 두 줄·간격)가 차지하는 높이를 뺀 만큼 */
+  --cover-gap: 22px;
+  --cover-size: max(120px, min(520px, 55cqw, 100cqh - 240px));
 }
 .lyrics__art { flex: none; border-radius: 14px; object-fit: cover; box-shadow: 0 30px 80px rgb(0 0 0 / 0.45); transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
 .lyrics__art.is-paused { transform: scale(0.92); }
+.lyrics__aura {
+  flex: none; height: 38px; margin: -6px 0 -2px;
+  /* 바닥에 비친 듯한 그림자 */
+  -webkit-box-reflect: below 3px linear-gradient(transparent 30%, rgb(255 255 255 / 0.22));
+}
 .lyrics__cover-text { max-width: min(100%, 40em); }
-.lyrics__cover-title { font-size: clamp(22px, 2.3vw, 32px); font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.lyrics__cover-title { font-size: clamp(22px, 2.3vw, 32px); font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .lyrics__cover-artist { color: var(--mist); font-size: 16px; margin-top: 4px; }
 .lyrics__preview { display: flex; flex-direction: column; gap: 4px; max-width: min(100%, 34em); padding: 10px 18px; border-radius: 14px; }
 .lyrics__preview:hover { background: rgb(var(--fg-rgb) / 0.06); }
-.lyrics__preview-now { font-size: calc(19px * var(--lyric-scale, 1)); font-weight: 800; color: var(--ink-strong); }
-.lyrics__preview-next { font-size: calc(15px * var(--lyric-scale, 1)); font-weight: 600; color: var(--mist); }
+.lyrics__preview-now { font-size: calc(19px * var(--lyric-scale, 1)); font-weight: 800; color: var(--ink-strong); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.lyrics__preview-next { font-size: calc(15px * var(--lyric-scale, 1)); font-weight: 600; color: var(--mist); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .lyrics__art { transition: none; } }
+/* 앨범 표지 화면이 낮을 때(위 규칙들보다 뒤에 둬야 display를 덮어쓴다): 다음 가사 줄 → 가사 미리보기 → 스펙트럼 순서로 줄인다 */
+@container cover (max-height: 620px) {
+  .lyrics__cover-inner { --cover-gap: 16px; --cover-size: max(120px, min(520px, 55cqw, 100cqh - 196px)); }
+  .lyrics__preview-next { display: none; }
+}
+@container cover (max-height: 480px) {
+  .lyrics__cover-inner { --cover-gap: 14px; --cover-size: max(120px, min(520px, 55cqw, 100cqh - 128px)); }
+  .lyrics__preview { display: none; }
+}
+@container cover (max-height: 300px) {
+  .lyrics__cover-inner { --cover-gap: 12px; --cover-size: max(110px, min(520px, 55cqw, 100cqh - 80px)); }
+  .lyrics__aura { display: none; }
+}
 .lyrics__tools { display: flex; align-items: center; gap: 10px; flex: none; }
 .textsize { display: flex; align-items: center; height: 34px; padding: 0 4px; border-radius: 17px; background: rgb(var(--fg-rgb) / 0.08); }
 .textsize__btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); }

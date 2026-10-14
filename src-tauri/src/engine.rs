@@ -388,6 +388,28 @@ async fn debug_desktop(app: &AppHandle, args: &Value) -> Result<Value, String> {
             crate::desktop::on_track_changed(app, &prev, &next);
             Ok(Value::Bool(true))
         }
+        "spectrum" => {
+            // 스펙트럼 그리기 시험: 소리·권한 없이 가짜 막대 48개를 초당 25번, seconds초 동안 보낸다(박자 2Hz).
+            let seconds = args["seconds"].as_f64().unwrap_or(6.0);
+            let app = app.clone();
+            std::thread::spawn(move || {
+                let started = std::time::Instant::now();
+                while started.elapsed().as_secs_f64() < seconds {
+                    let t = started.elapsed().as_secs_f32();
+                    let beat = (t * std::f32::consts::TAU * 2.0).sin().max(0.0);
+                    let bars: Vec<u8> = (0..48)
+                        .map(|i| {
+                            let x = i as f32 / 47.0;
+                            let v = 0.82 - 0.45 * x + 0.1 * (t * 3.0 + i as f32 * 0.5).sin() + 0.15 * beat * (1.0 - x);
+                            (v.clamp(0.0, 1.0) * 255.0) as u8
+                        })
+                        .collect();
+                    let _ = app.emit_to(MAIN, "spectrum", bars);
+                    std::thread::sleep(Duration::from_millis(40));
+                }
+            });
+            Ok(Value::Bool(true))
+        }
         "shortcut" => {
             use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
             let code = match args["key"].as_str().unwrap_or("P") { "N" => Code::KeyN, "B" => Code::KeyB, "L" => Code::KeyL, "M" => Code::KeyM, _ => Code::KeyP };
