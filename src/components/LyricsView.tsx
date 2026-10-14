@@ -2,8 +2,12 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { activeLine, loadLyrics, LYRIC_OFFSET_MAX, LYRIC_OFFSET_STEP, lyricsOffset, setLyricsOffset, type Lyrics } from '../lib/lyrics';
 import * as ytm from '../lib/ytm/client';
 import { patchPlayer, usePlayer, usePosition } from '../state/player';
-import { LYRIC_SCALES, stepLyricScale, toastError, toggleLyrics, useLyricScale } from '../state/ui';
+import { LYRIC_SCALES, setLyricsView, stepLyricScale, toastError, toggleLyrics, useLyricScale, useLyricsView } from '../state/ui';
+import { Cover } from './Cover';
 import { Icon } from './Icon';
+
+/** YouTube Music 썸네일 주소의 크기 지정(=w120-h120…)을 크게 바꾼다. */
+const largeArt = (url: string) => url.replace(/=w\d+-h\d+/, '=w1200-h1200');
 
 /** 사용자가 직접 굴린 뒤 이 시간 동안은 자동 따라가기를 멈춘다. */
 const MANUAL_SCROLL_PAUSE_MS = 4000;
@@ -57,6 +61,32 @@ function SyncedLines({ lyrics, scale, offset }: { lyrics: Lyrics; scale: number;
   );
 }
 
+/** 앨범 표지 크게 + 제목·가수 + 지금 부르는 가사 두 줄(누르면 가사 보기) */
+function CoverStage({ lyrics, offset, artwork, title, artist }: { lyrics?: Lyrics | null; offset: number; artwork: string; title: string; artist: string }) {
+  const playing = usePlayer((s) => s.playing);
+  const position = usePosition(4);
+  const lines = lyrics?.synced?.filter((l) => l.text.trim()) ?? [];
+  const at = lines.length ? Math.max(0, activeLine(lines, position + offset)) : -1;
+  const plain = !lines.length ? (lyrics?.plain ?? '').split('\n').map((l) => l.trim()).filter(Boolean) : [];
+  const now = at >= 0 ? lines[at].text : plain[0];
+  const next = at >= 0 ? lines[at + 1]?.text : plain[1];
+  return (
+    <div className="lyrics__cover">
+      <Cover src={artwork ? largeArt(artwork) : undefined} size="min(50vh, 38vw, 520px)" className={`lyrics__art${playing ? '' : ' is-paused'}`} />
+      <div className="lyrics__cover-text">
+        <div className="lyrics__cover-title">{title || '재생 중인 곡이 없습니다'}</div>
+        {artist && <div className="lyrics__cover-artist">{artist}</div>}
+      </div>
+      {now && (
+        <button type="button" className="lyrics__preview" title="가사 보기" onClick={() => setLyricsView('lyrics')}>
+          <span className="lyrics__preview-now">{now}</span>
+          {next && <span className="lyrics__preview-next">{next}</span>}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function LyricsView() {
   const videoId = usePlayer((s) => s.videoId);
   const title = usePlayer((s) => s.title);
@@ -98,42 +128,60 @@ export function LyricsView() {
   const nudge = (delta: number) => setOffset(setLyricsOffset(lyricsId, delta === 0 ? 0 : offset + delta));
   const bg = { '--art': artwork ? `url("${artwork}")` : 'none', '--lyric-scale': scale } as CSSProperties;
   const loading = (state.id !== videoId && !borrowed) || (state.lyrics === undefined && !state.error);
+  const view = useLyricsView();
 
   return (
-    <section className="lyrics" style={bg} aria-label="가사">
+    <section className="lyrics" style={bg} aria-label={view === 'cover' ? '지금 재생' : '가사'}>
       <div className="lyrics__backdrop" aria-hidden="true" />
       <header className="lyrics__head">
-        <div className="lyrics__track">
-          <div className="lyrics__title">{title || '재생 중인 곡이 없습니다'}</div>
-          {artist && <div className="lyrics__artist">{artist}</div>}
-        </div>
+        {view === 'lyrics' ? (
+          <div className="lyrics__track">
+            {videoId && <Cover src={artwork || undefined} size={48} className="lyrics__thumb" />}
+            <div className="lyrics__track-text">
+              <div className="lyrics__title">{title || '재생 중인 곡이 없습니다'}</div>
+              {artist && <div className="lyrics__artist">{artist}</div>}
+            </div>
+          </div>
+        ) : (
+          <div />
+        )}
         <div className="lyrics__tools">
-          <div className="textsize" role="group" aria-label="가사 글자 크기">
-            <button
-              type="button"
-              className="textsize__btn"
-              aria-label="가사 글자 작게"
-              title="작게 (⌘-)"
-              disabled={scale <= LYRIC_SCALES[0]}
-              onClick={() => stepLyricScale(-1)}
-            >
-              <span className="textsize__glyph textsize__glyph--sm" aria-hidden="true">가</span>
+          <div className="seg" role="radiogroup" aria-label="크게 볼 것">
+            <button type="button" role="radio" aria-checked={view === 'lyrics'} className={`seg__btn${view === 'lyrics' ? ' is-on' : ''}`} onClick={() => setLyricsView('lyrics')}>
+              가사
             </button>
-            <button type="button" className="textsize__value" title="기본 크기로 (⌘0)" onClick={() => stepLyricScale(0)}>
-              {Math.round(scale * 100)}%
-            </button>
-            <button
-              type="button"
-              className="textsize__btn"
-              aria-label="가사 글자 크게"
-              title="크게 (⌘=)"
-              disabled={scale >= LYRIC_SCALES[LYRIC_SCALES.length - 1]}
-              onClick={() => stepLyricScale(1)}
-            >
-              <span className="textsize__glyph textsize__glyph--lg" aria-hidden="true">가</span>
+            <button type="button" role="radio" aria-checked={view === 'cover'} className={`seg__btn${view === 'cover' ? ' is-on' : ''}`} onClick={() => setLyricsView('cover')}>
+              앨범 표지
             </button>
           </div>
-          {state.lyrics?.synced && (
+          {view === 'lyrics' && (
+            <div className="textsize" role="group" aria-label="가사 글자 크기">
+              <button
+                type="button"
+                className="textsize__btn"
+                aria-label="가사 글자 작게"
+                title="작게 (⌘-)"
+                disabled={scale <= LYRIC_SCALES[0]}
+                onClick={() => stepLyricScale(-1)}
+              >
+                <span className="textsize__glyph textsize__glyph--sm" aria-hidden="true">가</span>
+              </button>
+              <button type="button" className="textsize__value" title="기본 크기로 (⌘0)" onClick={() => stepLyricScale(0)}>
+                {Math.round(scale * 100)}%
+              </button>
+              <button
+                type="button"
+                className="textsize__btn"
+                aria-label="가사 글자 크게"
+                title="크게 (⌘=)"
+                disabled={scale >= LYRIC_SCALES[LYRIC_SCALES.length - 1]}
+                onClick={() => stepLyricScale(1)}
+              >
+                <span className="textsize__glyph textsize__glyph--lg" aria-hidden="true">가</span>
+              </button>
+            </div>
+          )}
+          {view === 'lyrics' && state.lyrics?.synced && (
             <div className="textsize lyric-sync" role="group" aria-label="가사 싱크">
               <button type="button" className="textsize__btn" aria-label="가사를 0.5초 늦게" title="가사가 빠를 때" disabled={offset <= -LYRIC_OFFSET_MAX} onClick={() => nudge(-LYRIC_OFFSET_STEP)}>
                 <Icon name="back" size={14} />
@@ -152,7 +200,9 @@ export function LyricsView() {
         </div>
       </header>
 
-      {!videoId ? (
+      {view === 'cover' ? (
+        <CoverStage lyrics={!loading && !ad ? state.lyrics : null} offset={offset + shift} artwork={ad ? '' : artwork} title={ad ? '광고' : title} artist={ad ? 'YouTube Music' : artist} />
+      ) : !videoId ? (
         <p className="lyrics__empty">곡을 재생하면 가사가 여기에 나옵니다.</p>
       ) : ad ? (
         <p className="lyrics__empty">광고가 끝나면 가사를 보여 드립니다.</p>
@@ -170,7 +220,7 @@ export function LyricsView() {
         </div>
       )}
 
-      {state.lyrics && state.id === videoId && (
+      {view === 'lyrics' && state.lyrics && (state.id === videoId || borrowed) && (
         <footer className="lyrics__source">
           가사 제공: {state.lyrics.source}
           {state.lyrics.synced ? '' : ' (시간 정보 없음)'}

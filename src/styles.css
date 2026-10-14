@@ -494,7 +494,32 @@ button.top-card:hover { background: var(--plum); }
 }
 .lyrics__backdrop::after { content: ''; position: absolute; inset: 0; background: linear-gradient(rgb(var(--bg-rgb) / 0.35), rgb(var(--bg-rgb) / 0.75)); }
 .lyrics__head { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 28px 40px 0; }
-.lyrics__title { font-size: 18px; font-weight: 800; }
+.lyrics__track { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.lyrics__thumb { flex: none; border-radius: 8px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.3); }
+.lyrics__track-text { min-width: 0; }
+.lyrics__title { font-size: 18px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lyrics__artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 가사 / 앨범 표지 고르기 */
+.seg { display: flex; align-items: center; height: 34px; padding: 0 4px; border-radius: 17px; background: rgb(var(--fg-rgb) / 0.08); }
+.seg__btn { height: 26px; padding: 0 12px; border-radius: 13px; font-size: 13px; font-weight: 700; color: var(--mist); white-space: nowrap; }
+.seg__btn:hover:not(.is-on) { color: var(--ink); }
+.seg__btn.is-on { background: rgb(var(--fg-rgb) / 0.16); color: var(--ink-strong); }
+/* 앨범 표지 크게 */
+.lyrics__cover {
+  position: relative; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  padding: 8px 40px 32px; text-align: center;
+}
+.lyrics__art { flex: none; border-radius: 14px; object-fit: cover; box-shadow: 0 30px 80px rgb(0 0 0 / 0.45); transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.lyrics__art.is-paused { transform: scale(0.92); }
+.lyrics__cover-text { max-width: min(100%, 40em); }
+.lyrics__cover-title { font-size: clamp(22px, 2.3vw, 32px); font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.lyrics__cover-artist { color: var(--mist); font-size: 16px; margin-top: 4px; }
+.lyrics__preview { display: flex; flex-direction: column; gap: 4px; max-width: min(100%, 34em); padding: 10px 18px; border-radius: 14px; }
+.lyrics__preview:hover { background: rgb(var(--fg-rgb) / 0.06); }
+.lyrics__preview-now { font-size: calc(19px * var(--lyric-scale, 1)); font-weight: 800; color: var(--ink-strong); }
+.lyrics__preview-next { font-size: calc(15px * var(--lyric-scale, 1)); font-weight: 600; color: var(--mist); }
+@media (prefers-reduced-motion: reduce) { .lyrics__art { transition: none; } }
 .lyrics__tools { display: flex; align-items: center; gap: 10px; flex: none; }
 .textsize { display: flex; align-items: center; height: 34px; padding: 0 4px; border-radius: 17px; background: rgb(var(--fg-rgb) / 0.08); }
 .textsize__btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); }

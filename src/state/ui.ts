@@ -67,6 +67,31 @@ export const togglePanel = (panel: Panel) =>
 export const toggleLyrics = (on?: boolean) => layoutStore.set((s) => ({ ...s, lyrics: on ?? !s.lyrics }));
 export const useLayout = <S>(select: (s: LayoutState) => S) => useStore(layoutStore, select);
 
+// ── 지금 재생 화면: 가사 / 앨범 표지 ──────────────────────────────────────
+export type LyricsViewMode = 'lyrics' | 'cover';
+const LYRICS_VIEW_KEY = 'ytm-desktop:lyrics-view';
+
+function loadLyricsView(): LyricsViewMode {
+  try {
+    return localStorage.getItem(LYRICS_VIEW_KEY) === 'cover' ? 'cover' : 'lyrics';
+  } catch {
+    return 'lyrics';
+  }
+}
+
+export const lyricsViewStore = createStore<LyricsViewMode>(loadLyricsView());
+export const useLyricsView = () => useStore(lyricsViewStore, (s) => s);
+
+/** 가사와 앨범 표지 중 무엇을 크게 볼지. 고른 값은 다음 실행에도 쓴다. */
+export function setLyricsView(mode: LyricsViewMode) {
+  lyricsViewStore.set(mode);
+  try {
+    localStorage.setItem(LYRICS_VIEW_KEY, mode);
+  } catch {
+    // 저장하지 못해도 이번 실행에는 적용된다.
+  }
+}
+
 // ── 가사 글자 크기 ─────────────────────────────────────────────────────────
 /** 가사 글자 배율 단계(기본 1). 고른 값은 다음 실행에도 쓴다. */
 export const LYRIC_SCALES = [0.7, 0.85, 1, 1.15, 1.3, 1.5, 1.75];
