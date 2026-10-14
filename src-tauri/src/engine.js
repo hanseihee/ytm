@@ -138,13 +138,7 @@
     return parts.join(' ');
   }
 
-  /**
-   * 다른 클라이언트로 보낼 수 있는 것(본문의 context.client만 바꾼다). 시간 맞춤 가사(timedLyricsModel)는 웹 클라이언트에는
-   * 오지 않고 모바일 앱 클라이언트에만 온다(ytmusicapi get_lyrics(timestamps=True)와 같은 방식).
-   */
-  const ALT_CLIENTS = { ANDROID_MUSIC: '7.21.50' };
-
-  async function api({ endpoint, body = {}, query = {}, client }) {
+  async function api({ endpoint, body = {}, query = {} }) {
     if (!ON_MUSIC) throw new Error('not_on_music');
     if (typeof endpoint !== 'string' || !/^[a-z_]+(\/[a-z_]+)*$/.test(endpoint)) throw new Error('bad_endpoint');
     // 페이지 맥락에는 시간이 지나면 만료되는 값(request.consistencyTokenJars)과 클릭 추적값이 들어 있어
@@ -155,14 +149,6 @@
     delete full.clickTracking;
     delete full.adSignalsInfo;
     if (full.request) delete full.request.consistencyTokenJars;
-    const alt = client && Object.prototype.hasOwnProperty.call(ALT_CLIENTS, client) ? client : null;
-    if (client && !alt) throw new Error('bad_client');
-    if (alt) {
-      // 웹 맥락 값(플랫폼·브라우저 등)이 섞이면 400이 나서(2026-10-14) 언어·지역만 남긴다.
-      const keep = full.client || {};
-      for (const key of Object.keys(full)) if (key !== 'client' && key !== 'user') delete full[key];
-      full.client = { clientName: alt, clientVersion: ALT_CLIENTS[alt], hl: keep.hl || 'ko', gl: keep.gl || 'KR' };
-    }
     // 그래도 400이 나면 꼭 필요한 값만 담아 한 번 더 보낸다.
     const minimal = {
       client: Object.fromEntries(['clientName', 'clientVersion', 'hl', 'gl', 'visitorData', 'platform', 'userAgent', 'timeZone']
@@ -176,11 +162,6 @@
       'X-Youtube-Client-Name': String(cfg('INNERTUBE_CONTEXT_CLIENT_NAME') ?? '67'),
       'X-Youtube-Client-Version': String(cfg("INNERTUBE_CLIENT_VERSION") ?? (full.client && full.client.clientVersion) ?? ""),
     };
-    // 다른 클라이언트로 보낼 때는 웹 클라이언트 머리값을 빼서 본문과 어긋나지 않게 한다.
-    if (alt) {
-      delete headers['X-Youtube-Client-Name'];
-      delete headers['X-Youtube-Client-Version'];
-    }
     const visitor = cfg('VISITOR_DATA');
     if (visitor) headers['X-Goog-Visitor-Id'] = visitor;
     const pageId = cfg('DELEGATED_SESSION_ID');
