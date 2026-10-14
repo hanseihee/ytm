@@ -1,6 +1,6 @@
 # Microsoft Store 등록 정보 초안
 
-Partner Center → YTMusic → 제출 → Store 목록(한국어·English)에 넣을 글. 언어는 MSIX 설명 파일(src-tauri/msix/AppxManifest.xml)의 ko-KR·en-US와 맞춘다.
+Partner Center → YTMusic(제품 ID 9NSGBJ9R0WSJ, https://apps.microsoft.com/detail/9NSGBJ9R0WSJ) → 제출 → Store 목록(한국어·English)에 넣을 글. 언어는 MSIX 설명 파일(src-tauri/msix/AppxManifest.xml)의 ko-KR·en-US와 맞춘다.
 
 ## 공통 값
 
