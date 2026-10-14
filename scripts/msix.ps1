@@ -25,7 +25,7 @@ $layout = "$out/layout"
 Remove-Item $layout -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory "$layout/Assets" -Force | Out-Null
 Copy-Item $exe "$layout/YTMusic.exe"
-foreach ($a in 'StoreLogo', 'Square44x44Logo', 'Square150x150Logo', 'Square310x310Logo') {
+foreach ($a in 'StoreLogo', 'Square44x44Logo', 'Square150x150Logo') {
   Copy-Item "$root/src-tauri/icons/$a.png" "$layout/Assets/$a.png"
 }
 

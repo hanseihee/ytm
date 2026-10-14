@@ -26,6 +26,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          cache-on-failure: true
       - run: npm ci
       - name: Tauri 빌드(Store용, 설치 파일 없이)
         run: npx tauri build --no-bundle
