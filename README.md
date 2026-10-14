@@ -1,6 +1,8 @@
-# YTM 0.2 — 데스크톱(맥·윈도우)과 iOS
+# YTM — 데스크톱(맥·윈도우)과 iOS
 
-YouTube Music 계정으로 쓰는 음악 플레이어입니다(비공식, 개인용). 한 저장소에서 두 앱을 관리합니다.
+YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 두 앱을 관리합니다.
+
+**내려받기**: [최신 릴리즈](https://github.com/hanseihee/ytm/releases/latest) — 맥(Apple 실리콘) `.dmg`, 윈도우(64비트) 설치 파일. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md).
 
 - **YTM Desktop**(맥·윈도우): Rust(Tauri 2) + React
 - **YTM**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
@@ -78,10 +80,12 @@ npm run ios:project        # 데이터 묶음(ios/build/ytm-core.js) + Xcode 프
 open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서명, 팀 RT556U3WKT)
 ```
 
-## 설치 파일 (`배포/`)
+## 설치
 
-- 맥(Apple 실리콘): `YTM Desktop_0.2.0_aarch64.dmg` (2026-10-14 17:30 빌드)
-- 윈도우(64비트): `YTM Desktop_0.2.0_x64-setup.exe`
+[GitHub 릴리즈](https://github.com/hanseihee/ytm/releases)에서 받습니다.
+- 맥(Apple 실리콘): `YTM-Desktop-<버전>-mac-arm64.dmg`
+- 윈도우(64비트): `YTM-Desktop-<버전>-windows-x64-setup.exe`
+- `SHA256SUMS.txt`로 받은 파일을 확인할 수 있습니다.
 
 코드 서명을 하지 않았습니다.
 - **맥**: 처음 열 때 Finder에서 앱을 우클릭한 뒤 "열기"를 고르세요.
@@ -165,6 +169,8 @@ npm install
 npm run dev          # 개발 실행
 npm run build:mac    # .app + .dmg
 npm run build:win    # 맥에서 윈도우 설치 파일 교차 빌드 (cargo-xwin, makensis, llvm 필요)
+npm run version:set -- 0.3.0   # 버전 올리기(데스크톱·iOS 파일 모두) + CHANGELOG.md에 새 칸
+npm run release      # 맥·윈도우 빌드 → 태그 v<버전> → GitHub 릴리즈에 설치 파일·SHA256SUMS 올리기
 npm run check:parsers -- <응답 폴더>   # 받아 둔 응답으로 해석기 점검
 cd src-tauri && cargo test --lib       # EQ 필터·Spotify 해석 단위 시험
 ```
@@ -208,3 +214,20 @@ YouTube Music 화면이나 API가 바뀌면 다음 두 곳을 먼저 보면 됩�
 - 잠금 화면용 정보가 WebKit mediaSession에 들어감, 위젯용 곡 정보·표지 파일이 App Group에 써짐
 
 못 한 것: 잠금 화면에 표지가 실제로 보이는지, 위젯을 홈 화면에 올려 단추 누르기, 화면 속 화면, 백그라운드 재생 오래 두기(사용자 확인 필요).
+
+## 릴리즈 순서
+
+1. `npm run version:set -- <버전>`으로 버전을 올립니다.
+2. `CHANGELOG.md`의 새 칸에 바뀐 점을 적습니다.
+3. 커밋하고 푸시합니다.
+4. `npm run release`를 실행합니다(이미 빌드했으면 `-- --skip-build`, 초안으로 만들려면 `-- --draft`).
+
+스크립트가 버전이 모두 같은지, 커밋하지 않은 변경이 없는지, 푸시했는지, 태그가 이미 있는지 먼저 확인합니다.
+GitHub 계정은 `origin` 주소의 소유자로 씁니다(`gh auth token --user <소유자>`).
+
+## 라이선스와 고지
+
+[MIT](LICENSE). YouTube, YouTube Music, Google과 관계없는 비공식 프로젝트이며, 각 상표는 해당 소유자의 것입니다.
+이 앱은 사용자가 로그인한 YouTube Music 웹 플레이어를 그대로 띄워 재생합니다. 광고 차단, 음원 내려받기, 유료 기능 우회는 하지 않습니다.
+차트 정보는 각 서비스(멜론·지니·벅스·FLO·VIBE·써클차트·Spotify·빌보드·Apple Music)의 공개 페이지에서 읽어 오며, 서비스 쪽 구조가 바뀌면 동작하지 않을 수 있습니다.
+

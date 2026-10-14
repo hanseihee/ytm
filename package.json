@@ -2,6 +2,7 @@
   "name": "ytm-desktop",
   "private": true,
   "version": "0.2.0",
+  "license": "MIT",
   "scripts": {
     "dev": "tauri dev",
     "vite": "vite",
@@ -12,7 +13,9 @@
     "build:win": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis",
     "tauri": "tauri",
     "build:ios-core": "tsc --noEmit && vite build --config vite.core.config.ts",
-    "ios:project": "npm run build:ios-core && cd ios && xcodegen generate"
+    "ios:project": "npm run build:ios-core && cd ios && xcodegen generate",
+    "version:set": "node scripts/set-version.mjs",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.2",
