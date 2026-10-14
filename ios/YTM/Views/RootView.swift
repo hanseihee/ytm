@@ -26,16 +26,23 @@ struct RootView: View {
         .preferredColorScheme(model.theme == .system ? nil : (palette.isLight ? .light : .dark))
         .tint(palette.rose)
         .animation(.easeInOut(duration: 0.25), value: model.engineVisible)
-        .sheet(item: $model.sheet) { sheet in
-            Group {
-                switch sheet {
-                case .addToPlaylist(let tracks): AddToPlaylistSheet(tracks: tracks)
-                case .newPlaylist(let tracks, let openAfter): NewPlaylistSheet(tracks: tracks, openAfter: openAfter)
-                case .renamePlaylist(let id, let title, let description): RenamePlaylistSheet(playlistId: id, title: title, description: description ?? "")
-                }
-            }
-            .environment(\.palette, palette)
-            .tint(palette.rose)
+        // 지금 재생 화면이 떠 있으면 그 화면이 시트를 띄운다(겹쳐 띄울 수 없다).
+        .sheet(item: Binding(get: { model.showNowPlaying ? nil : model.sheet }, set: { model.sheet = $0 })) { sheet in
+            SheetContent(sheet: sheet)
+                .environment(\.palette, palette)
+                .tint(palette.rose)
+        }
+    }
+}
+
+/// 플레이리스트에 추가·새로 만들기·정보 바꾸기 시트
+struct SheetContent: View {
+    let sheet: AppSheet
+    var body: some View {
+        switch sheet {
+        case .addToPlaylist(let tracks): AddToPlaylistSheet(tracks: tracks)
+        case .newPlaylist(let tracks, let openAfter): NewPlaylistSheet(tracks: tracks, openAfter: openAfter)
+        case .renamePlaylist(let id, let title, let description): RenamePlaylistSheet(playlistId: id, title: title, description: description ?? "")
         }
     }
 }
@@ -43,6 +50,7 @@ struct RootView: View {
 struct MainTabs: View {
     @Environment(AppModel.self) private var model
     @Environment(\.palette) private var palette
+    @Namespace private var nowPlayingSpace
 
     var body: some View {
         @Bindable var model = model
@@ -64,10 +72,20 @@ struct MainTabs: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        .tabViewBottomAccessory { MiniPlayer() }
-        .sheet(isPresented: $model.showNowPlaying) {
+        .tabViewBottomAccessory {
+            MiniPlayer()
+                .matchedTransitionSource(id: "now-playing", in: nowPlayingSpace)
+        }
+        // Apple 뮤직처럼 미니 플레이어에서 확대되며 열리고, 아래로 끌어내리면 닫힌다.
+        .fullScreenCover(isPresented: $model.showNowPlaying) {
             NowPlayingView()
+                .navigationTransition(.zoom(sourceID: "now-playing", in: nowPlayingSpace))
                 .environment(\.palette, palette)
+                .sheet(item: $model.sheet) { sheet in
+                    SheetContent(sheet: sheet)
+                        .environment(\.palette, palette)
+                        .tint(palette.rose)
+                }
         }
     }
 }

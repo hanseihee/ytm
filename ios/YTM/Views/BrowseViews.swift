@@ -332,12 +332,16 @@ struct ArtistView: View {
 
     private func hero(_ a: ArtistPage) -> some View {
         ZStack(alignment: .bottomLeading) {
-            AsyncImage(url: a.thumbnail.flatMap { URL(string: $0) }) { phase in
-                if case .success(let image) = phase { image.resizable().scaledToFill() } else { palette.dusk }
-            }
-            .frame(height: 360)
-            .frame(maxWidth: .infinity)
-            .clipped()
+            // 이미지가 화면보다 크게 잡혀 배치를 밀지 않게 빈 칸 위에 얹어 자른다.
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: 360)
+                .overlay {
+                    AsyncImage(url: a.thumbnail.flatMap { URL(string: $0) }) { phase in
+                        if case .success(let image) = phase { image.resizable().scaledToFill() } else { palette.dusk }
+                    }
+                }
+                .clipped()
             LinearGradient(colors: [palette.night.opacity(0.1), palette.night.opacity(0.4), palette.night], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 8) {
                 Text(a.name)

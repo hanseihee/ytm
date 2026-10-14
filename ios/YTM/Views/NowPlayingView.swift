@@ -1,5 +1,12 @@
-// 미니 플레이어(탭 위)와 "지금 재생" 시트(표지·가사·대기열을 오간다).
+// 미니 플레이어(탭 위)와 "지금 재생" 전체 화면.
+//
+// 참고한 플레이어(2026-10-14):
+// - Apple 뮤직: 미니 플레이어에서 확대되며 열리고 아래로 끌어 닫는다. 진행 막대는 손잡이 없이 얇게, 시간은 그 아래 작게.
+// - Spotify: 표지에서 뽑은 색으로 배경 그라데이션, 흰 원 재생 버튼, 위에 "지금 재생 / 앨범명", 제목 오른쪽 하트.
+// - 멜론: 표지 아래에 지금 부르는 가사 두 줄, 누르면 전체 가사.
 import AVKit
+import CoreImage
+import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 // MARK: 미니 플레이어
@@ -62,75 +69,141 @@ struct NowPlayingView: View {
     enum Mode { case artwork, lyrics, queue }
 
     @Environment(AppModel.self) private var model
-    @Environment(\.palette) private var palette
     @State private var mode: Mode = .artwork
+    @State private var lyrics = LyricsLoader()
+    @State private var colors = ArtworkColors()
 
     var body: some View {
         let p = model.player
-        ZStack {
-            Backdrop(url: Self.large(p.artwork))
-            VStack(spacing: 18) {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                header
                 switch mode {
                 case .artwork:
-                    Spacer(minLength: 8)
-                    CoverImage(url: Self.large(p.artwork), corner: 14)
-                        .shadow(color: .black.opacity(0.45), radius: 24, y: 14)
-                        .scaleEffect(p.playing ? 1 : 0.88)
-                        .animation(.spring(duration: 0.45, bounce: 0.25), value: p.playing)
-                        .padding(.horizontal, 6)
-                    Spacer(minLength: 8)
-                    TitleRow(large: true)
+                    Spacer(minLength: 10)
+                    CoverImage(url: Self.large(p.artwork), size: artworkSize(geo.size), corner: 12)
+                        .shadow(color: .black.opacity(0.4), radius: 22, y: 12)
+                        .scaleEffect(p.playing || p.videoId.isEmpty ? 1 : 0.9)
+                        .animation(.spring(duration: 0.5, bounce: 0.25), value: p.playing)
+                        .frame(maxWidth: .infinity)
+                    Spacer(minLength: 14)
+                    TrackInfo()
+                    LyricPreview(loader: lyrics) { mode = .lyrics }
+                        .padding(.top, 14)
                 case .lyrics:
-                    TitleRow(large: false)
-                    LyricsPane()
+                    CompactTrack()
+                        .padding(.top, 8)
+                    LyricsPane(loader: lyrics)
+                        .padding(.top, 6)
                 case .queue:
-                    TitleRow(large: false)
+                    CompactTrack()
+                        .padding(.top, 8)
                     QueuePane()
+                        .padding(.top, 6)
                 }
-                SeekBar()
-                Transport()
-                tools
+                ProgressBar()
+                    .padding(.top, 18)
+                Controls()
+                    .padding(.top, 10)
+                bottomBar
+                    .padding(.top, 14)
             }
-            .padding(.horizontal, 26)
-            .padding(.top, 22)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 6)
+            .frame(width: geo.size.width, height: geo.size.height)
         }
+        .background { colors.gradient.ignoresSafeArea() }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
-        .presentationDragIndicator(.visible)
         .animation(.easeInOut(duration: 0.25), value: mode)
+        .animation(.easeInOut(duration: 0.8), value: colors.key)
+        .task(id: p.artwork) { await colors.load(Self.large(p.artwork)) }
+        .task(id: p.videoId + (p.ad ? ":ad" : "") + (p.title.isEmpty ? "" : ":t")) { await lyrics.load(model) }
         .onAppear {
             mode = model.nowPlayingMode == "lyrics" ? .lyrics : model.nowPlayingMode == "queue" ? .queue : .artwork
             model.nowPlayingMode = "artwork"
         }
     }
 
-    private var tools: some View {
+    /// 표지는 양옆 24pt를 남긴 정사각형, 키가 작은 화면에서는 높이의 44%까지
+    private func artworkSize(_ size: CGSize) -> CGFloat {
+        max(160, min(size.width - 48, size.height * 0.44))
+    }
+
+    private var header: some View {
+        let p = model.player
+        return HStack(spacing: 8) {
+            Button { model.showNowPlaying = false } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("지금 재생 닫기")
+            Spacer(minLength: 0)
+            VStack(spacing: 1) {
+                Text("지금 재생")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.65))
+                if !p.album.isEmpty && !p.ad {
+                    Text(p.album)
+                        .font(.footnote.weight(.semibold))
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+            Menu {
+                if !p.videoId.isEmpty && !p.ad {
+                    TrackMenu(track: Self.currentTrack(p))
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .disabled(p.videoId.isEmpty || p.ad)
+            .accessibilityLabel("더 보기")
+        }
+        .padding(.horizontal, -10)
+        .padding(.top, 4)
+    }
+
+    private var bottomBar: some View {
         HStack {
-            toolButton(mode == .lyrics ? "quote.bubble.fill" : "quote.bubble", label: "가사", on: mode == .lyrics) {
+            barButton("가사", symbol: mode == .lyrics ? "quote.bubble.fill" : "quote.bubble", on: mode == .lyrics) {
                 mode = mode == .lyrics ? .artwork : .lyrics
             }
             Spacer()
             RoutePicker()
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
+                .accessibilityLabel("출력 기기 고르기")
             Spacer()
-            toolButton("list.bullet", label: "대기열", on: mode == .queue) {
+            barButton("대기열", symbol: "list.bullet", on: mode == .queue) {
                 mode = mode == .queue ? .artwork : .queue
             }
         }
-        .padding(.horizontal, 18)
     }
 
-    private func toolButton(_ symbol: String, label: String, on: Bool, action: @escaping () -> Void) -> some View {
+    private func barButton(_ label: String, symbol: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .foregroundStyle(on ? Color.white : Color.white.opacity(0.65))
-                .background { if on { Circle().fill(.white.opacity(0.18)) } }
+            HStack(spacing: 6) {
+                Image(systemName: symbol).font(.system(size: 17, weight: .semibold))
+                Text(label).font(.subheadline.weight(.semibold))
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 38)
+            .foregroundStyle(on ? Color.black : Color.white.opacity(0.85))
+            .background(Capsule().fill(on ? Color.white : Color.white.opacity(0.12)))
         }
-        .accessibilityLabel(label)
+        .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    static func currentTrack(_ p: PlayerState) -> Track {
+        Track(
+            videoId: p.videoId, title: p.title, artists: p.artist.isEmpty ? [] : [Ref(name: p.artist)],
+            thumbnail: p.artwork, play: .object(["watchEndpoint": .object(["videoId": .string(p.videoId)])]),
+            isVideo: false, available: true
+        )
     }
 
     /// YouTube Music 썸네일 주소의 크기 지정(=w120-h120…)을 크게 바꾼다.
@@ -141,115 +214,120 @@ struct NowPlayingView: View {
     }
 }
 
-private struct Backdrop: View {
-    let url: String?
-    var body: some View {
-        ZStack {
-            Color(hex: 0x120C18)
-            AsyncImage(url: url.flatMap { URL(string: $0) }) { phase in
-                if case .success(let image) = phase {
-                    image.resizable().scaledToFill()
-                }
-            }
-            .blur(radius: 70)
-            .scaleEffect(1.5)
-            .opacity(0.85)
-            LinearGradient(colors: [.black.opacity(0.25), .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-        }
-        .ignoresSafeArea()
-    }
-}
-
-private struct TitleRow: View {
+/// 제목·가수(크게) + 하트
+private struct TrackInfo: View {
     @Environment(AppModel.self) private var model
-    let large: Bool
 
     var body: some View {
         let p = model.player
         let liked = model.liked.contains(p.videoId)
-        HStack(spacing: 12) {
-            if !large {
-                CoverImage(url: p.artwork, size: 52, corner: 6)
-            }
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(p.ad ? "광고" : (p.title.isEmpty ? "재생 중인 곡이 없습니다" : p.title))
-                    .font(large ? .title2.bold() : .headline)
+                    .font(.title2.weight(.bold))
                     .lineLimit(1)
                 Text(p.ad ? "YouTube Music" : p.artist)
-                    .font(large ? .title3 : .subheadline)
+                    .font(.body)
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
             }
-            Spacer(minLength: 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
             Button {
                 model.toggleLike(videoId: p.videoId, title: p.title)
             } label: {
                 Image(systemName: liked ? "heart.fill" : "heart")
-                    .font(.title3)
-                    .frame(width: 40, height: 40)
+                    .font(.system(size: 24, weight: .medium))
+                    .frame(width: 44, height: 44)
                     .contentTransition(.symbolEffect(.replace))
             }
             .disabled(p.videoId.isEmpty || p.ad)
             .sensoryFeedback(.impact(weight: .light), trigger: liked)
             .accessibilityLabel(liked ? "좋아요 취소" : "좋아요")
-            Menu {
-                if !p.videoId.isEmpty && !p.ad {
-                    TrackMenu(track: currentTrack(p))
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.title3)
-                    .frame(width: 36, height: 40)
-            }
-            .accessibilityLabel("더 보기")
         }
-    }
-
-    private func currentTrack(_ p: PlayerState) -> Track {
-        Track(
-            videoId: p.videoId, title: p.title, artists: p.artist.isEmpty ? [] : [Ref(name: p.artist)],
-            thumbnail: p.artwork, play: .object(["watchEndpoint": .object(["videoId": .string(p.videoId)])]),
-            isVideo: false, available: true
-        )
     }
 }
 
-private struct SeekBar: View {
+/// 가사·대기열을 볼 때 위에 작게 보이는 곡 정보
+private struct CompactTrack: View {
     @Environment(AppModel.self) private var model
-    @State private var dragging: Double?
+
+    var body: some View {
+        let p = model.player
+        HStack(spacing: 12) {
+            CoverImage(url: p.artwork, size: 48, corner: 6)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(p.ad ? "광고" : p.title).font(.headline).lineLimit(1)
+                Text(p.ad ? "YouTube Music" : p.artist).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            let liked = model.liked.contains(p.videoId)
+            Button {
+                model.toggleLike(videoId: p.videoId, title: p.title)
+            } label: {
+                Image(systemName: liked ? "heart.fill" : "heart").font(.title3).frame(width: 40, height: 40)
+            }
+            .disabled(p.videoId.isEmpty || p.ad)
+            .accessibilityLabel(liked ? "좋아요 취소" : "좋아요")
+        }
+    }
+}
+
+// MARK: 진행 막대(손잡이 없이 얇게, 누르고 끄는 동안 두꺼워진다)
+
+private struct ProgressBar: View {
+    @Environment(AppModel.self) private var model
+    @State private var drag: Double?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let p = model.player
-            let max = Swift.max(p.duration, 1)
-            let value = dragging ?? model.position(at: context.date)
-            VStack(spacing: 4) {
-                Slider(
-                    value: Binding(get: { Swift.min(value, max) }, set: { dragging = $0 }),
-                    in: 0...max
-                ) { editing in
-                    if !editing, let target = dragging {
-                        model.seek(target)
-                        dragging = nil
+            let duration = max(p.duration, 1)
+            let position = drag.map { $0 * duration } ?? min(model.position(at: context.date), duration)
+            let enabled = !p.videoId.isEmpty && !p.ad && p.duration > 0
+            VStack(spacing: 6) {
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.22))
+                        Capsule().fill(.white).frame(width: g.size.width * min(1, max(0, position / duration)))
                     }
+                    .frame(height: drag == nil ? 5 : 10)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { v in
+                                guard enabled else { return }
+                                drag = min(1, max(0, v.location.x / max(1, g.size.width)))
+                            }
+                            .onEnded { _ in
+                                if let d = drag { model.seek(d * duration) }
+                                drag = nil
+                            }
+                    )
+                    .animation(.easeOut(duration: 0.15), value: drag == nil)
                 }
-                .disabled(p.videoId.isEmpty || p.ad || p.duration <= 0)
-                .tint(.white)
-                .accessibilityLabel("재생 위치")
-                .accessibilityValue("\(formatTime(value)) / \(formatTime(p.duration))")
+                .frame(height: 22)
                 HStack {
-                    Text(p.videoId.isEmpty ? "" : formatTime(value))
+                    Text(p.videoId.isEmpty ? " " : formatTime(position))
                     Spacer()
-                    Text(p.videoId.isEmpty ? "" : "-" + formatTime(Swift.max(0, p.duration - value)))
+                    Text(p.videoId.isEmpty ? " " : "-" + formatTime(max(0, p.duration - position)))
                 }
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.caption.monospacedDigit().weight(.medium))
+                .foregroundStyle(.white.opacity(drag == nil ? 0.6 : 0.9))
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("재생 위치")
+            .accessibilityValue("\(formatTime(position)) / \(formatTime(p.duration))")
+            .accessibilityAdjustableAction { dir in
+                model.seek(max(0, model.position() + (dir == .increment ? 10 : -10)))
             }
         }
     }
 }
 
-private struct Transport: View {
+// MARK: 재생 버튼 줄
+
+private struct Controls: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
@@ -257,36 +335,42 @@ private struct Transport: View {
         let has = !p.videoId.isEmpty
         HStack {
             Button { model.control("shuffle", failure: "섞지 못했습니다") } label: {
-                Image(systemName: "shuffle").font(.title3).frame(width: 44, height: 44)
+                Image(systemName: "shuffle").font(.system(size: 19, weight: .semibold)).frame(width: 44, height: 44)
             }
+            .foregroundStyle(.white.opacity(0.75))
             .accessibilityLabel("대기열 섞기")
             Spacer()
             Button { model.control("previous", failure: "이전 곡으로 가지 못했습니다") } label: {
-                Image(systemName: "backward.fill").font(.title).frame(width: 56, height: 56)
+                Image(systemName: "backward.fill").font(.system(size: 30)).frame(width: 56, height: 56)
             }
             .accessibilityLabel("이전 곡")
             Spacer()
             Button { model.togglePlay() } label: {
                 Image(systemName: p.playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 44))
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(.black)
+                    .offset(x: p.playing ? 0 : 2)
                     .frame(width: 72, height: 72)
+                    .background(Circle().fill(.white))
                     .contentTransition(.symbolEffect(.replace))
             }
             .sensoryFeedback(.impact(weight: .medium), trigger: p.playing)
             .accessibilityLabel(p.playing ? "일시정지" : "재생")
             Spacer()
             Button { model.control("next", failure: "다음 곡으로 가지 못했습니다") } label: {
-                Image(systemName: "forward.fill").font(.title).frame(width: 56, height: 56)
+                Image(systemName: "forward.fill").font(.system(size: 30)).frame(width: 56, height: 56)
             }
             .accessibilityLabel("다음 곡")
             Spacer()
             Button { model.control("repeat", failure: "반복을 바꾸지 못했습니다") } label: {
                 Image(systemName: p.repeat == "ONE" ? "repeat.1" : "repeat")
-                    .font(.title3)
+                    .font(.system(size: 19, weight: .semibold))
                     .frame(width: 44, height: 44)
-                    .foregroundStyle(p.repeat == "NONE" ? Color.white.opacity(0.65) : Color.white)
-                    .background { if p.repeat != "NONE" { Circle().fill(.white.opacity(0.18)) } }
+                    .overlay(alignment: .bottom) {
+                        if p.repeat != "NONE" { Circle().fill(.white).frame(width: 4, height: 4).offset(y: -2) }
+                    }
             }
+            .foregroundStyle(p.repeat == "NONE" ? Color.white.opacity(0.75) : Color.white)
             .accessibilityLabel(p.repeat == "ONE" ? "한 곡 반복" : p.repeat == "ALL" ? "전체 반복" : "반복 안 함")
         }
         .disabled(!has)
@@ -298,7 +382,7 @@ private struct Transport: View {
 private struct RoutePicker: UIViewRepresentable {
     func makeUIView(context: Context) -> AVRoutePickerView {
         let view = AVRoutePickerView()
-        view.tintColor = UIColor.white.withAlphaComponent(0.65)
+        view.tintColor = UIColor.white.withAlphaComponent(0.85)
         view.activeTintColor = .white
         view.prioritizesVideoDevices = false
         return view
@@ -307,30 +391,216 @@ private struct RoutePicker: UIViewRepresentable {
     func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
 }
 
+// MARK: 배경색(표지에서 뽑은 두 색)
+
+@MainActor
+@Observable
+final class ArtworkColors {
+    private static let fallback = (Color(hex: 0x3A2850), Color(hex: 0x120C18))
+    private static let cache = NSCache<NSString, UIColorPair>()
+    private static let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+    var top = fallback.0
+    var bottom = fallback.1
+    /// 색이 바뀔 때 애니메이션 기준
+    var key = ""
+
+    var gradient: some View {
+        LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
+            .overlay(Color.black.opacity(0.12))
+    }
+
+    func load(_ url: String?) async {
+        guard let url, let target = URL(string: url) else {
+            (top, bottom, key) = (Self.fallback.0, Self.fallback.1, "")
+            return
+        }
+        if let hit = Self.cache.object(forKey: url as NSString) {
+            apply(hit, key: url)
+            return
+        }
+        guard let (data, _) = try? await URLSession.shared.data(from: target), let image = CIImage(data: data) else { return }
+        let letterboxed = CoverImage.isLetterboxed(url)
+        let pair = await Task.detached(priority: .utility) { Self.extract(image, letterboxed: letterboxed) }.value
+        guard let pair else { return }
+        Self.cache.setObject(pair, forKey: url as NSString)
+        apply(pair, key: url)
+    }
+
+    private func apply(_ pair: UIColorPair, key: String) {
+        top = Color(uiColor: pair.top)
+        bottom = Color(uiColor: pair.bottom)
+        self.key = key
+    }
+
+    /// 표지 위쪽 절반·아래쪽 절반의 평균색을 흰 글자가 잘 보이게 어둡게 만든다.
+    nonisolated private static func extract(_ image: CIImage, letterboxed: Bool) -> UIColorPair? {
+        // 검은 띠가 있는 썸네일은 가운데 영상 부분만 본다.
+        let full = image.extent
+        let e = letterboxed ? full.insetBy(dx: 0, dy: full.height / 8) : full
+        func average(_ rect: CGRect) -> UIColor? {
+            let f = CIFilter.areaAverage()
+            f.inputImage = image
+            f.extent = rect
+            guard let out = f.outputImage else { return nil }
+            var px = [UInt8](repeating: 0, count: 4)
+            context.render(out, toBitmap: &px, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())
+            return UIColor(red: CGFloat(px[0]) / 255, green: CGFloat(px[1]) / 255, blue: CGFloat(px[2]) / 255, alpha: 1)
+        }
+        // CIImage 좌표는 아래가 0이다.
+        guard let upper = average(CGRect(x: e.minX, y: e.midY, width: e.width, height: e.height / 2)),
+              let lower = average(CGRect(x: e.minX, y: e.minY, width: e.width, height: e.height / 2)) else { return nil }
+        return UIColorPair(top: shade(upper, brightness: 0.62), bottom: shade(lower, brightness: 0.26))
+    }
+
+    nonisolated private static func shade(_ color: UIColor, brightness: CGFloat) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        // 너무 탁하면 조금 맑게, 너무 밝으면 어둡게
+        return UIColor(hue: h, saturation: min(0.75, max(s, 0.18) * 1.1), brightness: min(b, brightness) * 0.6 + brightness * 0.4, alpha: 1)
+    }
+}
+
+final class UIColorPair: NSObject {
+    let top: UIColor
+    let bottom: UIColor
+    init(top: UIColor, bottom: UIColor) {
+        self.top = top
+        self.bottom = bottom
+    }
+}
+
 // MARK: 가사
+
+/// 지금 곡의 가사(표지 아래 미리보기와 전체 가사 화면이 함께 쓴다)
+@MainActor
+@Observable
+final class LyricsLoader {
+    var state: Loadable<Lyrics?> = .loading
+    private(set) var videoId = ""
+
+    func load(_ model: AppModel) async {
+        let p = model.player
+        guard !p.videoId.isEmpty, !p.ad, !p.title.isEmpty else { return }
+        if videoId == p.videoId, case .loaded = state { return }
+        videoId = p.videoId
+        state = .loading
+        do {
+            let lyrics = try await model.api.lyrics(LyricsQuery(videoId: p.videoId, title: p.title, artist: p.artist, album: p.album.isEmpty ? nil : p.album, duration: p.duration))
+            if videoId == p.videoId { state = .loaded(lyrics) }
+        } catch {
+            if videoId == p.videoId { state = .failed(AppModel.describe(error)) }
+        }
+    }
+
+    /// 지금 위치(초)에 해당하는 줄 번호(src/lib/lyrics.ts activeLine과 같다). 첫 줄 전이면 -1.
+    static func activeLine(_ lines: [LyricLine], _ position: Double) -> Int {
+        var lo = 0, hi = lines.count - 1, ans = -1
+        while lo <= hi {
+            let mid = (lo + hi) / 2
+            if lines[mid].time <= position + 0.15 {
+                ans = mid
+                lo = mid + 1
+            } else {
+                hi = mid - 1
+            }
+        }
+        return ans
+    }
+}
+
+/// 표지 아래 가사 두 줄(멜론처럼). 누르면 전체 가사.
+private struct LyricPreview: View {
+    @Environment(AppModel.self) private var model
+    let loader: LyricsLoader
+    let open: () -> Void
+
+    var body: some View {
+        Button(action: open) {
+            VStack(alignment: .leading, spacing: 4) {
+                content
+            }
+            .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.white.opacity(0.1)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("가사 보기")
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        let p = model.player
+        if p.videoId.isEmpty {
+            line("곡을 재생하면 가사가 여기에 나옵니다", dim: true)
+        } else if p.ad {
+            line("광고가 끝나면 가사를 보여 드립니다", dim: true)
+        } else {
+            switch loader.state {
+            case .loading:
+                line("가사를 찾는 중…", dim: true)
+            case .failed:
+                line("가사를 불러오지 못했습니다", dim: true)
+            case .loaded(nil):
+                line("이 곡의 가사를 찾지 못했습니다", dim: true)
+            case .loaded(let lyrics?):
+                if let lines = lyrics.synced?.filter({ !$0.text.isEmpty }), !lines.isEmpty {
+                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        let i = max(0, LyricsLoader.activeLine(lines, model.position(at: context.date)))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(lines[i].text)
+                                .font(.callout.weight(.bold))
+                                .lineLimit(1)
+                                .contentTransition(.opacity)
+                            Text(i + 1 < lines.count ? lines[i + 1].text : " ")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.5))
+                                .lineLimit(1)
+                        }
+                        .animation(.easeOut(duration: 0.3), value: i)
+                    }
+                } else {
+                    let plain = (lyrics.plain ?? "").split(separator: "\n").map(String.init).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                    Text(plain.first ?? "가사 보기").font(.callout.weight(.bold)).lineLimit(1)
+                    Text(plain.count > 1 ? plain[1] : "전체 가사 보기")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private func line(_ text: String, dim: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "quote.bubble").font(.footnote.weight(.semibold))
+            Text(text).font(.footnote.weight(.semibold)).lineLimit(1)
+        }
+        .foregroundStyle(.white.opacity(dim ? 0.6 : 1))
+    }
+}
 
 private struct LyricsPane: View {
     @Environment(AppModel.self) private var model
-    @State private var state: Loadable<Lyrics?> = .loading
-    @State private var loadedFor = ""
+    let loader: LyricsLoader
     @State private var manualUntil = Date.distantPast
 
     var body: some View {
         VStack(spacing: 8) {
             HStack {
+                if let lyrics = loader.state.value ?? nil {
+                    Text("가사 제공: \(lyrics.source)\(lyrics.synced == nil ? " (시간 정보 없음)" : "")")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.5))
+                }
                 Spacer()
                 sizeControl
             }
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            if let lyrics = state.value ?? nil {
-                Text("가사 제공: \(lyrics.source)\(lyrics.synced == nil ? " (시간 정보 없음)" : "")")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.45))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
         }
-        .task(id: model.player.videoId + (model.player.ad ? ":ad" : "") + (model.player.title.isEmpty ? "" : ":t")) { await load() }
     }
 
     private var sizeControl: some View {
@@ -363,7 +633,7 @@ private struct LyricsPane: View {
         } else if p.ad {
             message("광고가 끝나면 가사를 보여 드립니다.")
         } else {
-            switch state {
+            switch loader.state {
             case .loading:
                 message("가사를 찾는 중…")
             case .failed:
@@ -398,11 +668,11 @@ private struct LyricsPane: View {
 
     private func synced(_ lines: [LyricLine]) -> some View {
         TimelineView(.periodic(from: .now, by: 0.25)) { context in
-            let active = Self.activeLine(lines, model.position(at: context.date))
+            let active = LyricsLoader.activeLine(lines, model.position(at: context.date))
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        Color.clear.frame(height: 120)
+                        Color.clear.frame(height: 100)
                         ForEach(Array(lines.enumerated()), id: \.offset) { i, line in
                             Button {
                                 manualUntil = .distantPast
@@ -419,7 +689,7 @@ private struct LyricsPane: View {
                             .buttonStyle(.plain)
                             .id(i)
                         }
-                        Color.clear.frame(height: 240)
+                        Color.clear.frame(height: 220)
                     }
                 }
                 .scrollIndicators(.hidden)
@@ -433,35 +703,6 @@ private struct LyricsPane: View {
                     proxy.scrollTo(max(0, active), anchor: UnitPoint(x: 0, y: 0.32))
                 }
             }
-        }
-    }
-
-    /// 지금 위치(초)에 해당하는 줄 번호(src/lib/lyrics.ts activeLine과 같다). 첫 줄 전이면 -1.
-    static func activeLine(_ lines: [LyricLine], _ position: Double) -> Int {
-        var lo = 0, hi = lines.count - 1, ans = -1
-        while lo <= hi {
-            let mid = (lo + hi) / 2
-            if lines[mid].time <= position + 0.15 {
-                ans = mid
-                lo = mid + 1
-            } else {
-                hi = mid - 1
-            }
-        }
-        return ans
-    }
-
-    private func load() async {
-        let p = model.player
-        guard !p.videoId.isEmpty, !p.ad, !p.title.isEmpty else { return }
-        if loadedFor == p.videoId, case .loaded = state { return }
-        loadedFor = p.videoId
-        state = .loading
-        do {
-            let lyrics = try await model.api.lyrics(LyricsQuery(videoId: p.videoId, title: p.title, artist: p.artist, album: p.album.isEmpty ? nil : p.album, duration: p.duration))
-            if loadedFor == p.videoId { state = .loaded(lyrics) }
-        } catch {
-            if loadedFor == p.videoId { state = .failed(AppModel.describe(error)) }
         }
     }
 }

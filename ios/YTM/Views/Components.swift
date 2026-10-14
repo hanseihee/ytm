@@ -19,6 +19,8 @@ struct CoverImage: View {
                 AsyncImage(url: url.flatMap { URL(string: $0) }, transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
                     if case .success(let image) = phase {
                         image.resizable().scaledToFill()
+                            // YouTube 4:3 썸네일(hqdefault 등)은 16:9 영상 위아래에 검은 띠가 들어 있어 그만큼 확대해 잘라낸다.
+                            .scaleEffect(Self.isLetterboxed(url) ? 4.0 / 3.0 : 1)
                     } else {
                         ZStack {
                             palette.plum
@@ -31,6 +33,11 @@ struct CoverImage: View {
             }
             .clipShape(round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: corner, style: .continuous)))
             .accessibilityHidden(true)
+    }
+
+    static func isLetterboxed(_ url: String?) -> Bool {
+        guard let url, url.contains("i.ytimg.com/") else { return false }
+        return url.range(of: #"/(hqdefault|sddefault|0)\.jpg"#, options: .regularExpression) != nil
     }
 }
 

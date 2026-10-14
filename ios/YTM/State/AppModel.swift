@@ -498,6 +498,7 @@ final class AppModel {
             p.videoId = item["videoId"] as? String ?? "fake"
             p.title = item["title"] as? String ?? ""
             p.artist = item["artist"] as? String ?? ""
+            p.album = item["album"] as? String ?? ""
             p.artwork = item["artwork"] as? String ?? ""
             p.duration = item["duration"] as? Double ?? 0
             p.position = item["position"] as? Double ?? 0
