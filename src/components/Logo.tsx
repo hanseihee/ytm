@@ -1,4 +1,4 @@
-// 앱 표시(아이콘과 같은 모양: 강조색 링 + 이퀄라이저 막대). 테마 강조색을 따른다.
+// 앱 표시(아이콘과 같은 모양: 둥근 사각형 + 이퀄라이저 막대 다섯 개). 바탕은 테마 강조색, 막대는 강조색 위 글자색을 따른다.
 import { useId } from 'react';
 
 export function Logo({ size = 22 }: { size?: number }) {
@@ -11,12 +11,13 @@ export function Logo({ size = 22 }: { size?: number }) {
           <stop offset="1" style={{ stopColor: 'var(--violet)' }} />
         </linearGradient>
       </defs>
-      <circle cx="22" cy="22" r="18" fill="none" stroke={`url(#${id})`} strokeWidth="3.6" />
-      <g fill="currentColor">
-        <rect x="13" y="21" width="3.2" height="8" rx="1.6" />
-        <rect x="17.6" y="16.5" width="3.2" height="12.5" rx="1.6" />
-        <rect x="22.2" y="13" width="3.2" height="16" rx="1.6" />
-        <rect x="26.8" y="18" width="3.2" height="11" rx="1.6" />
+      <rect x="3" y="3" width="38" height="38" rx="8.5" fill={`url(#${id})`} />
+      <g style={{ fill: 'var(--on-accent)' }}>
+        <rect x="10" y="17.9" width="3.4" height="8.2" rx="1.7" />
+        <rect x="15.15" y="15.3" width="3.4" height="13.4" rx="1.7" />
+        <rect x="20.3" y="12.25" width="3.4" height="19.5" rx="1.7" />
+        <rect x="25.45" y="15.3" width="3.4" height="13.4" rx="1.7" />
+        <rect x="30.6" y="17.9" width="3.4" height="8.2" rx="1.7" />
       </g>
     </svg>
   );

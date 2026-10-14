@@ -1,0 +1,10 @@
+# app-icon-art.png를 만든 프롬프트(2026-10-15, codex 내장 image_gen, 시안 A — 1254px로 나온 것을 1024로 줄임).
+# 유튜브 느낌(빨강·흰색)은 내되 유튜브처럼 보이지 않게: 재생 삼각형·빨간 둥근 사각형·링 없이 이퀄라이저 막대로.
+
+Use case: logo-brand
+Asset type: original app icon artwork for YTM Desktop, an unofficial desktop music player for YouTube Music. Variant A.
+Canvas: exactly one square 1024x1024 image. FULL-BLEED opaque artwork; the background fills the entire square edge to edge, including all four square corners. The operating system will apply its mask later.
+Background: a rich, smooth red gradient flowing from deep crimson around #c3122f through vivid red #ff2d46 to warm coral pink #ff6b7d, with a subtle hint of magenta. Never a flat pure #FF0000 field.
+Subject: exactly five large, thick, white vertical equalizer bars with fully rounded ends, evenly spaced and centered. Their heights rise toward the middle and fall symmetrically: short, medium, tall, medium, short. Align their vertical centers to form a balanced sound-wave silhouette. Keep the bars separate and the emblem bold enough to read clearly at 32x32.
+Rendering: polished modern macOS Big Sur / iOS-style artwork with simple confident flat shapes, crisp edges, gentle depth, soft lighting, a subtle inner glow behind the bars, and slight top-to-bottom lighting. Bold warm-red energy and white-on-red contrast suggest the YouTube family, while the emblem remains clearly original and visually distinct from YouTube and YouTube Music branding.
+Hard constraints: no rounded canvas corners, border, outer margin, inset icon tile, or drop shadow around the artwork edge; no transparency. No play-button triangle or other triangle anywhere. No red rounded-rectangle pill. No red circle with a white ring around a triangle. No text, letters, wordmarks, watermark, YouTube logo, or Google logo. No extra symbols. Not photorealistic or cartoonish.
