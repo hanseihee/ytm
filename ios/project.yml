@@ -22,10 +22,19 @@ targets:
     platform: iOS
     sources:
       - path: YTM
+      - path: Shared
       - path: build/ytm-core.js
         buildPhase: resources
       - path: ../src-tauri/src/engine.js
         buildPhase: resources
+    dependencies:
+      - target: YTMWidget
+        embed: true
+    entitlements:
+      path: YTM/YTM.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.dev.seihee.ytmmobile
     preBuildScripts:
       - name: 데이터 묶음 빌드(ytm-core.js)
         basedOnDependencyAnalysis: false
@@ -49,3 +58,25 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: NO
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+  # 홈 화면·잠금 화면 위젯(지금 재생). 앱과 App Group(group.dev.seihee.ytmmobile)으로 곡 정보를 나눈다.
+  YTMWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: YTMWidget
+      - path: Shared
+    entitlements:
+      path: YTMWidget/YTMWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.dev.seihee.ytmmobile
+    settings:
+      base:
+        PRODUCT_NAME: YTMWidget
+        PRODUCT_BUNDLE_IDENTIFIER: dev.seihee.ytmmobile.widget
+        INFOPLIST_FILE: YTMWidget/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES
+        ENABLE_PREVIEWS: NO

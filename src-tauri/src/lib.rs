@@ -5,12 +5,13 @@
 //!   재생 제어를 대신한다. 로그인할 때와 "웹 화면 열기"를 고를 때만 보인다.
 //! - 운영체제 미디어 컨트롤(맥 지금 재생·윈도우 SMTC)·트레이·메뉴는 여기서 붙인다.
 
+mod desktop;
 mod engine;
 mod eq;
 #[cfg(target_os = "macos")]
 mod mac_tap;
+mod charts;
 mod media;
-mod melon;
 mod spotify;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -61,7 +62,7 @@ const MAX_ARTWORK_URL: usize = 2048;
 /// 트레이 메뉴의 "지금 재생" 줄 최대 글자 수.
 const TRAY_TITLE_CHARS: usize = 40;
 /// 앱 화면 배경(로딩 중 흰 화면 깜빡임 방지). styles.css의 --night와 같은 값.
-const MAIN_BACKGROUND: Color = Color(20, 14, 28, 255);
+pub(crate) const MAIN_BACKGROUND: Color = Color(20, 14, 28, 255);
 
 /// `engine.js`의 `readState()`가 보내는 값 중 운영체제 연결에 필요한 것.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -120,8 +121,8 @@ impl TrackState {
 }
 
 #[derive(Default)]
-struct AppState {
-    track: Mutex<TrackState>,
+pub(crate) struct AppState {
+    pub(crate) track: Mutex<TrackState>,
     tray_items: Mutex<Option<TrayItems>>,
     quitting: AtomicBool,
 }
@@ -143,6 +144,20 @@ pub(crate) fn warn<T, E: std::fmt::Display>(what: &str, result: Result<T, E>) {
     }
 }
 
+/// 앱 화면(main)과 미니 플레이어(mini)에 같은 이벤트를 보낸다(열려 있는 창에만).
+pub(crate) fn emit_ui<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: S) {
+    for label in [MAIN, desktop::MINI] {
+        if app.get_webview_window(label).is_some() {
+            warn("화면에 알리기", app.emit_to(label, event, payload.clone()));
+        }
+    }
+}
+
+pub(crate) fn emit_to_main<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: S) {
+    show_main(app);
+    warn("화면에 알리기", app.emit_to(MAIN, event, payload));
+}
+
 // ── 재생 상태 → 창 제목·트레이·운영체제 ─────────────────────────────────────
 
 /// 지금 재생 중인지(EQ 탭의 무음 감지·스펙트럼에 쓴다).
@@ -156,6 +171,9 @@ pub(crate) fn on_track_state(app: &AppHandle, state: TrackState) {
     let prev = std::mem::replace(&mut *lock(&app.state::<AppState>().track), next.clone());
     if prev.label() != next.label() || prev.playing != next.playing {
         update_labels(app, &next);
+    }
+    if prev.video_id != next.video_id || prev.title != next.title {
+        desktop::on_track_changed(app, &prev, &next);
     }
     media::update(app, prev, next);
 }
@@ -267,7 +285,7 @@ fn engine_opens_in_app(url: &Url) -> bool {
 }
 
 /// 앱 화면 자체의 주소(개발 서버·tauri 프로토콜).
-fn is_app_url(url: &Url) -> bool {
+pub(crate) fn is_app_url(url: &Url) -> bool {
     match url.scheme() {
         "tauri" | "asset" | "ipc" | "about" | "data" | "blob" => true,
         "http" | "https" => matches!(
@@ -351,6 +369,8 @@ fn show_engine_window(app: &AppHandle, url: Option<&str>) {
     let Some(window) = app.get_webview_window(ENGINE) else {
         return;
     };
+    // 영상 창으로 쓰던 중이면 웹 화면으로 돌려놓는다.
+    desktop::leave_video(app);
     if let Some(url) = url.and_then(|u| Url::parse(u).ok()) {
         warn("엔진 창 이동", window.navigate(url));
     }
@@ -505,6 +525,8 @@ fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         true,
         &[
             &MenuItem::with_id(app, "ui:home", "홈", true, Some("CmdOrCtrl+Shift+H"))?,
+            &MenuItem::with_id(app, "ui:explore", "둘러보기", true, Some("CmdOrCtrl+Shift+E"))?,
+            &MenuItem::with_id(app, "ui:stats", "청취 통계", true, None::<&str>)?,
             &MenuItem::with_id(app, "ui:search", "검색", true, Some("CmdOrCtrl+F"))?,
             &MenuItem::with_id(app, "ui:library", "보관함", true, Some("CmdOrCtrl+Shift+L"))?,
             &MenuItem::with_id(app, "ui:spotify", "차트", true, Some("CmdOrCtrl+Shift+S"))?,
@@ -525,6 +547,7 @@ fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         ("sunset", "노을"),
         ("mono", "모노"),
         ("sakura", "벚꽃"),
+        ("album", "앨범 색"),
     ]
     .iter()
     .map(|(id, label)| MenuItem::with_id(app, format!("ui:theme:{id}"), *label, true, None::<&str>))
@@ -584,23 +607,40 @@ fn on_menu(app: &AppHandle, id: &str) {
 
 // ── 시작 ───────────────────────────────────────────────────────────────────
 
+/// 개발 빌드 전용 "엔진만" 시험 모드(`YTM_HEADLESS=1`): 화면·트레이·메뉴·미디어 키·EQ 탭 없이 숨은 엔진만 띄운다.
+/// 사용자가 쓰는 배포판과 나란히 돌릴 수 있게 하나만 실행·창 위치 기억도 끈다(개발판은 로그인 저장소가 따로다).
+fn headless() -> bool {
+    cfg!(debug_assertions) && std::env::var_os("YTM_HEADLESS").is_some()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
-        // 두 번째로 실행하면 새로 띄우지 않고 있던 창을 앞으로 가져온다(반드시 첫 플러그인).
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            show_main(app)
-        }))
-        // 앱 화면의 크기·위치만 기억한다. 숨김 상태까지 기억하면 다음 실행 때 창이 안 보인다.
+    let mut builder = tauri::Builder::default();
+    if !headless() {
+        builder = builder
+            // 두 번째로 실행하면 새로 띄우지 않고 있던 창을 앞으로 가져온다(반드시 첫 플러그인).
+            .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+                show_main(app)
+            }))
+            // 앱 화면의 크기·위치만 기억한다. 숨김 상태까지 기억하면 다음 실행 때 창이 안 보인다.
+            .plugin(
+                tauri_plugin_window_state::Builder::default()
+                    .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
+                    .with_denylist(&[ENGINE])
+                    .build(),
+            );
+    }
+    let app = builder
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(
-            tauri_plugin_window_state::Builder::default()
-                .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
-                .with_denylist(&[ENGINE])
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| desktop::on_shortcut(app, shortcut, event.state()))
                 .build(),
         )
-        .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .manage(Engine::default())
+        .manage(desktop::Extras::default())
         .invoke_handler(tauri::generate_handler![
             engine::engine_call,
             engine::engine_reply,
@@ -610,7 +650,12 @@ pub fn run() {
             show_engine,
             hide_engine,
             spotify::spotify_playlist,
-            melon::melon_chart_page,
+            charts::chart_fetch,
+            desktop::video_window,
+            desktop::mini_window,
+            desktop::mini_pin,
+            desktop::show_main_window,
+            desktop::set_prefs,
             engine::ui_log,
             eq::eq_set,
             eq::eq_visualizer,
@@ -623,15 +668,29 @@ pub fn run() {
                 if app.state::<AppState>().quitting.load(Ordering::SeqCst) {
                     return;
                 }
+                // 미니 플레이어는 그냥 닫는다.
+                if window.label() == desktop::MINI {
+                    return;
+                }
                 api.prevent_close();
                 if window.label() == ENGINE {
                     app.state::<Engine>().set_login_in_progress(false);
+                    if desktop::video_open(app) {
+                        desktop::on_engine_close(app);
+                        return;
+                    }
                 }
                 warn("창 숨기기", window.hide());
             }
         })
         .setup(|app| {
             let handle = app.handle();
+            if headless() {
+                build_engine_window(handle)?;
+                #[cfg(debug_assertions)]
+                engine::spawn_debug_inbox(handle);
+                return Ok(());
+            }
             #[cfg(target_os = "macos")]
             app.set_menu(build_app_menu(handle)?)?;
 

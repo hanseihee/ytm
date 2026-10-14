@@ -139,6 +139,8 @@ export interface Collection {
   continuation?: Continuation;
   /** 앨범 아래 "다른 버전" 같은 추가 묶음 */
   shelves: Shelf[];
+  /** 곡 목록 아래 묶음을 더 불러오는 값(내 재생목록의 "추천" 곡 등) */
+  sectionsContinuation?: Continuation;
 }
 
 export interface ArtistPage {
@@ -150,6 +152,8 @@ export interface ArtistPage {
   radio?: Endpoint;
   channelId?: string;
   subscribed?: boolean;
+  /** 구독 단추의 subscribeEndpoint.params */
+  subscribeParams?: string;
   shelves: Shelf[];
 }
 
@@ -180,4 +184,46 @@ export interface Account {
   name: string;
   handle?: string;
   photo?: string;
+}
+
+/** 분위기·장르 단추 */
+export interface MoodItem {
+  label: string;
+  browseId: string;
+  params?: string;
+  /** 단추 왼쪽 띠 색(#rrggbb) */
+  color?: string;
+}
+
+export interface MoodsPage {
+  title: string;
+  sections: { title: string; items: MoodItem[] }[];
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  avatar?: string;
+  text: string;
+  /** "3일 전" */
+  published: string;
+  likes: string;
+  replies: string;
+  /** 아티스트·채널 주인 */
+  isArtist: boolean;
+}
+
+export interface CommentsPage {
+  /** "댓글 137개" */
+  countText?: string;
+  comments: Comment[];
+  /** 다음 쪽 이어받기 값 */
+  continuation?: string;
+}
+
+/** 지금 곡의 "다음 트랙/가사/댓글/관련 항목" 탭 정보(next 응답) */
+export interface WatchTabs {
+  lyricsBrowseId?: string;
+  relatedBrowseId?: string;
+  commentsToken?: string;
 }

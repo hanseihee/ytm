@@ -24,6 +24,11 @@ import type {
   Suggestions,
   TopResult,
   Track,
+  Comment,
+  CommentsPage,
+  MoodItem,
+  MoodsPage,
+  WatchTabs,
 } from './types';
 
 // 원본 JSON은 형태가 고정되지 않아 여기서만 느슨한 타입을 쓴다.
@@ -534,17 +539,22 @@ export function parseBrowseGeneric(resp: Raw): { title: string; shelves: Shelf[]
 
 // ── 앨범·플레이리스트 ──────────────────────────────────────────────────────
 
-function headerButtons(buttons: Raw[]): { play?: Endpoint; shuffle?: Endpoint; radio?: Endpoint; saved?: boolean } {
+function headerButtons(buttons: Raw[]): { play?: Endpoint; shuffle?: Endpoint; radio?: Endpoint; saved?: boolean; savePlaylistId?: string } {
   let play: Endpoint | undefined;
   let shuffle: Endpoint | undefined;
   let radio: Endpoint | undefined;
   let saved: boolean | undefined;
+  let savePlaylistId: string | undefined;
   for (const button of buttons ?? []) {
     const [kind, r] = only(button);
     if (kind === 'musicPlayButtonRenderer') play = r.playNavigationEndpoint;
     if (kind === 'toggleButtonRenderer') {
       const icon = r.defaultIcon?.iconType ?? '';
-      if (/BOOKMARK|LIBRARY_ADD|LIBRARY_SAVED/.test(icon)) saved = !!r.isToggled;
+      if (/BOOKMARK|LIBRARY_ADD|LIBRARY_SAVED/.test(icon)) {
+        saved = !!r.isToggled;
+        // 보관함 저장 단추가 가리키는 재생목록(앨범은 OLAK5uy_…)
+        savePlaylistId = r.defaultServiceEndpoint?.likeEndpoint?.target?.playlistId ?? r.toggledServiceEndpoint?.likeEndpoint?.target?.playlistId;
+      }
     }
     if (kind === 'menuRenderer') {
       for (const item of r.items ?? []) {
@@ -560,7 +570,7 @@ function headerButtons(buttons: Raw[]): { play?: Endpoint; shuffle?: Endpoint; r
       if (icon === 'MIX') radio = r.navigationEndpoint;
     }
   }
-  return { play, shuffle, radio, saved };
+  return { play, shuffle, radio, saved, savePlaylistId };
 }
 
 function parseResponsiveHeader(h: Raw, kind: CardKind, editable: boolean): CollectionHeader {
@@ -572,8 +582,9 @@ function parseResponsiveHeader(h: Raw, kind: CardKind, editable: boolean): Colle
   const description =
     text(h.description?.musicDescriptionShelfRenderer?.description) || text(h.description);
   const buttons = headerButtons(h.buttons);
-  const playlistId =
-    buttons.play?.['watchPlaylistEndpoint'] && (buttons.play['watchPlaylistEndpoint'] as Raw).playlistId;
+  // 앨범의 재생 단추는 watchEndpoint(첫 곡 + playlistId)라 watchPlaylistEndpoint만 보면 놓친다(2026-10-14 "Love poem").
+  const endpointPlaylist = (e?: Endpoint) => ((e?.['watchPlaylistEndpoint'] ?? e?.['watchEndpoint']) as Raw | undefined)?.playlistId as string | undefined;
+  const playlistId = endpointPlaylist(buttons.play) ?? buttons.savePlaylistId ?? endpointPlaylist(buttons.shuffle);
   return {
     kind: kind === 'album' ? kindFromPageType('MUSIC_PAGE_TYPE_ALBUM', typeLabel) : kind,
     title: text(h.title),
@@ -668,7 +679,16 @@ export function parsePlaylist(resp: Raw): Collection {
   const { tracks } = itemsOf(shelfRaw?.contents ?? []);
   if (!header.playlistId && shelfRaw?.playlistId) header.playlistId = shelfRaw.playlistId;
   const shelves = parseSections(secondary.filter((c: Raw) => !c.musicPlaylistShelfRenderer && !c.musicShelfRenderer));
-  return { header, tracks, shelves, continuation: continuationOf(shelfRaw) };
+  // 곡 목록 이어받기(곡이 많을 때)와 따로, 묶음 목록 끝의 이어받기는 내 재생목록의 "추천" 곡 묶음을 준다(2026-10-14 확인).
+  const sectionList = two?.secondaryContents?.sectionListRenderer ?? sectionListOf(resp);
+  const sectionsContinuation = sectionList?.continuations?.[0]?.nextContinuationData?.continuation;
+  return {
+    header,
+    tracks,
+    shelves,
+    continuation: continuationOf(shelfRaw),
+    sectionsContinuation: sectionsContinuation ? { token: sectionsContinuation, style: 'query' } : undefined,
+  };
 }
 
 // ── 아티스트 ───────────────────────────────────────────────────────────────
@@ -688,6 +708,7 @@ export function parseArtist(resp: Raw): ArtistPage {
     subscribers: text(sub?.longSubscriberCountText) || text(sub?.subscriberCountText) || undefined,
     channelId: sub?.channelId,
     subscribed: sub?.subscribed,
+    subscribeParams: (sub?.serviceEndpoints ?? []).find((e: Raw) => e?.subscribeEndpoint)?.subscribeEndpoint?.params,
     shuffle,
     radio,
     shelves,
@@ -707,6 +728,94 @@ export function lyricsBrowseId(resp: Raw): string | undefined {
     if (typeof id === 'string' && id.startsWith('MPLY')) return id;
   }
   return undefined;
+}
+
+/** next 응답의 탭: 가사(MPLY…)·관련 항목(MPTR…) browseId, 댓글 첫 쪽 이어받기 값 */
+export function parseWatchTabs(resp: Raw): WatchTabs {
+  const out: WatchTabs = {};
+  for (const tab of watchNextTabs(resp)) {
+    const t = tab?.tabRenderer;
+    const id = t?.endpoint?.browseEndpoint?.browseId;
+    const pageType = t?.endpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType;
+    if (typeof id === 'string' && (id.startsWith('MPLY') || pageType === 'MUSIC_PAGE_TYPE_TRACK_LYRICS')) out.lyricsBrowseId = id;
+    else if (typeof id === 'string' && (id.startsWith('MPTR') || pageType === 'MUSIC_PAGE_TYPE_TRACK_RELATED')) out.relatedBrowseId = id;
+    else if (!id) {
+      // 댓글 탭은 주소 대신 처음 불러올 이어받기 값을 품고 있다(2026-10-14 확인).
+      const token = t?.content?.sectionListRenderer?.continuations?.[0]?.reloadContinuationData?.continuation;
+      if (typeof token === 'string' && t?.content?.sectionListRenderer?.targetId) out.commentsToken = token;
+    }
+  }
+  return out;
+}
+
+/**
+ * 댓글(next + continuation 응답). 내용은 frameworkUpdates의 commentEntityPayload에 있고,
+ * 순서는 commentThreadRenderer → commentViewModel.commentKey로 잇는다(2026-10-14 확인).
+ */
+export function parseComments(resp: Raw): CommentsPage {
+  const payloads = new Map<string, Raw>();
+  for (const m of resp?.frameworkUpdates?.entityBatchUpdate?.mutations ?? []) {
+    const p = m?.payload?.commentEntityPayload;
+    if (p?.key) payloads.set(p.key, p);
+  }
+  const groups: Raw[] = (resp?.onResponseReceivedEndpoints ?? []).flatMap(
+    (e: Raw) => e?.reloadContinuationItemsCommand?.continuationItems ?? e?.appendContinuationItemsAction?.continuationItems ?? [],
+  );
+  let countText: string | undefined;
+  let continuation: string | undefined;
+  const comments: Comment[] = [];
+  for (const item of groups) {
+    if (item?.commentsHeaderRenderer) {
+      countText = text(item.commentsHeaderRenderer.countText) || undefined;
+    } else if (item?.commentThreadRenderer) {
+      const vm = item.commentThreadRenderer.commentViewModel?.commentViewModel;
+      const p = vm?.commentKey ? payloads.get(vm.commentKey) : undefined;
+      if (!p) continue;
+      const author = p.author ?? {};
+      const toolbar = p.toolbar ?? {};
+      comments.push({
+        id: p.properties?.commentId ?? vm.commentId ?? vm.commentKey,
+        author: author.displayName ?? '',
+        avatar: author.avatarThumbnailUrl || undefined,
+        text: p.properties?.content?.content ?? '',
+        published: p.properties?.publishedTime ?? '',
+        likes: String(toolbar.likeCountNotliked ?? '').trim(),
+        replies: String(toolbar.replyCount ?? '').trim(),
+        isArtist: !!(author.isArtist || author.isCreator),
+      });
+    } else if (item?.continuationItemRenderer) {
+      // 묶음 끝의 것이 다음 쪽(답글 이어받기는 스레드 안에 들어 있어 여기 오지 않는다)
+      const token = item.continuationItemRenderer.continuationEndpoint?.continuationCommand?.token
+        ?? item.continuationItemRenderer.button?.buttonRenderer?.command?.continuationCommand?.token;
+      if (token) continuation = token;
+    }
+  }
+  return { countText, comments, continuation };
+}
+
+/** 분위기·장르 첫 화면: 묶음별 단추(musicNavigationButtonRenderer) */
+export function parseMoods(resp: Raw): MoodsPage {
+  const list = sectionListOf(resp);
+  const sections: MoodsPage['sections'] = [];
+  for (const section of list?.contents ?? []) {
+    const grid = section?.gridRenderer;
+    if (!grid) continue;
+    const items: MoodItem[] = [];
+    for (const it of grid.items ?? []) {
+      const b = it?.musicNavigationButtonRenderer;
+      const ep = b?.clickCommand?.browseEndpoint;
+      if (!b || !ep?.browseId) continue;
+      const argb = Number(b.solid?.leftStripeColor);
+      items.push({
+        label: text(b.buttonText),
+        browseId: ep.browseId,
+        params: ep.params,
+        color: Number.isFinite(argb) && argb > 0 ? `#${(argb & 0xffffff).toString(16).padStart(6, '0')}` : undefined,
+      });
+    }
+    if (items.length) sections.push({ title: text(grid.header?.gridHeaderRenderer?.title), items });
+  }
+  return { title: text(resp?.header?.musicHeaderRenderer?.title), sections };
 }
 
 export function parseLyrics(resp: Raw): LyricsData | undefined {

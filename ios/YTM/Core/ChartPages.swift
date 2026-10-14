@@ -1,6 +1,6 @@
-// 차트 원본 페이지 받아 오기(데스크톱 src-tauri/src/spotify.rs·melon.rs와 같은 일).
+// 차트 원본 페이지 받아 오기(데스크톱 src-tauri/src/spotify.rs·charts.rs와 같은 일).
 // - Spotify: 공개 임베드 페이지의 __NEXT_DATA__에서 곡 목록을 꺼낸다(Web API는 편집 플레이리스트를 막는다).
-// - 멜론: 차트 페이지 HTML을 그대로 넘기고, 해석은 데이터 묶음(src/lib/melon.ts)이 한다.
+// - 멜론·지니·벅스·FLO·VIBE·써클차트·빌보드·Apple Music: 페이지 글을 그대로 넘기고, 해석은 데이터 묶음(src/lib/charts)이 한다.
 import Foundation
 
 enum ChartPages {
@@ -24,9 +24,32 @@ enum ChartPages {
         return html
     }
 
-    /// 멜론 TOP 100 페이지(JSON 문자열로 감싼 HTML)
-    static func melonPage() async throws -> String {
-        jsonString(try await get(URL(string: "https://www.melon.com/chart/index.htm")!, prefix: "melon"))
+    /// 받을 수 있는 차트 사이트(src/lib/charts의 주소들, 데스크톱 charts.rs ALLOWED_HOSTS와 같다)
+    private static let allowedHosts: Set<String> = [
+        "www.melon.com", "www.genie.co.kr", "music.bugs.co.kr", "www.music-flo.com",
+        "apis.naver.com", "circlechart.kr", "www.billboard.com", "rss.applemarketingtools.com",
+    ]
+
+    /// 차트 페이지 하나(JSON 문자열로 감싼 본문)
+    static func chartFetch(_ req: ChartRequestInfo) async throws -> String {
+        guard let url = URL(string: req.url), url.scheme == "https", let host = url.host(), allowedHosts.contains(host) else {
+            throw BridgeError("chart_not_allowed \(URL(string: req.url)?.host() ?? "")")
+        }
+        let source = host.split(separator: ".").dropLast().last.map(String.init) ?? "chart"
+        var request = URLRequest(url: url, timeoutInterval: 25)
+        request.httpMethod = req.method ?? "GET"
+        for (key, value) in req.headers ?? [:] { request.setValue(value, forHTTPHeaderField: key) }
+        if let body = req.body { request.httpBody = Data(body.utf8) }
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw BridgeError("\(source)_network \(error.localizedDescription)")
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<400).contains(status) else { throw BridgeError("\(source)_http_\(status)") }
+        guard data.count <= 12 * 1024 * 1024 else { throw BridgeError("\(source)_read") }
+        return jsonString(String(decoding: data, as: UTF8.self))
     }
 
     /// Spotify 공개 플레이리스트(spotify.rs parse_page와 같은 결과 모양, JSON 문자열)

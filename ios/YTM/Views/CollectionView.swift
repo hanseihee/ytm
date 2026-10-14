@@ -11,6 +11,7 @@ struct CollectionView: View {
     @State private var state: Loadable<CollectionPage> = .loading
     @State private var saved: Bool?
     @State private var confirmDelete = false
+    @State private var editMode: EditMode = .inactive
 
     var body: some View {
         Group {
@@ -28,9 +29,18 @@ struct CollectionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let data = state.value {
+                if data.header.editable && kind == .playlist && !data.tracks.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(editMode.isEditing ? "완료" : "편집") {
+                            withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                        }
+                        .fontWeight(editMode.isEditing ? .semibold : .regular)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) { moreMenu(data) }
             }
         }
+        .environment(\.editMode, $editMode)
         .confirmationDialog("플레이리스트 삭제", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("삭제", role: .destructive) {
                 guard let pid = state.value.flatMap(playlistId) else { return }
@@ -104,6 +114,11 @@ struct CollectionView: View {
                             .tint(palette.rose)
                         }
                     }
+            }
+            .onMove(perform: editable && pid != nil && data.tracks.allSatisfy { $0.setVideoId != nil } ? { from, to in move(from, to) } : nil)
+            .onDelete(perform: editable && pid != nil ? { offsets in remove(offsets) } : nil)
+            if editable, let pid, let c = data.sectionsContinuation, !editMode.isEditing {
+                SuggestionsSection(playlistId: pid, title: h.title, continuation: c)
             }
             if let c = data.continuation {
                 LoadMoreRow { await more(c) }
@@ -237,6 +252,37 @@ struct CollectionView: View {
         }
     }
 
+    /// 끌어서 순서 바꾸기: 옮긴 곡을 새 자리 다음 곡 앞으로(맨 끝이면 맨 뒤로). src/views/CollectionView.tsx reorder와 같다.
+    private func move(_ from: IndexSet, _ to: Int) {
+        guard case .loaded(var data) = state, let pid = playlistId(data), let source = from.first, from.count == 1 else { return }
+        var list = data.tracks
+        list.move(fromOffsets: from, toOffset: to)
+        let moved = data.tracks[source]
+        guard let newIndex = list.firstIndex(where: { $0.setVideoId == moved.setVideoId }), let setVideoId = moved.setVideoId else { return }
+        let successor = newIndex + 1 < list.count ? list[newIndex + 1] : nil
+        if successor == nil && data.continuation != nil {
+            model.toast("목록을 끝까지 불러온 뒤 맨 끝으로 옮길 수 있습니다", error: true)
+            return
+        }
+        data.tracks = list
+        state = .loaded(data)
+        Task {
+            if !(await model.movePlaylistItem(pid, setVideoId: setVideoId, before: successor?.setVideoId)) { await load() }
+        }
+    }
+
+    /// 편집 중 왼쪽으로 밀어 빼기
+    private func remove(_ offsets: IndexSet) {
+        guard case .loaded(var data) = state, let pid = playlistId(data) else { return }
+        let tracks = offsets.map { data.tracks[$0] }.filter { $0.setVideoId != nil }
+        guard !tracks.isEmpty else { return }
+        data.tracks.remove(atOffsets: offsets)
+        state = .loaded(data)
+        Task {
+            if !(await model.removeTracks(from: pid, tracks)) { await load() }
+        }
+    }
+
     private func more(_ c: Continuation) async {
         guard case .loaded(var data) = state, data.continuation == c else { return }
         do {
@@ -248,5 +294,62 @@ struct CollectionView: View {
             data.continuation = nil
         }
         state = .loaded(data)
+    }
+}
+
+/// 내 재생목록 아래 "추천 곡"(YouTube Music이 고른 곡). 누르면 재생, +로 넣기.
+private struct SuggestionsSection: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.palette) private var palette
+    let playlistId: String
+    let title: String
+    let continuation: Continuation
+    @State private var tracks: [Track] = []
+    @State private var round = 0
+    @State private var loaded = false
+
+    var body: some View {
+        if !(loaded && tracks.isEmpty) {
+            Section {
+                if !loaded {
+                    ProgressView().frame(maxWidth: .infinity).listRowBackground(Color.clear)
+                }
+                ForEach(tracks, id: \.videoId) { track in
+                    HStack(spacing: 12) {
+                        CoverImage(url: track.thumbnail, size: 44, corner: 5)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(track.title).font(.body.weight(.semibold)).foregroundStyle(palette.ink).lineLimit(1)
+                            Text(track.artistLine).font(.subheadline).foregroundStyle(palette.mist).lineLimit(1)
+                        }
+                        Spacer()
+                        Button {
+                            tracks.removeAll { $0.videoId == track.videoId }
+                            Task { await model.addTracks(to: PlaylistOption(playlistId: playlistId, title: title, thumbnail: nil, contains: false), [track]) }
+                        } label: {
+                            Image(systemName: "plus.circle").font(.title2).foregroundStyle(palette.roseSoft)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("\(track.title) 이 재생목록에 넣기")
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.playTrack(track) }
+                    .listRowBackground(Color.clear)
+                }
+            } header: {
+                HStack {
+                    Text("추천 곡").font(.title3.bold()).foregroundStyle(palette.ink)
+                    Spacer()
+                    Button("다른 곡 보기") { round += 1 }
+                        .font(.subheadline.weight(.semibold))
+                        .buttonStyle(.borderless)
+                }
+                .textCase(nil)
+            }
+            .task(id: round) {
+                loaded = false
+                tracks = ((try? await model.api.playlistSections(continuation)) ?? []).flatMap(\.tracks)
+                loaded = true
+            }
+        }
     }
 }

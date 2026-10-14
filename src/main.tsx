@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles.css';
 import { App } from './App';
+import { MiniApp } from './components/MiniApp';
 import { initTheme } from './lib/theme';
 
 // 화면 오류·경고를 터미널 기록(ui_log)으로도 넘긴다. 넘기기 실패는 무시(원래 콘솔에는 남는다).
@@ -28,6 +29,6 @@ initTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {location.hash === '#mini' ? <MiniApp /> : <App />}
   </StrictMode>,
 );

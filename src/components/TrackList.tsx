@@ -1,4 +1,4 @@
-import { memo, type MouseEvent } from 'react';
+import { memo, useState, type DragEvent, type MouseEvent } from 'react';
 import type { Ref, Track } from '../lib/ytm/types';
 import { toggleLike, playTrack, useLiked } from '../state/library';
 import { go, routeForBrowse } from '../state/nav';
@@ -36,15 +36,25 @@ function Bars() {
   );
 }
 
+interface DragProps {
+  draggable: boolean;
+  onDragStart: (e: DragEvent) => void;
+  onDragOver: (e: DragEvent) => void;
+  onDrop: (e: DragEvent) => void;
+  onDragEnd: () => void;
+}
+
 interface RowProps extends TrackMenuContext {
   track: Track;
   position: number;
   numbered: boolean;
   showCover: boolean;
   showAlbum: boolean;
+  drag?: DragProps;
+  dropTarget?: boolean;
 }
 
-const Row = memo(function Row({ track, position, numbered, showCover, showAlbum, editablePlaylistId, onRemoved }: RowProps) {
+const Row = memo(function Row({ track, position, numbered, showCover, showAlbum, editablePlaylistId, onRemoved, drag, dropTarget }: RowProps) {
   const isCurrent = usePlayer((s) => s.videoId === track.videoId);
   const isPlaying = usePlayer((s) => s.videoId === track.videoId && s.playing);
   const liked = useLiked(track.videoId);
@@ -55,11 +65,13 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
   const lead = numbered ? (track.index ?? position + 1) : null;
   return (
     <div
-      className={`track${isCurrent ? ' is-current' : ''}${track.available ? '' : ' is-unavailable'}`}
+      className={`track${isCurrent ? ' is-current' : ''}${track.available ? '' : ' is-unavailable'}${drag ? ' is-draggable' : ''}${dropTarget ? ' is-drop-target' : ''}`}
       role="row"
       onDoubleClick={() => playTrack(track)}
       onContextMenu={menu}
+      {...drag}
     >
+      {drag && <span className="track__grip" aria-hidden="true" title="끌어서 순서 바꾸기"><Icon name="grip" size={14} /></span>}
       <div className="track__lead" role="cell">
         {showCover && <Cover src={track.thumbnail} size={40} />}
         {lead !== null && !showCover && <span className="track__num">{isPlaying ? <Bars /> : lead}</span>}
@@ -105,6 +117,8 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
 
 interface Props extends TrackMenuContext {
   tracks: Track[];
+  /** 내 재생목록: 끌어서 순서 바꾸기(from 자리 곡을 to 자리로) */
+  onReorder?: (from: number, to: number) => void;
   /** 앨범처럼 수록 순서가 의미 있을 때 번호를 보인다 */
   numbered?: boolean;
   showCover?: boolean;
@@ -112,8 +126,31 @@ interface Props extends TrackMenuContext {
   limit?: number;
 }
 
-export function TrackList({ tracks, numbered = false, showCover = true, showAlbum = true, limit, editablePlaylistId, onRemoved }: Props) {
+export function TrackList({ tracks, numbered = false, showCover = true, showAlbum = true, limit, editablePlaylistId, onRemoved, onReorder }: Props) {
   const list = limit ? tracks.slice(0, limit) : tracks;
+  const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
+  const dragProps = (i: number): DragProps | undefined =>
+    onReorder
+      ? {
+          draggable: true,
+          onDragStart: (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(i));
+            setDrag({ from: i, over: i });
+          },
+          onDragOver: (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setDrag((d) => (d && d.over !== i ? { ...d, over: i } : d));
+          },
+          onDrop: (e) => {
+            e.preventDefault();
+            if (drag && drag.from !== i) onReorder(drag.from, i);
+            setDrag(null);
+          },
+          onDragEnd: () => setDrag(null),
+        }
+      : undefined;
   return (
     <div className={`tracks${showAlbum ? '' : ' tracks--no-album'}`} role="table">
       {list.map((t, i) => (
@@ -126,6 +163,8 @@ export function TrackList({ tracks, numbered = false, showCover = true, showAlbu
           showAlbum={showAlbum}
           editablePlaylistId={editablePlaylistId}
           onRemoved={onRemoved}
+          drag={dragProps(i)}
+          dropTarget={!!drag && drag.over === i && drag.from !== i}
         />
       ))}
     </div>

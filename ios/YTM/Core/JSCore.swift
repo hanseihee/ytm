@@ -42,7 +42,7 @@ final class JSCore: @unchecked Sendable {
             self?.fetch(id: Int(id.toInt32()), url: url.toString(), initJSON: initJSON.toString())
         }
         let storageGet: @convention(block) (JSValue) -> Any = { [weak self] key in
-            self?.storage.string(forKey: Self.storagePrefix + key.toString()) ?? NSNull()
+            (self?.storage.string(forKey: Self.storagePrefix + key.toString()) as Any?) ?? NSNull()
         }
         let storageSet: @convention(block) (JSValue, JSValue) -> Void = { [weak self] key, value in
             self?.storage.set(value.toString(), forKey: Self.storagePrefix + key.toString())

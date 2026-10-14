@@ -12,7 +12,7 @@ import {
   toggleLike,
 } from '../state/library';
 import { go, routeForBrowse } from '../state/nav';
-import { openDialog, type MenuEntry } from '../state/ui';
+import { openDialog, toast, toastError, type MenuEntry } from '../state/ui';
 import { NewPlaylistDialog } from './Dialogs';
 
 /** "플레이리스트에 추가" 하위 메뉴: 내가 고칠 수 있는 플레이리스트만 YouTube Music에 물어 온다. */
@@ -38,6 +38,26 @@ export function addToPlaylistEntry(tracks: Track[]): MenuEntry {
   };
 }
 
+/** 공유 링크(YouTube Music) */
+export const trackUrl = (videoId: string) => `https://music.youtube.com/watch?v=${videoId}`;
+export function cardUrl(card: Card): string | undefined {
+  const playlistId = card.playlistId ?? (card.browseId?.startsWith('VL') ? card.browseId.slice(2) : undefined);
+  if (card.videoId) return trackUrl(card.videoId);
+  if (playlistId) return `https://music.youtube.com/playlist?list=${playlistId}`;
+  if (card.browseId?.startsWith('UC')) return `https://music.youtube.com/channel/${card.browseId}`;
+  if (card.browseId) return `https://music.youtube.com/browse/${card.browseId}`;
+  return undefined;
+}
+
+export async function copyLink(url: string) {
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('링크를 복사했습니다');
+  } catch (err) {
+    toastError(err, '링크를 복사하지 못했습니다');
+  }
+}
+
 export interface TrackMenuContext {
   /** 내가 만든 플레이리스트 화면이면 그 id(곡 빼기 가능) */
   editablePlaylistId?: string;
@@ -54,6 +74,7 @@ export function trackMenu(track: Track, ctx: TrackMenuContext = {}): MenuEntry[]
     { label: '', separator: true },
     { label: liked ? '좋아요 취소' : '좋아요', action: () => toggleLike(track) },
     addToPlaylistEntry([track]),
+    { label: '링크 복사', action: () => copyLink(trackUrl(track.videoId)) },
   ];
   if (ctx.editablePlaylistId && track.setVideoId) {
     const playlistId = ctx.editablePlaylistId;
@@ -94,5 +115,7 @@ export function cardMenu(card: Card): MenuEntry[] {
   if (card.browseId) {
     entries.push({ label: '', separator: true }, { label: '열기', action: () => go(routeForBrowse(card.browseId!, card.params, card.title)) });
   }
+  const url = cardUrl(card);
+  if (url) entries.push({ label: '링크 복사', action: () => copyLink(url) });
   return entries;
 }

@@ -1,4 +1,5 @@
-// 차트(멜론 TOP 100·Spotify 나라별 Top 50) → YouTube Music으로 듣기 (src/views/SpotifyView.tsx와 같은 동작).
+// 차트(멜론·지니·벅스·FLO·VIBE·써클차트·Spotify 나라별 Top 50·빌보드·Apple Music) → YouTube Music으로 듣기
+// (src/views/SpotifyView.tsx와 같은 동작).
 import SwiftUI
 
 struct ChartView: View {
@@ -9,6 +10,7 @@ struct ChartView: View {
     let isRoot: Bool
 
     @State private var charts: [ChartInfo] = []
+    @State private var groups: [String] = []
     @State private var state: Loadable<ChartPlaylist> = .loading
     @State private var titleText = ""
     @State private var kindText = ""
@@ -20,7 +22,8 @@ struct ChartView: View {
     @State private var link = ""
 
     private var chart: ChartInfo? { charts.first { $0.id == id } }
-    private var isMelon: Bool { chart?.source == "melon" }
+    /// Spotify 플레이리스트(곡 길이가 있고, 오늘 날짜 기준)인지
+    private var isSpotify: Bool { chart.map { $0.source == "spotify" } ?? true }
     private var found: [Track] { matches.compactMap { $0?.track } }
     private var done: Int { matches.filter { $0 != nil }.count }
     private var finished: Bool { !matches.isEmpty && done == matches.count }
@@ -31,7 +34,7 @@ struct ChartView: View {
                 if isRoot { picker }
                 switch state {
                 case .loading:
-                    LoadingView(label: isMelon ? "멜론에서 곡 목록을 가져오는 중…" : "Spotify에서 곡 목록을 가져오는 중…")
+                    LoadingView(label: "\(isSpotify ? "Spotify" : chart?.group ?? "차트")에서 곡 목록을 가져오는 중…")
                 case .failed(let message):
                     ErrorView(message: message) { Task { await load() } }
                 case .loaded(let p):
@@ -68,18 +71,23 @@ struct ChartView: View {
 
     private var picker: some View {
         Menu {
-            Picker("차트", selection: Binding(get: { id }, set: { model.chartId = $0 })) {
-                ForEach(charts) { c in
-                    Text(c.source == "melon" ? c.label : "Spotify \(c.label)").tag(c.id)
+            // 출처별 묶음(멜론 · Spotify Top 50 · 국내 음원 · 해외 …)
+            ForEach(groups, id: \.self) { group in
+                let items = charts.filter { $0.group == group }
+                if items.count <= 8 {
+                    Section(group) { options(items) }
+                } else {
+                    Menu(group) { options(items) }
                 }
             }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "chart.bar.fill").foregroundStyle(palette.roseSoft)
-                Text(chart.map { $0.source == "melon" ? $0.label : "Spotify \($0.label) Top 50" } ?? "차트")
+                Text(chart.map { $0.source == "spotify" ? "Spotify \($0.label) Top 50" : $0.label } ?? "차트")
                     .font(.headline)
                     .foregroundStyle(palette.ink)
-                Text("차트 바꾸기").font(.subheadline).foregroundStyle(palette.mist)
+                    .lineLimit(1)
+                Text("차트 바꾸기").font(.subheadline).foregroundStyle(palette.mist).layoutPriority(-1)
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(palette.mist)
             }
             .padding(.horizontal, 14)
@@ -87,6 +95,13 @@ struct ChartView: View {
             .background(Capsule().fill(palette.plum))
         }
         .padding(.bottom, 4)
+    }
+
+    private func options(_ items: [ChartInfo]) -> some View {
+        Picker("차트", selection: Binding(get: { id }, set: { model.chartId = $0 })) {
+            ForEach(items) { c in Text(c.label).tag(c.id) }
+        }
+        .pickerStyle(.inline)
     }
 
     // MARK: 머리
@@ -103,7 +118,7 @@ struct ChartView: View {
                         .font(.title2.bold())
                         .foregroundStyle(palette.ink)
                         .lineLimit(2)
-                    Text([p.subtitle.isEmpty ? "Spotify" : p.subtitle, "\(p.tracks.count)곡", isMelon ? nil : "\(today) 기준"].compactMap { $0 }.joined(separator: " · "))
+                    Text([p.subtitle.isEmpty ? (isSpotify ? "Spotify" : chart?.group ?? "") : p.subtitle, "\(p.tracks.count)곡", isSpotify ? "\(today) 기준" : nil].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                         .font(.subheadline)
                         .foregroundStyle(palette.mist)
                 }
@@ -238,7 +253,10 @@ struct ChartView: View {
     // MARK: 동작
 
     private func load() async {
-        if charts.isEmpty { charts = (try? await model.api.charts()) ?? [] }
+        if charts.isEmpty {
+            charts = (try? await model.api.charts()) ?? []
+            groups = (try? await model.api.chartGroups()) ?? []
+        }
         state = .loading
         matches = []
         do {

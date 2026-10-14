@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import * as ytm from '../lib/ytm/client';
 import { toggleLike, useLiked } from '../state/library';
 import { formatTime, patchPlayer, usePlayer, usePosition } from '../state/player';
-import { toastError, togglePanel, toggleLyrics, useLayout } from '../state/ui';
+import { openMenu, toastError, togglePanel, toggleLyrics, useLayout, type MenuEntry } from '../state/ui';
+import { cancelSleep, SLEEP_MINUTES, sleepLabel, startSleep, startSleepAfterTrack, useSleep } from '../state/sleep';
+import { miniWindow, videoWindow } from '../lib/tauri';
 import { useEq } from '../lib/eq';
 import { Cover } from './Cover';
 import { Icon } from './Icon';
@@ -88,6 +90,53 @@ function Volume() {
 
 const REPEAT_LABEL: Record<string, string> = { NONE: '반복 안 함', ALL: '전체 반복', ONE: '한 곡 반복' };
 
+/** 노래(음원) ↔ 영상(뮤직비디오) 전환. 영상으로 바꾸면 영상 창을 띄우고, 노래로 바꾸면 닫는다. */
+export async function switchAv(video: boolean) {
+  try {
+    await ytm.avSwitch(video);
+    await videoWindow(video);
+  } catch (err) {
+    toastError(err, video ? '영상으로 바꾸지 못했습니다' : '노래로 바꾸지 못했습니다');
+  }
+}
+
+export function AvToggle({ compact = false }: { compact?: boolean }) {
+  const available = usePlayer((s) => !!s.avAvailable && !s.ad);
+  const video = usePlayer((s) => !!s.avVideo);
+  if (!available) return null;
+  return (
+    <div className={`avtoggle${compact ? ' avtoggle--compact' : ''}`} role="radiogroup" aria-label="노래·영상">
+      <button type="button" role="radio" aria-checked={!video} className={!video ? 'is-on' : ''} onClick={() => video && void switchAv(false)}>노래</button>
+      <button type="button" role="radio" aria-checked={video} className={video ? 'is-on' : ''} onClick={() => !video && void switchAv(true)}>영상</button>
+    </div>
+  );
+}
+
+function SleepButton() {
+  const sleep = useSleep((s) => s);
+  const has = usePlayer((s) => !!s.videoId);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (sleep.mode !== 'time') return;
+    const t = window.setInterval(() => tick((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [sleep.mode]);
+  const on = sleep.mode !== 'off';
+  const menu = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const entries: MenuEntry[] = SLEEP_MINUTES.map((m) => ({ label: m >= 60 ? `${m / 60}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`, action: () => startSleep(m) }));
+    entries.push({ label: '지금 곡이 끝나면', action: startSleepAfterTrack, disabled: !has });
+    if (on) entries.push({ label: '', separator: true }, { label: '수면 타이머 끄기', action: () => cancelSleep() });
+    openMenu(r.left - 120, r.top - 10 - entries.length * 36, entries);
+  };
+  return (
+    <button type="button" className={`icon-btn sleep-btn${on ? ' is-on' : ''}`} aria-label={on ? `수면 타이머 ${sleepLabel(sleep)}` : '수면 타이머'} title="수면 타이머" onClick={menu}>
+      <Icon name="moon" size={18} />
+      {on && <span className="sleep-btn__left">{sleepLabel(sleep)}</span>}
+    </button>
+  );
+}
+
 export function PlayerBar() {
   const videoId = usePlayer((s) => s.videoId);
   const title = usePlayer((s) => s.title);
@@ -102,6 +151,10 @@ export function PlayerBar() {
   const queueOn = useLayout((s) => s.panel === 'queue');
   const eqOpen = useLayout((s) => s.panel === 'eq');
   const eqOn = useEq((s) => s.enabled);
+  const videoOpen = useLayout((s) => s.video);
+  const avAvailable = usePlayer((s) => !!s.avAvailable);
+  const avVideo = usePlayer((s) => !!s.avVideo);
+  const picture = usePlayer((s) => !!s.avVideo || !!s.hasPicture || !!s.avAvailable);
   const has = !!videoId;
 
   const toggle = () => {
@@ -120,6 +173,7 @@ export function PlayerBar() {
             <div className="player__meta">
               <div className="player__title" title={title}>{ad ? '광고' : title}</div>
               <div className="player__artist" title={artist}>{ad ? 'YouTube Music' : artist}</div>
+              <AvToggle compact />
             </div>
             <button
               type="button"
@@ -167,6 +221,22 @@ export function PlayerBar() {
       </div>
 
       <div className="player__side">
+        <button
+          type="button"
+          className={`icon-btn${videoOpen ? ' is-on' : ''}`}
+          aria-label={videoOpen ? '영상 창 닫기' : '영상 보기'}
+          title={videoOpen ? '영상 창 닫기' : '영상 보기'}
+          aria-pressed={videoOpen}
+          disabled={!has || !picture || ad}
+          onClick={() => {
+            if (videoOpen) void videoWindow(false).catch((err) => toastError(err));
+            // 노래 쪽이면 영상으로 바꾸고, 원래 영상(짝 없음)이면 창만 띄운다.
+            else if (avAvailable && !avVideo) void switchAv(true);
+            else void videoWindow(true).catch((err) => toastError(err, '영상 창을 열지 못했습니다'));
+          }}
+        >
+          <Icon name="video" size={19} />
+        </button>
         <button type="button" className={`icon-btn${lyricsOn ? ' is-on' : ''}`} aria-label="가사" aria-pressed={lyricsOn} onClick={() => toggleLyrics()}>
           <Icon name="lyrics" size={19} />
         </button>
@@ -182,6 +252,10 @@ export function PlayerBar() {
         >
           <Icon name="eq" size={19} />
           {eqOn && <span className="dot" aria-hidden="true" />}
+        </button>
+        <SleepButton />
+        <button type="button" className="icon-btn" aria-label="미니 플레이어" title="미니 플레이어 (⌃⌥M)" onClick={() => void miniWindow(true).catch((err) => toastError(err))}>
+          <Icon name="mini" size={19} />
         </button>
         <Volume />
       </div>

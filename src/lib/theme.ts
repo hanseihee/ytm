@@ -2,7 +2,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { createStore, useStore } from './store';
 
-export type ThemeId = 'system' | 'dark' | 'light' | 'midnight' | 'forest' | 'sunset' | 'mono' | 'sakura';
+export type ThemeId = 'system' | 'dark' | 'light' | 'midnight' | 'forest' | 'sunset' | 'mono' | 'sakura' | 'album';
 type Resolved = Exclude<ThemeId, 'system'>;
 
 export interface ThemeInfo {
@@ -31,6 +31,8 @@ export const THEMES: ThemeInfo[] = [
     preview: { bg: '#101112', surface: '#17181a', ink: '#f2f2f3', accent: ['#f2f2f3', '#b9bbc0'] } },
   { id: 'sakura', label: '벚꽃', description: '연분홍 라이트', kind: 'light',
     preview: { bg: '#fff6f8', surface: '#ffffff', ink: '#2b1520', accent: ['#ff6f9c', '#e0457b'] } },
+  { id: 'album', label: '앨범 색', description: '지금 듣는 곡의 표지 색을 따라 바뀝니다', kind: 'dark',
+    preview: { bg: '#10161c', surface: '#18222b', ink: '#eef4f8', accent: ['#3cc9d6', '#f2a94b'] } },
 ];
 
 const KEY = 'ytm-desktop:theme:v1';
@@ -91,4 +93,122 @@ export function initTheme() {
 export function cssColor(name: string, fallback: string): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback;
+}
+
+// ── 앨범 색 테마 ────────────────────────────────────────────────────────────
+// 표지 이미지(교차 출처 허용, 2026-10-14 확인)를 작게 그려 가장 선명한 색 두 가지를 뽑고,
+// 강조색과 바탕(아주 어둡게)을 그 색으로 바꾼다. 다크 테마 값 위에 덮어쓴다.
+
+const ACCENT_VARS = ['--rose', '--violet', '--rose-soft', '--rose-rgb', '--violet-rgb', '--focus', '--on-accent', '--night', '--dusk', '--plum', '--plum-2', '--bg-rgb'];
+
+function hsl(h: number, s: number, l: number): [number, number, number] {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+const hex = (rgb: [number, number, number]) => `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+const rgbVar = (rgb: [number, number, number]) => rgb.join(' ');
+
+function toHsl(r: number, g: number, b: number) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (!d) return { h: 0, s: 0, l };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  return { h, s, l };
+}
+
+/** 표지에서 선명한 색상(hue) 두 개. 회색조 표지면 null. */
+function extractHues(img: HTMLImageElement): { a: number; b: number; sat: number } | null {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 32;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(img, 0, 0, 32, 32);
+  const data = ctx.getImageData(0, 0, 32, 32).data;
+  const bins = new Array(24).fill(0);
+  let satSum = 0;
+  let weightSum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const { h, s, l } = toHsl(data[i], data[i + 1], data[i + 2]);
+    const w = s * (1 - Math.abs(l - 0.5) * 2);
+    bins[Math.floor(h / 15) % 24] += w;
+    satSum += s * w;
+    weightSum += w;
+  }
+  if (weightSum < 8) return null;
+  const order = bins.map((w, i) => ({ w, i })).sort((x, y) => y.w - x.w);
+  const a = order[0].i * 15 + 7.5;
+  // 두 번째 색은 첫 색과 45도 이상 떨어진 것 중 가장 많은 것(없으면 첫 색을 돌린 것)
+  const second = order.find((o) => Math.min(Math.abs(o.i * 15 + 7.5 - a), 360 - Math.abs(o.i * 15 + 7.5 - a)) >= 45 && o.w > order[0].w * 0.15);
+  return { a, b: second ? second.i * 15 + 7.5 : (a + 40) % 360, sat: satSum / weightSum };
+}
+
+function setAccent(h: { a: number; b: number; sat: number } | null) {
+  const root = document.documentElement.style;
+  if (!h) {
+    for (const v of ACCENT_VARS) root.removeProperty(v);
+    return;
+  }
+  const s = Math.max(0.55, Math.min(0.85, h.sat + 0.25));
+  const rose = hsl(h.a, s, 0.6);
+  const violet = hsl(h.b, s * 0.9, 0.52);
+  const soft = hsl(h.a, s, 0.74);
+  // 노랑·연두처럼 밝은 색이면 강조 위 글자를 어둡게
+  const lum = (0.2126 * rose[0] + 0.7152 * rose[1] + 0.0722 * rose[2]) / 255;
+  const night = hsl(h.a, 0.28, 0.07);
+  root.setProperty('--rose', hex(rose));
+  root.setProperty('--violet', hex(violet));
+  root.setProperty('--rose-soft', hex(soft));
+  root.setProperty('--rose-rgb', rgbVar(rose));
+  root.setProperty('--violet-rgb', rgbVar(violet));
+  root.setProperty('--focus', hex(soft));
+  root.setProperty('--on-accent', lum > 0.62 ? '#151015' : '#ffffff');
+  root.setProperty('--night', hex(night));
+  root.setProperty('--dusk', hex(hsl(h.a, 0.24, 0.1)));
+  root.setProperty('--plum', hex(hsl(h.a, 0.22, 0.16)));
+  root.setProperty('--plum-2', hex(hsl(h.a, 0.2, 0.21)));
+  root.setProperty('--bg-rgb', rgbVar(night));
+}
+
+/**
+ * 앨범 색 테마를 켜 둔다: 테마가 'album'이면 곡이 바뀔 때마다 표지 색을 뽑아 적용하고, 다른 테마면 원래 색으로 둔다.
+ * getArtwork: 지금 곡 표지 주소, subscribe: 재생 상태가 바뀔 때 부를 함수 등록. 해제 함수를 돌려준다.
+ */
+export function startAlbumTheme(getArtwork: () => string, subscribe: (fn: () => void) => () => void): () => void {
+  let last = '';
+  const update = () => {
+    if (themeStore.get() !== 'album') {
+      if (last) setAccent(null);
+      last = '';
+      return;
+    }
+    const url = getArtwork();
+    if (!url || url === last) return;
+    last = url;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = () => {
+      if (last !== url || themeStore.get() !== 'album') return;
+      try {
+        setAccent(extractHues(img));
+      } catch (err) {
+        console.warn('[theme] 표지 색을 읽지 못했습니다', err);
+      }
+    };
+    img.src = url;
+  };
+  update();
+  const stopPlayer = subscribe(update);
+  const stopTheme = themeStore.subscribe(update);
+  return () => {
+    stopPlayer();
+    stopTheme();
+  };
 }

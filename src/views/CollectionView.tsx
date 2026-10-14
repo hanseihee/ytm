@@ -2,7 +2,9 @@ import { createElement, useState, type MouseEvent } from 'react';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import type { Collection, Track } from '../lib/ytm/types';
-import { deletePlaylist, enqueue, playEndpoint, playTrack, setSaved, useLibrary } from '../state/library';
+import { addTracksToPlaylist, deletePlaylist, enqueue, playEndpoint, playTrack, setSaved, useLibrary } from '../state/library';
+import { toast, toastError } from '../state/ui';
+import { formatTime } from '../state/player';
 import { go } from '../state/nav';
 import { openDialog, openMenu, type MenuEntry } from '../state/ui';
 import { ShelfView } from '../components/Cards';
@@ -15,6 +17,52 @@ import { obj } from '../lib/ko';
 import { Empty, ErrorState, LoadMore, Loading } from './common';
 
 type Kind = 'album' | 'playlist' | 'liked';
+
+/** 내 재생목록 아래 "추천 곡"(YouTube Music이 고른 곡). 누르면 재생, +로 넣기. */
+function Suggestions({ playlistId, title, continuation, revision }: { playlistId: string; title: string; continuation: NonNullable<Collection['sectionsContinuation']>; revision: number }) {
+  const res = useAsync(`sugg:${playlistId}:${revision}`, () => ytm.playlistSections(continuation));
+  const [added, setAdded] = useState<Set<string>>(new Set());
+  const tracks = (res.data ?? []).flatMap((s) => s.tracks).filter((t) => !added.has(t.videoId));
+  if (res.error || (!res.loading && !tracks.length)) return null;
+  return (
+    <section className="shelf suggest-shelf">
+      <header className="shelf__head">
+        <h2 className="shelf__title">추천 곡</h2>
+        <button type="button" className="link shelf__more" onClick={res.reload}>다른 곡 보기</button>
+      </header>
+      {res.loading && !res.data ? (
+        <Loading />
+      ) : (
+        <div className="tracks tracks--no-album" role="table">
+          {tracks.map((t) => (
+            <div key={t.videoId} className="track" role="row" onDoubleClick={() => playTrack(t)}>
+              <div className="track__lead" role="cell"><Cover src={t.thumbnail} size={40} /></div>
+              <div className="track__main" role="cell">
+                <span className="track__title">{t.title}</span>
+                <span className="track__artists">{t.artists.map((a) => a.name).join(', ')}</span>
+              </div>
+              <div className="track__tail" role="cell">
+                <span className="track__time">{t.duration !== undefined ? formatTime(t.duration) : ''}</span>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`${t.title} 이 재생목록에 넣기`}
+                  title="이 재생목록에 넣기"
+                  onClick={async () => {
+                    setAdded((s) => new Set(s).add(t.videoId));
+                    await addTracksToPlaylist({ playlistId, title }, [t]);
+                  }}
+                >
+                  <Icon name="plus" size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function load(kind: Kind, id: string): Promise<Collection> {
   if (kind === 'album') return ytm.album(id);
@@ -66,6 +114,26 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
 
   const onRemoved = (track: Track) =>
     res.setData((prev) => ({ ...prev, tracks: prev.tracks.filter((t) => t.setVideoId !== track.setVideoId) }));
+
+  /** 끌어서 순서 바꾸기: 옮긴 곡을 새 자리 다음 곡 앞으로(맨 끝이면 맨 뒤로) */
+  const reorder = async (from: number, to: number) => {
+    if (!playlistId) return;
+    const list = [...data.tracks];
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    const successor = list[to + 1];
+    if (!moved?.setVideoId || (!successor && data.continuation)) {
+      toast('목록을 끝까지 불러온 뒤 맨 끝으로 옮길 수 있습니다', 'error');
+      return;
+    }
+    res.setData((prev) => ({ ...prev, tracks: list }));
+    try {
+      await ytm.movePlaylistItem(playlistId, moved.setVideoId, successor?.setVideoId);
+    } catch (err) {
+      toastError(err, '순서를 바꾸지 못했습니다');
+      res.reload();
+    }
+  };
 
   const menu = (e: MouseEvent) => {
     const entries: MenuEntry[] = [];
@@ -160,7 +228,11 @@ export function CollectionView({ kind, id = '' }: { kind: Kind; id?: string }) {
           showAlbum={kind !== 'album'}
           editablePlaylistId={editable ? playlistId : undefined}
           onRemoved={onRemoved}
+          onReorder={editable && playlistId && data.tracks.every((t) => t.setVideoId) ? reorder : undefined}
         />
+      )}
+      {editable && playlistId && data.sectionsContinuation && (
+        <Suggestions playlistId={playlistId} title={h.title} continuation={data.sectionsContinuation} revision={revision} />
       )}
       {data.continuation && <LoadMore onReach={more} busy={busy} />}
       {data.shelves.map((s, i) => <ShelfView key={`${s.title}-${i}`} shelf={s} />)}

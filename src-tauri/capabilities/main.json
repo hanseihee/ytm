@@ -1,8 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "앱 화면: 엔진 요청·상태 조회·로그인 창 열기, 이벤트 듣기, 외부 링크 열기, 테마에 맞춘 창 제목 막대·바탕색, Spotify 공개 플레이리스트·멜론 TOP 100 곡 목록 읽기.",
-  "windows": ["main"],
+  "description": "앱 화면·미니 플레이어: 엔진 요청·상태 조회·로그인 창 열기, 이벤트 듣기, 외부 링크 열기, 테마에 맞춘 창 제목 막대·바탕색, 차트 곡 목록 읽기, 영상 창·미니 플레이어·알림·전역 단축키 설정.",
+  "windows": [
+    "main",
+    "mini"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-set-theme",
@@ -14,9 +17,17 @@
     "allow-show-engine",
     "allow-hide-engine",
     "allow-spotify-playlist",
-    "allow-melon-chart-page",
+    "allow-chart-fetch",
     "allow-ui-log",
     "allow-eq-set",
-    "allow-eq-visualizer"
+    "allow-eq-visualizer",
+    "allow-video-window",
+    "allow-mini-window",
+    "allow-mini-pin",
+    "allow-set-prefs",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "allow-show-main-window"
   ]
 }

@@ -26,11 +26,20 @@ export interface PlayerState {
   repeat: 'NONE' | 'ALL' | 'ONE' | string;
   volume: number;
   muted: boolean;
+  /** 노래(음원)↔영상(뮤직비디오) 짝이 있는지 */
+  avAvailable?: boolean;
+  /** 지금 영상 쪽인지 */
+  avVideo?: boolean;
+  /** 실제 영상 화면이 나오는지(노래 쪽은 소리만 받는다) */
+  hasPicture?: boolean;
+  /** 짝 버전 videoId와 시간 차이(짝 버전 위치 = 지금 위치 + avShift초) */
+  avOther?: string;
+  avShift?: number;
   /** 엔진이 상태를 읽은 시각(ms) — 재생 위치를 이어서 계산할 때 쓴다 */
   at: number;
 }
 
-export type EngineMethod = 'api' | 'status' | 'state' | 'play' | 'queueAdd' | 'queue' | 'queueJump' | 'control';
+export type EngineMethod = 'api' | 'status' | 'state' | 'play' | 'queueAdd' | 'queue' | 'queueJump' | 'control' | 'avSwitch' | 'videoView';
 
 /** 엔진 오류를 사람이 읽을 문장으로. */
 export function describeError(err: unknown): string {
@@ -60,3 +69,16 @@ export const onPlayerState = (fn: (s: PlayerState) => void): Promise<UnlistenFn>
   listen<PlayerState>('player-state', (e) => fn(e.payload));
 export const onMenuAction = (fn: (action: string) => void): Promise<UnlistenFn> =>
   listen<string>('menu-action', (e) => fn(e.payload));
+
+// ── 데스크톱 부가 기능(src-tauri/src/desktop.rs) ──────────────────────────────
+export interface Prefs {
+  notifications: boolean;
+  globalShortcuts: boolean;
+  videoOnTop: boolean;
+}
+export const videoWindow = (open: boolean) => invoke<void>('video_window', { open });
+export const miniWindow = (open: boolean) => invoke<void>('mini_window', { open });
+export const miniPin = (on: boolean) => invoke<void>('mini_pin', { on });
+export const sendPrefs = (prefs: Prefs) => invoke<{ failed: string[] }>('set_prefs', { prefs });
+export const onVideoWindow = (fn: (open: boolean) => void): Promise<UnlistenFn> =>
+  listen<boolean>('video-window', (e) => fn(e.payload));

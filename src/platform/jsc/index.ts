@@ -2,7 +2,8 @@
 // 가사 찾기는 데스크톱과 같은 코드(src/lib)를 그대로 돌려 결과를 맞춘다.
 // 앱은 __coreCall(id, 이름, 인자 JSON 배열)로 부르고, 결과는 __native.done으로 JSON을 받는다.
 import './polyfills';
-import { loadLyrics } from '../../lib/lyrics';
+import { loadLyrics, lyricsOffset, setLyricsOffset } from '../../lib/lyrics';
+import { clearPlays, flushPlays, recordState, statsSummary } from '../../lib/stats';
 import * as spotify from '../../lib/spotify';
 import * as ytm from '../../lib/ytm/client';
 import { native } from './native';
@@ -19,6 +20,11 @@ const api: Record<string, (...args: never[]) => unknown> = {
   playlistMore: ytm.playlistMore,
   artist: ytm.artist,
   browse: ytm.browse,
+  // 둘러보기
+  moods: ytm.moods,
+  moodCategory: ytm.moodCategory,
+  newReleases: ytm.newReleases,
+  ytmCharts: ytm.ytmCharts,
   // 보관함
   likedSongs: ytm.likedSongs,
   libraryPlaylists: ytm.libraryPlaylists,
@@ -31,6 +37,14 @@ const api: Record<string, (...args: never[]) => unknown> = {
   removeFromPlaylist: ytm.removeFromPlaylist,
   renamePlaylist: ytm.renamePlaylist,
   deletePlaylist: ytm.deletePlaylist,
+  movePlaylistItem: ytm.movePlaylistItem,
+  playlistSections: ytm.playlistSections,
+  history: ytm.history,
+  libraryAlbums: ytm.libraryAlbums,
+  libraryArtists: ytm.libraryArtists,
+  librarySubscriptions: ytm.librarySubscriptions,
+  libraryMore: ytm.libraryMore,
+  setSubscribed: ytm.setSubscribed,
   // 재생
   play: ytm.play,
   playTrack: ytm.playTrack,
@@ -40,10 +54,24 @@ const api: Record<string, (...args: never[]) => unknown> = {
   queue: ytm.queue,
   queueJump: ytm.queueJump,
   control: ytm.control,
+  avSwitch: ytm.avSwitch,
+  videoView: ytm.videoView,
+  // 지금 곡 탭
+  related: ytm.related,
+  comments: ytm.comments,
+  commentsMore: ytm.commentsMore,
+  // 청취 통계(이 기기)
+  recordState,
+  flushPlays,
+  statsSummary,
+  clearPlays,
   // 가사
   lyrics: loadLyrics,
-  // 차트(멜론 TOP 100·Spotify)
+  lyricsOffset,
+  setLyricsOffset,
+  // 차트(멜론·지니·Spotify·빌보드 등)
   charts: () => spotify.CHARTS,
+  chartGroups: () => spotify.CHART_GROUP_ORDER,
   chartKind: spotify.chartKind,
   spotifyPlaylist: spotify.fetchPlaylist,
   matchTrack: spotify.matchTrack,

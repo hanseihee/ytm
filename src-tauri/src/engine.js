@@ -30,16 +30,48 @@
     invoke('engine_event', { kind, data }).catch((err) => console.warn('[ytm-engine] 이벤트 전달 실패', kind, err));
 
   // ── 1. mediaSession 바꿔 끼우기 ─────────────────────────────────────────
+  // 곡 정보·재생 상태는 가로채 앱에 넘긴다. 데스크톱은 앱(media.rs)이 맥 '지금 재생'을 직접 채우므로 여기서 멈춘다.
+  // iOS 앱은 소리를 내는 WebKit이 잠금 화면·제어 센터 정보를 내보내서, 실제 mediaSession에도 그대로 넘겨야
+  // 잠금 화면에 표지·제목과 이전/다음 단추가 나온다(2026-10-14 아이폰: 넘기지 않으면 표지가 비었다).
+  let realSession = null;
+  if (window.__ytmIpc) {
+    try {
+      const desc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'mediaSession');
+      realSession = (desc && desc.get && desc.get.call(navigator)) || null;
+    } catch {
+      realSession = null;
+    }
+  }
+  const forward = (what, fn) => {
+    if (!realSession) return;
+    try {
+      fn(realSession);
+    } catch (err) {
+      console.warn('[ytm-engine] 잠금 화면 정보 넘기기 실패', what, err);
+    }
+  };
   const session = { metadata: null, playbackState: 'none', handlers: Object.create(null) };
   const fakeSession = {
     get metadata() { return session.metadata; },
-    set metadata(value) { session.metadata = value || null; schedule(); },
+    set metadata(value) {
+      session.metadata = value || null;
+      forward('metadata', (s) => { s.metadata = value || null; });
+      schedule();
+    },
     get playbackState() { return session.playbackState; },
-    set playbackState(value) { session.playbackState = String(value); schedule(); },
+    set playbackState(value) {
+      session.playbackState = String(value);
+      forward('playbackState', (s) => { s.playbackState = value; });
+      schedule();
+    },
     setActionHandler(action, handler) {
       session.handlers[action] = typeof handler === 'function' ? handler : null;
+      forward(action, (s) => s.setActionHandler(action, typeof handler === 'function' ? handler : null));
     },
-    setPositionState() { schedule(); },
+    setPositionState(state) {
+      forward('positionState', (s) => s.setPositionState(state));
+      schedule();
+    },
     setCameraActive() {},
     setMicrophoneActive() {},
   };
@@ -207,6 +239,342 @@
     return false;
   }
 
+  // ── 4.5 노래↔영상 ──────────────────────────────────────────────────────
+  // YouTube Music 웹 플레이어의 [노래 | 동영상] 전환(<ytmusic-av-toggle>)을 그대로 누른다. 짝 버전 사이의 시간 대응
+  // (예: 밤편지 뮤직비디오는 음원보다 24초 늦게 시작)은 YouTube Music이 맞춰 준다(2026-10-14 시험: 55초 → 83초).
+  // 고른 쪽은 YouTube Music이 기억해 다음 곡에도 쓴다(playback-mode ATV_PREFERRED / OMV_PREFERRED).
+  const avToggle = () => document.querySelector('ytmusic-av-toggle');
+
+  async function avSwitch({ video }) {
+    const t = avToggle();
+    if (!t || !t.hasAttribute('selected-queue-item-has-counterpart')) throw new Error('no_counterpart');
+    const want = !!video;
+    const now = () => t.getAttribute('is-video-playback-mode-selected') === 'true';
+    if (now() !== want) {
+      const button = t.querySelector(want ? 'button.video-button' : 'button.song-button');
+      if (!button) throw new Error('no_av_button');
+      button.click();
+      for (let i = 0; i < 40 && now() !== want; i++) await sleep(100);
+    }
+    schedule();
+    return readState();
+  }
+
+  // 영상만 보이는 화면: 앱이 엔진 화면을 영상 창(데스크톱)이나 지금 재생 화면(iOS)에 띄울 때 쓴다.
+  // 페이지의 나머지는 숨기고 플레이어만 --ytm-x/y/w/h 자리에 둔다. pip이면 화면 속 화면 버튼을 페이지 안에 둔다.
+  // 배치(layout):
+  // - fill: 화면 가득(예전 방식)
+  // - window: 데스크톱 영상 창. 어두운 바탕 위에 영상을 조금 안쪽에 띄우고 둘레에 앰비언트 빛
+  // - card: iOS 지금 재생. 바탕을 비워(앱 배경이 보이게) 표지와 같은 너비의 둥근 영상 + 앰비언트 빛
+  // 앰비언트 빛은 YouTube '앰비언트 모드'처럼 영상 프레임을 작은 캔버스에 조금씩 겹쳐 그리고(장면이 바뀌어도
+  // 번쩍이지 않게) 크게 흐려 영상 뒤에 깐다.
+  const VIDEO_CSS = `
+    html.ytm-app-video, html.ytm-app-video body { overflow: hidden !important; background: var(--ytm-bg, #000) !important; }
+    /* 페이지 전부를 숨기고(YouTube Music이 visibility: visible을 직접 준 요소까지 — 2026-10-14 관찰: 상단 메뉴 막대,
+       #player-bar-background, 목록 화면) 영상에 필요한 상자만 되살린다. 플레이어 안의 다른 덮개도 그대로 숨는다. */
+    html.ytm-app-video body * { visibility: hidden !important; }
+    html.ytm-app-video ytmusic-player#player,
+    html.ytm-app-video ytmusic-player#player #song-video,
+    html.ytm-app-video ytmusic-player#player .player-wrapper,
+    html.ytm-app-video ytmusic-player#player #movie_player,
+    html.ytm-app-video ytmusic-player#player .html5-video-container,
+    html.ytm-app-video ytmusic-player#player video.html5-main-video { visibility: visible !important; }
+    /* 접힌 재생 화면(ytmusic-player-page)은 transform으로 화면 아래에 밀려 있어(2026-10-14 관찰: translateY 748px)
+       안의 fixed 요소가 그 상자를 기준으로 잡힌다. 영상 모드일 때만 변환을 풀고 맨 위로 올린다. */
+    html.ytm-app-video ytmusic-player-page#player-page {
+      transform: none !important; will-change: auto !important; z-index: 2147483646 !important; background: transparent !important;
+    }
+    html.ytm-app-video ytmusic-player#player {
+      position: fixed !important; inset: auto !important;
+      left: var(--ytm-x, 0px) !important; top: var(--ytm-y, 0px) !important;
+      width: var(--ytm-w, 100vw) !important; height: var(--ytm-h, 100vh) !important;
+      max-width: none !important; max-height: none !important; margin: 0 !important; padding: 0 !important;
+      z-index: 2147483646 !important; background: #000 !important; display: block !important;
+      visibility: visible !important; transform: none !important;
+      border-radius: var(--ytm-r, 0px) !important; overflow: hidden !important;
+      box-shadow: var(--ytm-shadow, none) !important;
+      transition: top 0.45s ease, height 0.45s ease, left 0.45s ease, width 0.45s ease !important;
+    }
+    html.ytm-app-video ytmusic-player#player #song-image { display: none !important; }
+    html.ytm-app-video ytmusic-player#player #song-video,
+    html.ytm-app-video ytmusic-player#player .player-wrapper,
+    html.ytm-app-video ytmusic-player#player #movie_player,
+    html.ytm-app-video ytmusic-player#player .html5-video-container {
+      display: block !important; position: absolute !important; inset: 0 !important;
+      width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important;
+      /* #song-video는 16:9 비율을 위쪽 여백(padding-top)으로 잡아 상자가 영상 아래로 늘어난다 */
+      padding: 0 !important; margin: 0 !important; min-width: 0 !important; min-height: 0 !important;
+    }
+    html.ytm-app-video ytmusic-player#player video.html5-main-video {
+      position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+      left: 0 !important; top: 0 !important; object-fit: cover !important;
+    }
+    html.ytm-app-video ytmusic-player#player .ytp-chrome-top, html.ytm-app-video ytmusic-player#player .ytp-gradient-top,
+    html.ytm-app-video ytmusic-player#player .ytp-overlays-container, html.ytm-app-video ytmusic-player#player .ytp-player-content,
+    html.ytm-app-video ytmusic-player#player .ytp-iv-video-content, html.ytm-app-video ytmusic-player#player .ytp-cued-thumbnail-overlay,
+    html.ytm-app-video ytmusic-player#player .ytp-bezel, html.ytm-app-video ytmusic-player#player .ytp-unmute,
+    html.ytm-app-video ytmusic-player#player .ytp-spinner, html.ytm-app-video ytmusic-player#player .ytp-paid-content-overlay,
+    html.ytm-app-video ytmusic-player#player .ytp-chrome-bottom, html.ytm-app-video ytmusic-player#player .ytp-gradient-bottom { display: none !important; }
+    #ytm-app-ambient { display: none; }
+    /* 빛은 영상 테두리를 따라 조금 넓게 깔고 흐린다(영상 모양 그대로, 과하지 않게). */
+    html.ytm-app-video.ytm-app-glow #ytm-app-ambient {
+      display: block; visibility: visible !important; position: fixed;
+      left: calc(var(--ytm-x, 0px) - var(--ytm-spread, 16px)); top: calc(var(--ytm-y, 0px) - var(--ytm-spread, 16px));
+      width: calc(var(--ytm-w, 100vw) + 2 * var(--ytm-spread, 16px)); height: calc(var(--ytm-h, 100vh) + 2 * var(--ytm-spread, 16px));
+      border-radius: var(--ytm-r, 0px);
+      z-index: 2147483645; pointer-events: none; opacity: var(--ytm-glow, 0.55);
+      filter: blur(var(--ytm-blur, 20px)) saturate(1.3);
+      transition: opacity 0.6s ease, top 0.45s ease, height 0.45s ease, left 0.45s ease, width 0.45s ease;
+    }
+    #ytm-app-pip { display: none; }
+    html.ytm-app-video.ytm-app-pip #ytm-app-pip {
+      display: grid; place-items: center; position: fixed; right: 14px; top: 14px; z-index: 2147483647;
+      width: 52px; height: 52px; border-radius: 26px; border: 0; padding: 0; cursor: pointer; visibility: visible !important;
+      background: rgba(0, 0, 0, 0.55); color: #fff; font: 600 13px/1 -apple-system, system-ui, sans-serif;
+    }`;
+
+  function ensureVideoStyle() {
+    if (document.getElementById('ytm-app-video-style')) return;
+    const style = document.createElement('style');
+    style.id = 'ytm-app-video-style';
+    style.textContent = VIDEO_CSS;
+    (document.head || document.documentElement).appendChild(style);
+    const pip = document.createElement('button');
+    pip.id = 'ytm-app-pip';
+    pip.type = 'button';
+    pip.setAttribute('aria-label', '화면 속 화면');
+    pip.textContent = 'PiP';
+    pip.addEventListener('click', () => togglePip());
+    (document.body || document.documentElement).appendChild(pip);
+  }
+
+  /** 화면 속 화면 켜고 끄기. 사용자 동작 안에서만 된다(페이지 단추, 또는 앱이 사용자 탭으로 부를 때). */
+  function togglePip() {
+    const v = document.querySelector('video');
+    if (!v) throw new Error('no_video');
+    if (typeof v.webkitSetPresentationMode === 'function') {
+      const on = v.webkitPresentationMode !== 'picture-in-picture';
+      v.webkitSetPresentationMode(on ? 'picture-in-picture' : 'inline');
+      return { pip: on };
+    }
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture();
+      return { pip: false };
+    }
+    if (typeof v.requestPictureInPicture === 'function') {
+      v.requestPictureInPicture().catch((err) => console.warn('[ytm-engine] 화면 속 화면 실패', err));
+      return { pip: true };
+    }
+    throw new Error('pip_unsupported');
+  }
+
+  // 배치별 모양: 안쪽 여백(너비 비율), 모서리, 그림자, 바탕, 앰비언트 빛 세기·흐림
+  const VIDEO_LAYOUTS = {
+    fill: { inset: 0, radius: 0, shadow: null, bg: '#000', glow: 0 },
+    window: { inset: 0.06, radius: 12, shadow: [0, 18, 50, 0.55], bg: '#060608', glow: 0.6, blur: 26, spread: 18 },
+    card: { inset: 0.06, radius: 12, shadow: [0, 14, 34, 0.45], bg: 'transparent', glow: 0.55, blur: 20, spread: 14 },
+  };
+  const videoMode = {
+    on: false, layout: VIDEO_LAYOUTS.fill, colors: false, timer: 0, canvas: null, ctx: null, primed: false, colorsAt: 0, blocked: false,
+    // 검은 띠 감지: 위·아래 띠 비율(0~0.3)과 최근 표본, 어느 영상의 값인지
+    bars: 0, barSamples: [], barSrc: '', probe: null, probeAt: 0,
+  };
+
+  /**
+   * 영상 안에 박힌 위·아래 검은 띠 비율. 어두운 장면을 띠로 잘못 보지 않게 최근 약 4초(12번) 표본 중 가장 작은 값을 쓴다.
+   * 다른 출처라 픽셀을 읽을 수 없으면 0.
+   */
+  function detectBars(v) {
+    const now = Date.now();
+    if (now - videoMode.probeAt < 300) return;
+    videoMode.probeAt = now;
+    const src = v.currentSrc || v.src || '';
+    if (src !== videoMode.barSrc) {
+      videoMode.barSrc = src;
+      videoMode.barSamples = [];
+      if (videoMode.bars) {
+        videoMode.bars = 0;
+        layoutVideo();
+      }
+    }
+    if (!videoMode.probe) {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      videoMode.probe = c.getContext('2d', { willReadFrequently: true });
+    }
+    const ctx = videoMode.probe;
+    // 같은 프레임(멈춤)을 여러 번 세지 않는다 — 어두운 장면 하나를 띠로 잘못 보지 않게.
+    if (!ctx || v.currentTime === videoMode.probeTime) return;
+    videoMode.probeTime = v.currentTime;
+    let data;
+    try {
+      ctx.drawImage(v, 0, 0, 64, 64);
+      data = ctx.getImageData(0, 0, 64, 64).data;
+    } catch {
+      return;
+    }
+    const dark = (y) => {
+      let sum = 0, max = 0;
+      for (let x = 0; x < 64; x++) {
+        const i = (y * 64 + x) * 4;
+        const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        sum += l;
+        if (l > max) max = l;
+      }
+      return sum / 64 < 14 && max < 40;
+    };
+    let top = 0;
+    while (top < 20 && dark(top)) top++;
+    let bottom = 0;
+    while (bottom < 20 && dark(63 - bottom)) bottom++;
+    // 전체가 어두운 장면(페이드 등)은 표본에서 뺀다.
+    if (top >= 20 && bottom >= 20) return;
+    videoMode.barSamples.push(Math.min(top, bottom) / 64);
+    if (videoMode.barSamples.length > 12) videoMode.barSamples.shift();
+    if (videoMode.barSamples.length < 3) return;
+    let bars = Math.min(...videoMode.barSamples);
+    bars = bars >= 0.04 ? Math.min(0.3, bars + 1 / 128) : 0;
+    if (Math.abs(bars - videoMode.bars) > 0.012) {
+      videoMode.bars = bars;
+      layoutVideo();
+    }
+  }
+
+  /** 플레이어 자리 계산: 영상 비율을 지키며 여백 안에 가운데로 */
+  function layoutVideo() {
+    if (!videoMode.on) return;
+    const L = videoMode.layout;
+    const root = document.documentElement;
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const v = document.querySelector('video');
+    // 영상 안에 검은 띠가 박혀 있으면(시네마 비율 뮤직비디오) 띠를 뺀 실제 화면 비율로 자리를 잡는다.
+    const crop = videoMode.bars || 0;
+    const aspect = v && v.videoWidth > 0 && v.videoHeight > 0 ? v.videoWidth / (v.videoHeight * (1 - 2 * crop)) : 16 / 9;
+    let w = W * (1 - 2 * L.inset);
+    let h = w / aspect;
+    const maxH = H - (L.inset ? W * L.inset * 2 : 0);
+    if (h > maxH) {
+      h = maxH;
+      w = h * aspect;
+    }
+    const px = (n) => `${Math.round(n)}px`;
+    // iOS는 데스크톱 화면 모드라 페이지가 줄여 보인다(visualViewport.scale < 1). 모서리·그림자·흐림은 화면 크기 기준으로 맞춘다.
+    const scale = (window.visualViewport && window.visualViewport.scale) || 1;
+    const pt = (n) => px(n / scale);
+    root.style.setProperty('--ytm-x', px((W - w) / 2));
+    root.style.setProperty('--ytm-y', px((H - h) / 2));
+    root.style.setProperty('--ytm-w', px(w));
+    root.style.setProperty('--ytm-h', px(h));
+    root.style.setProperty('--ytm-r', pt(L.radius));
+    root.style.setProperty('--ytm-shadow', L.shadow ? `0 ${pt(L.shadow[1])} ${pt(L.shadow[2])} rgba(0,0,0,${L.shadow[3]})` : 'none');
+    root.style.setProperty('--ytm-bg', L.bg);
+    root.style.setProperty('--ytm-glow', String(L.glow));
+    root.style.setProperty('--ytm-blur', pt(L.blur || 20));
+    root.style.setProperty('--ytm-spread', pt(L.spread || 16));
+  }
+
+  /** 앰비언트 빛: 영상 프레임을 작은 캔버스에 18%씩 겹쳐 그린다(약 0.4초에 걸쳐 새 장면으로 바뀐다). */
+  function ambientTick() {
+    const v = document.querySelector('video');
+    if (!videoMode.on || !v || !v.videoWidth || v.readyState < 2) return;
+    detectBars(v);
+    // 영상 비율이 바뀌면(4:3 뮤직비디오 등) 자리를 다시 잡는다.
+    const aspect = v.videoWidth / v.videoHeight;
+    if (Math.abs(aspect - (videoMode.aspect || 0)) > 0.01) {
+      videoMode.aspect = aspect;
+      layoutVideo();
+    }
+    if (!(videoMode.layout.glow > 0)) return;
+    if (!videoMode.canvas) {
+      const c = document.createElement('canvas');
+      c.id = 'ytm-app-ambient';
+      c.width = 48;
+      c.height = 27;
+      (document.body || document.documentElement).appendChild(c);
+      videoMode.canvas = c;
+      videoMode.ctx = c.getContext('2d', { willReadFrequently: true });
+    }
+    const ctx = videoMode.ctx;
+    if (!ctx) return;
+    ctx.globalAlpha = videoMode.primed ? 0.18 : 1;
+    try {
+      // 박힌 검은 띠는 빼고 그린다(빛이 띠 때문에 어두워지지 않게).
+      const sy = Math.round(v.videoHeight * (videoMode.bars || 0));
+      ctx.drawImage(v, 0, sy, v.videoWidth, v.videoHeight - 2 * sy, 0, 0, videoMode.canvas.width, videoMode.canvas.height);
+      videoMode.primed = true;
+    } catch {
+      return;
+    }
+    // iOS 앱: 영상의 위·아래 평균색을 1.5초마다 알려 배경 그라데이션이 영상을 따라가게 한다.
+    const now = Date.now();
+    if (videoMode.colors && !videoMode.blocked && now - videoMode.colorsAt > 1500) {
+      videoMode.colorsAt = now;
+      try {
+        const { width, height } = videoMode.canvas;
+        const data = ctx.getImageData(0, 0, width, height).data;
+        const avg = (y0, y1) => {
+          let r = 0, g = 0, b = 0, n = 0;
+          for (let y = y0; y < y1; y++) {
+            for (let x = 0; x < width; x++) {
+              const i = (y * width + x) * 4;
+              r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+            }
+          }
+          return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+        };
+        emit('ambient', { top: avg(0, height >> 1), bottom: avg(height >> 1, height) });
+      } catch {
+        // 다른 출처 영상이라 픽셀을 읽을 수 없으면 빛만 보이고 색은 알리지 않는다.
+        videoMode.blocked = true;
+      }
+    }
+  }
+
+  /**
+   * iOS: 화면을 가로로 돌렸다 오면 WebKit이 페이지 배율을 줄인 채 두는 일이 있어(영상이 아주 작아짐),
+   * 배율을 1로 묶는다. 데스크톱(맥 WebKit)은 viewport를 쓰지 않는다.
+   */
+  function pinViewport() {
+    if (!window.__ytmIpc || !document.head) return;
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      document.head.appendChild(meta);
+    }
+    const content = 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no';
+    if (meta.content !== content) meta.content = content;
+  }
+
+  function videoView({ on, pip, layout, inset, colors }) {
+    ensureVideoStyle();
+    pinViewport();
+    const root = document.documentElement;
+    videoMode.on = !!on;
+    const base = VIDEO_LAYOUTS[layout] || VIDEO_LAYOUTS.fill;
+    // 앱이 여백을 정해 주면(iOS: 표지와 같은 너비) 그대로 쓴다.
+    videoMode.layout = typeof inset === 'number' && inset >= 0 && inset < 0.4 ? { ...base, inset } : base;
+    videoMode.colors = !!colors;
+    root.classList.toggle('ytm-app-video', !!on);
+    root.classList.toggle('ytm-app-pip', !!on && !!pip);
+    root.classList.toggle('ytm-app-glow', !!on && videoMode.layout.glow > 0);
+    window.clearInterval(videoMode.timer);
+    videoMode.timer = 0;
+    if (on) {
+      videoMode.aspect = 0;
+      videoMode.primed = false;
+      layoutVideo();
+      // 빛이 없는 배치(fill)도 검은 띠 감지·비율 맞추기는 한다.
+      videoMode.timer = window.setInterval(ambientTick, 66);
+    }
+    // 플레이어가 새 크기에 맞춰 화질·배치를 다시 잡게 한다.
+    window.dispatchEvent(new Event('resize'));
+    return { on: !!on };
+  }
+  window.addEventListener('resize', () => layoutVideo());
+
   // 대기열은 <ytmusic-player-queue>에 붙은 Redux 저장소가 관리한다(getState().queue: items, automixItems,
   // selectedItemIndex, nextQueueItemId, repeatMode). YouTube Music 자체의 "끼워 넣기"는
   // music/get_queue로 곡 데이터를 받아 ADD_ITEMS {nextQueueItemId, index, items, shouldAssignIds}를 보낸다(2026-10-14 분석).
@@ -351,6 +719,8 @@
       store = null;
     }
     const repeatAttr = (qs && qs.repeatMode) || (b && b.getAttribute('repeat-mode'));
+    const av = avToggle();
+    const pair = av && av.hasAttribute('selected-queue-item-has-counterpart') ? avPair(String(data.video_id || '')) : null;
     return {
       videoId: String(data.video_id || ''),
       title: String((meta && meta.title) || data.title || ''),
@@ -366,8 +736,37 @@
       repeat: repeatAttr || 'NONE',
       volume: finite(call(p, 'getVolume'), 100),
       muted: call(p, 'isMuted') === true,
+      // 노래(음원)↔영상(뮤직비디오) 짝이 있는지, 지금 영상 쪽인지, 실제 화면(영상 프레임)이 나오는지
+      avAvailable: !!(av && av.hasAttribute('selected-queue-item-has-counterpart')),
+      avVideo: !!(av && av.getAttribute('is-video-playback-mode-selected') === 'true'),
+      hasPicture: !!(video && video.videoWidth > 0),
+      // 짝 버전 videoId와 시간 차이(짝 버전 위치 = 지금 위치 + avShift초). 가사를 바꿔 부르지 않고 옮겨 쓴다.
+      avOther: pair ? pair.other : '',
+      avShift: pair ? pair.shift : 0,
       at: Date.now(),
     };
+  }
+
+  /**
+   * 대기열 항목 playlistPanelVideoWrapperRenderer: primaryRenderer(지금 항목) + counterpart[0](짝 버전과 segmentMap).
+   * 2026-10-14 밤편지: 음원 6744glqD6lk ↔ 뮤직비디오 BzYnNdJhZQw, counterpartVideoStartTimeMilliseconds 24015.
+   */
+  function avPair(videoId) {
+    const q = queueState();
+    if (!videoId || !q || !Array.isArray(q.items)) return null;
+    for (const item of q.items) {
+      const w = item && item.playlistPanelVideoWrapperRenderer;
+      const primary = w && w.primaryRenderer && w.primaryRenderer.playlistPanelVideoRenderer;
+      const c = w && Array.isArray(w.counterpart) ? w.counterpart[0] : null;
+      const counter = c && c.counterpartRenderer && c.counterpartRenderer.playlistPanelVideoRenderer;
+      if (!primary || !counter) continue;
+      const seg = c.segmentMap && Array.isArray(c.segmentMap.segment) ? c.segmentMap.segment[0] : null;
+      let diff = seg ? (Number(seg.counterpartVideoStartTimeMilliseconds) - Number(seg.primaryVideoStartTimeMilliseconds)) / 1000 : 0;
+      if (!Number.isFinite(diff)) diff = 0;
+      if (primary.videoId === videoId) return { other: String(counter.videoId || ''), shift: diff };
+      if (counter.videoId === videoId) return { other: String(primary.videoId || ''), shift: -diff };
+    }
+    return null;
   }
 
   // ── 6. 상태 보고 (바뀐 것이 있을 때만) ─────────────────────────────────
@@ -382,7 +781,7 @@
     const now = state.at;
     const key = [state.videoId, state.title, state.artist, state.album, state.artwork, state.playing,
       state.buffering, state.ad, Math.round(state.duration), state.likeStatus, state.repeat,
-      Math.round(state.volume), state.muted].join('\u0001');
+      Math.round(state.volume), state.muted, state.avAvailable, state.avVideo, state.hasPicture, state.avOther].join('\u0001');
     if (last && key === lastKey) {
       // 위치가 예상과 1초 넘게 어긋나면(탐색·버퍼링) 바로, 아니면 5초마다 보정값을 보낸다.
       const expected = last.position + (last.playing ? (now - lastSentAt) / 1000 : 0);
@@ -628,6 +1027,9 @@
     control: ({ command, value }) => control(command, value),
     eq: setEq,
     eqStream,
+    avSwitch,
+    videoView,
+    pip: () => togglePip(),
   };
 
   async function handle(id, method, args) {

@@ -13,7 +13,9 @@ import {
   rememberChart,
   savedPlaylistId,
   CHARTS,
+  CHART_GROUP_ORDER,
   chartKind,
+  chartShortLabel,
   syncToYouTubeMusic,
   todayLabel,
   type Match,
@@ -43,25 +45,32 @@ function ChartPicker({ current }: { current: string }) {
         onClick={() => setOpen((v) => !v)}
       >
         <Icon name="chart" size={16} />
-        <span className="chart-picker__current">{chart?.label ?? '나라'}</span>
+        <span className="chart-picker__current">{chart ? chartShortLabel(chart) : '차트'}</span>
         <span className="chart-picker__hint">{open ? '접기' : '차트 바꾸기'}</span>
         <Icon name={open ? 'up' : 'down'} size={16} />
       </button>
       {open && (
-        <div id="chart-picker-list" className="chart-picker__list" role="group" aria-label="차트 고르기">
-          {CHARTS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={`chip${c.id === current ? ' is-on' : ''}`}
-              aria-current={c.id === current ? 'page' : undefined}
-              onClick={() => {
-                setOpen(false);
-                if (c.id !== current) replace({ name: 'spotify', id: c.id });
-              }}
-            >
-              {c.label}
-            </button>
+        <div id="chart-picker-list" className="chart-picker__groups" role="group" aria-label="차트 고르기">
+          {CHART_GROUP_ORDER.map((group) => (
+            <div key={group} className="chart-picker__group">
+              <span className="chart-picker__group-title">{group}</span>
+              <div className="chart-picker__list">
+                {CHARTS.filter((c) => c.group === group).map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`chip${c.id === current ? ' is-on' : ''}`}
+                    aria-current={c.id === current ? 'page' : undefined}
+                    onClick={() => {
+                      setOpen(false);
+                      if (c.id !== current) replace({ name: 'spotify', id: c.id });
+                    }}
+                  >
+                    {c.source === 'spotify' ? c.label : c.label.replace(/^(멜론|Apple Music) /, '')}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -165,7 +174,7 @@ export function SpotifyView({ id }: { id: string }) {
   const finished = total > 0 && done === total;
 
   if (res.loading && !playlist) {
-    return <div className="page">{isChart && <ChartPicker current={id} />}<Loading label={chartFor(id)?.source === 'melon' ? '멜론에서 곡 목록을 가져오는 중…' : 'Spotify에서 곡 목록을 가져오는 중…'} /></div>;
+    return <div className="page">{isChart && <ChartPicker current={id} />}<Loading label="차트 곡 목록을 가져오는 중…" /></div>;
   }
   if (res.error || !playlist) {
     return <div className="page">{isChart && <ChartPicker current={id} />}<ErrorState message={describeSpotifyError(res.error)} onRetry={res.reload} /></div>;
@@ -240,7 +249,7 @@ export function SpotifyView({ id }: { id: string }) {
           <div className="hero__meta">
             <span>{playlist.subtitle || 'Spotify'}</span>
             <span>{total}곡</span>
-            {chartFor(id)?.source !== 'melon' && <span>{todayLabel()} 기준</span>}
+            {(!chartFor(id) || chartFor(id)?.source === 'spotify') && <span>{todayLabel()} 기준</span>}
           </div>
           <p className="hero__desc">
             {finished

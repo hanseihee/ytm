@@ -81,6 +81,28 @@ final class DebugInbox {
     }
 }
 
+/// 시뮬레이터 시험용: 시뮬레이터는 Google 로그인이 막혀 있어(한국에서 로그아웃 상태면 musicpremium으로 넘어간다)
+/// Documents/debug/remote-engine 파일에 적힌 주소(예: http://127.0.0.1:8787)의 맥 시험 엔진으로 엔진 요청을 보낸다.
+enum DebugRemote {
+    static let url: URL? = {
+        let file = DebugInbox.directory.appendingPathComponent("remote-engine")
+        guard let text = try? String(contentsOf: file, encoding: .utf8) else { return nil }
+        return URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines))
+    }()
+
+    /// 중계 서버(ui-proxy.mjs)에 {cmd, args}를 보내고 data를 JSON 문자열로 받는다.
+    static func send(_ cmd: String, _ args: [String: Any]) async throws -> String {
+        guard let url else { throw BridgeError("remote_off") }
+        var request = URLRequest(url: url, timeoutInterval: 40)
+        request.httpMethod = "POST"
+        request.httpBody = Data(jsonString(["cmd": cmd, "args": args]).utf8)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let body = jsonObject(String(decoding: data, as: UTF8.self)) as? [String: Any] else { throw BridgeError("remote_bad_reply") }
+        guard body["ok"] as? Bool == true else { throw BridgeError(body["data"] as? String ?? "remote_failed") }
+        return jsonString(body["data"])
+    }
+}
+
 /// Foundation 값(JSON에서 읽은 것)을 그대로 Encodable로
 struct AnyJSON: Encodable {
     let value: Any

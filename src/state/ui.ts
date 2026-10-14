@@ -50,11 +50,18 @@ export const closeDialog = () => dialogStore.set(null);
 
 // ── 오른쪽 패널·가사 ───────────────────────────────────────────────────────
 export type Panel = 'none' | 'queue' | 'eq';
+/** 오른쪽 "지금 곡" 패널의 탭(YouTube Music의 다음 트랙·관련 항목·댓글) */
+export type PanelTab = 'queue' | 'related' | 'comments';
 export interface LayoutState {
   panel: Panel;
+  panelTab: PanelTab;
   lyrics: boolean;
+  /** 영상 창이 열려 있는지(Rust video-window 이벤트) */
+  video: boolean;
 }
-export const layoutStore = createStore<LayoutState>({ panel: 'none', lyrics: false });
+export const layoutStore = createStore<LayoutState>({ panel: 'none', panelTab: 'queue', lyrics: false, video: false });
+export const openPanelTab = (tab: PanelTab) => layoutStore.set((s) => ({ ...s, panel: 'queue', panelTab: tab }));
+export const setPanelTab = (tab: PanelTab) => layoutStore.set((s) => ({ ...s, panelTab: tab }));
 export const togglePanel = (panel: Panel) =>
   layoutStore.set((s) => ({ ...s, panel: s.panel === panel ? 'none' : panel }));
 export const toggleLyrics = (on?: boolean) => layoutStore.set((s) => ({ ...s, lyrics: on ?? !s.lyrics }));

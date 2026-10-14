@@ -15,7 +15,10 @@ final class Engine: NSObject {
     /// 데스크톱판 맥 엔진과 같은 Safari 식별 문자열. 휴대폰용 YouTube Music은 화면 구조가 달라 engine.js가 맞지 않는다.
     nonisolated static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
     /// engine.js가 제공하는 요청 이름(engine.rs METHODS와 같다).
-    static let methods: Set<String> = ["api", "status", "state", "play", "queueAdd", "queue", "queueJump", "control", "eq", "eqStream"]
+    /// YouTube Music 페이지 바탕색(#030303)
+    static let background = UIColor(red: 3 / 255, green: 3 / 255, blue: 3 / 255, alpha: 1)
+
+    static let methods: Set<String> = ["api", "status", "state", "play", "queueAdd", "queue", "queueJump", "control", "eq", "eqStream", "avSwitch", "videoView", "pip"]
 
     private static let readyTimeout: Double = 25
     private static let callTimeout: Double = 30
@@ -42,7 +45,8 @@ final class Engine: NSObject {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.allowsAirPlayForMediaPlayback = true
-        config.allowsPictureInPictureMediaPlayback = false
+        // 지금 재생 화면의 영상 모드에서 화면 속 화면(PiP)으로 띄울 수 있게
+        config.allowsPictureInPictureMediaPlayback = true
         config.defaultWebpagePreferences.preferredContentMode = .desktop
         let content = WKUserContentController()
         config.userContentController = content
@@ -60,7 +64,9 @@ final class Engine: NSObject {
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
-        webView.backgroundColor = UIColor(red: 3 / 255, green: 3 / 255, blue: 3 / 255, alpha: 1)
+        // 안전 영역만큼 페이지를 줄이지 않는다(가로 전체 화면에서 영상이 화면 폭을 다 쓰게).
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.backgroundColor = Self.background
         webView.isOpaque = false
         #if DEBUG
         webView.isInspectable = true
@@ -198,7 +204,7 @@ final class Engine: NSObject {
             }
             lastState = state
             onState?(state)
-        case "spectrum", "eq":
+        case "spectrum", "eq", "ambient":
             onEvent?(kind, json)
         default:
             log("알 수 없는 엔진 이벤트: \(kind)")

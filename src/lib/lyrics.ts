@@ -168,3 +168,40 @@ export function activeLine(lines: LyricLine[], position: number): number {
   }
   return ans;
 }
+
+// ── 가사 싱크 조절(곡마다, 이 기기에 저장) ─────────────────────────────────
+// LRCLIB 시간이 음원과 조금 어긋날 때 곡마다 ±로 맞춘다. 양수면 가사를 일찍 넘긴다.
+
+const OFFSET_KEY = 'ytm:lyrics-offset:v1';
+export const LYRIC_OFFSET_STEP = 0.5;
+export const LYRIC_OFFSET_MAX = 10;
+
+function offsets(): Record<string, number> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(OFFSET_KEY) ?? '{}');
+    return raw && typeof raw === 'object' ? (raw as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function lyricsOffset(videoId: string): number {
+  const v = Number(offsets()[videoId]);
+  return Number.isFinite(v) ? v : 0;
+}
+
+export function setLyricsOffset(videoId: string, seconds: number) {
+  const all = offsets();
+  const v = Math.max(-LYRIC_OFFSET_MAX, Math.min(LYRIC_OFFSET_MAX, Math.round(seconds * 10) / 10));
+  if (v === 0) delete all[videoId];
+  else all[videoId] = v;
+  // 오래 쌓이지 않게 최근 500곡만 남긴다.
+  const keys = Object.keys(all);
+  for (const k of keys.slice(0, Math.max(0, keys.length - 500))) delete all[k];
+  try {
+    localStorage.setItem(OFFSET_KEY, JSON.stringify(all));
+  } catch {
+    // 저장 못 해도 이번 실행에는 쓴다.
+  }
+  return v;
+}

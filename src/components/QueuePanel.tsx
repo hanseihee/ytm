@@ -1,16 +1,42 @@
+// 오른쪽 "지금 곡" 패널: 다음 트랙(대기열) · 관련 항목 · 댓글 (YouTube Music 재생 화면의 탭과 같다).
 import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import * as ytm from '../lib/ytm/client';
-import type { QueueItem, Track } from '../lib/ytm/types';
-import { playTrack } from '../state/library';
+import type { Card, CommentsPage, QueueItem, Shelf, Track } from '../lib/ytm/types';
+import { playEndpoint, playTrack } from '../state/library';
+import { go, routeForBrowse } from '../state/nav';
 import { usePlayer, formatTime } from '../state/player';
-import { openMenu, toastError, togglePanel } from '../state/ui';
+import { describeError } from '../lib/tauri';
+import { openMenu, setPanelTab, toastError, togglePanel, useLayout, type PanelTab } from '../state/ui';
 import { Cover } from './Cover';
 import { Icon } from './Icon';
-import { trackMenu } from './menus';
+import { cardMenu, trackMenu } from './menus';
 
 type QueueData = Awaited<ReturnType<typeof ytm.queue>>;
 
-export function QueuePanel() {
+const TABS: { id: PanelTab; label: string }[] = [
+  { id: 'queue', label: '다음 트랙' },
+  { id: 'related', label: '관련 항목' },
+  { id: 'comments', label: '댓글' },
+];
+
+function TrackItem({ track, current = false, onClick }: { track: Track; current?: boolean; onClick: () => void }) {
+  const menu = (e: MouseEvent) => {
+    e.preventDefault();
+    openMenu(e.clientX, e.clientY, trackMenu(track));
+  };
+  return (
+    <button type="button" className={`qitem${current ? ' is-current' : ''}`} onClick={onClick} onContextMenu={menu}>
+      <Cover src={track.thumbnail} size={40} />
+      <span className="qitem__meta">
+        <span className="qitem__title">{track.title}</span>
+        <span className="qitem__artist">{track.artists.map((a) => a.name).join(', ')}</span>
+      </span>
+      <span className="qitem__time">{track.duration !== undefined ? formatTime(track.duration) : ''}</span>
+    </button>
+  );
+}
+
+function QueueTab() {
   const videoId = usePlayer((s) => s.videoId);
   const [data, setData] = useState<QueueData | null>(null);
   const [error, setError] = useState(false);
@@ -38,58 +64,173 @@ export function QueuePanel() {
   const jump = (index: number) =>
     ytm.queueJump(index).then(() => setTimeout(refresh, 600), (err) => toastError(err, '그 곡으로 가지 못했습니다'));
 
-  const row = (track: Track, key: string, current: boolean, onClick: () => void) => {
-    const menu = (e: MouseEvent) => {
-      e.preventDefault();
-      openMenu(e.clientX, e.clientY, trackMenu(track));
-    };
-    return (
-      <button key={key} type="button" className={`qitem${current ? ' is-current' : ''}`} onClick={onClick} onContextMenu={menu}>
-        <Cover src={track.thumbnail} size={40} />
-        <span className="qitem__meta">
-          <span className="qitem__title">{track.title}</span>
-          <span className="qitem__artist">{track.artists.map((a) => a.name).join(', ')}</span>
-        </span>
-        <span className="qitem__time">{track.duration !== undefined ? formatTime(track.duration) : ''}</span>
-      </button>
-    );
-  };
-
   const items = data?.items ?? [];
   const current = items.findIndex((i) => i?.selected);
   const now = current >= 0 ? (items[current] as QueueItem) : undefined;
   const upcoming = items.map((item, index) => ({ item, index })).slice(current + 1).filter((x): x is { item: QueueItem; index: number } => !!x.item);
   const automix = data?.automix ?? [];
 
+  if (error && !data) return <p className="panel__empty">대기열을 읽지 못했습니다.</p>;
+  if (!data) return <p className="panel__empty">불러오는 중…</p>;
+  if (items.length === 0) return <p className="panel__empty">곡을 재생하면 다음에 나올 곡이 여기에 쌓입니다.</p>;
   return (
-    <aside className="panel" aria-label="대기열">
+    <>
+      {now && (
+        <>
+          <h3 className="panel__section">지금 재생 중</h3>
+          <TrackItem track={now.track} current onClick={() => undefined} />
+        </>
+      )}
+      {upcoming.length > 0 && <h3 className="panel__section">다음 곡</h3>}
+      {upcoming.map(({ item, index }) => <TrackItem key={`q-${index}-${item.track.videoId}`} track={item.track} onClick={() => jump(index)} />)}
+      {automix.length > 0 && <h3 className="panel__section">이어서 자동 재생</h3>}
+      {automix.map((t, i) => <TrackItem key={`a-${i}-${t.videoId}`} track={t} onClick={() => playTrack(t)} />)}
+    </>
+  );
+}
+
+function CardItem({ card }: { card: Card }) {
+  const open = () => {
+    if (card.browseId) go(routeForBrowse(card.browseId, card.params, card.title));
+    else if (card.play) void playEndpoint(card.play);
+  };
+  const menu = (e: MouseEvent) => {
+    e.preventDefault();
+    const entries = cardMenu(card);
+    if (entries.length) openMenu(e.clientX, e.clientY, entries);
+  };
+  const round = card.kind === 'artist' || card.kind === 'profile';
+  return (
+    <button type="button" className="pcard" onClick={open} onContextMenu={menu} title={card.title}>
+      <Cover src={card.thumbnail} size="100%" round={round} />
+      <span className="pcard__title">{card.title}</span>
+      <span className="pcard__sub">{card.subtitle}</span>
+    </button>
+  );
+}
+
+function RelatedTab() {
+  const videoId = usePlayer((s) => s.videoId);
+  const ad = usePlayer((s) => s.ad);
+  const [state, setState] = useState<{ id: string; shelves?: Shelf[]; error?: string }>({ id: '' });
+  useEffect(() => {
+    if (!videoId || ad) return;
+    let alive = true;
+    setState({ id: videoId });
+    ytm.related(videoId).then(
+      (r) => alive && setState({ id: videoId, shelves: r.shelves }),
+      (err) => alive && setState({ id: videoId, error: describeError(err) }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [videoId, ad]);
+
+  if (!videoId) return <p className="panel__empty">곡을 재생하면 비슷한 곡과 아티스트가 여기에 나옵니다.</p>;
+  if (state.error) return <p className="panel__empty">관련 항목을 불러오지 못했습니다: {state.error}</p>;
+  if (!state.shelves || state.id !== videoId) return <p className="panel__empty">불러오는 중…</p>;
+  if (!state.shelves.length) return <p className="panel__empty">이 곡은 관련 항목이 없습니다.</p>;
+  return (
+    <>
+      {state.shelves.map((s, i) => (
+        <section key={`${s.title}-${i}`} className="psection">
+          <h3 className="panel__section">{s.title}</h3>
+          {s.tracks.slice(0, 10).map((t, j) => <TrackItem key={`${t.videoId}-${j}`} track={t} onClick={() => playTrack(t)} />)}
+          {s.cards.length > 0 && (
+            <div className="pcards">
+              {s.cards.slice(0, 6).map((c, j) => <CardItem key={`${c.browseId ?? c.videoId}-${j}`} card={c} />)}
+            </div>
+          )}
+        </section>
+      ))}
+    </>
+  );
+}
+
+function CommentsTab() {
+  const videoId = usePlayer((s) => s.videoId);
+  const ad = usePlayer((s) => s.ad);
+  const [state, setState] = useState<{ id: string; page?: CommentsPage; error?: string; busy?: boolean }>({ id: '' });
+  useEffect(() => {
+    if (!videoId || ad) return;
+    let alive = true;
+    setState({ id: videoId });
+    ytm.comments(videoId).then(
+      (page) => alive && setState({ id: videoId, page }),
+      (err) => alive && setState({ id: videoId, error: describeError(err) }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [videoId, ad]);
+
+  const more = async () => {
+    const token = state.page?.continuation;
+    if (!token || state.busy) return;
+    setState((s) => ({ ...s, busy: true }));
+    try {
+      const next = await ytm.commentsMore(token);
+      setState((s) => (s.id === videoId && s.page ? { ...s, busy: false, page: { ...s.page, comments: [...s.page.comments, ...next.comments], continuation: next.continuation } } : s));
+    } catch (err) {
+      toastError(err, '댓글을 더 불러오지 못했습니다');
+      setState((s) => ({ ...s, busy: false }));
+    }
+  };
+
+  if (!videoId) return <p className="panel__empty">곡을 재생하면 댓글이 여기에 나옵니다.</p>;
+  if (state.error) return <p className="panel__empty">댓글을 불러오지 못했습니다: {state.error}</p>;
+  if (!state.page || state.id !== videoId) return <p className="panel__empty">불러오는 중…</p>;
+  if (!state.page.comments.length) return <p className="panel__empty">댓글이 없거나 댓글을 막은 곡입니다.</p>;
+  return (
+    <>
+      {state.page.countText && <h3 className="panel__section">{state.page.countText}</h3>}
+      <ul className="comments">
+        {state.page.comments.map((c) => (
+          <li key={c.id} className="comment">
+            <Cover src={c.avatar} size={32} round />
+            <div className="comment__body">
+              <div className="comment__head">
+                <span className={`comment__author${c.isArtist ? ' is-artist' : ''}`}>{c.author}</span>
+                <span className="comment__time">{c.published}</span>
+              </div>
+              <p className="comment__text">{c.text}</p>
+              {(c.likes || c.replies) && (
+                <div className="comment__meta">
+                  {c.likes && <span><Icon name="heart" size={12} /> {c.likes}</span>}
+                  {c.replies && <span><Icon name="comment" size={12} /> 답글 {c.replies}</span>}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {state.page.continuation && (
+        <button type="button" className="btn btn--quiet comments__more" disabled={state.busy} onClick={more}>
+          {state.busy ? '불러오는 중…' : '댓글 더 보기'}
+        </button>
+      )}
+    </>
+  );
+}
+
+export function QueuePanel() {
+  const tab = useLayout((s) => s.panelTab);
+  return (
+    <aside className="panel" aria-label="지금 곡">
       <header className="panel__head">
-        <h2 className="panel__title">대기열</h2>
-        <button type="button" className="icon-btn" aria-label="대기열 닫기" onClick={() => togglePanel('queue')}>
+        <div className="panel__tabs" role="tablist" aria-label="지금 곡">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`panel__tab${tab === t.id ? ' is-on' : ''}`} onClick={() => setPanelTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="icon-btn" aria-label="패널 닫기" onClick={() => togglePanel('queue')}>
           <Icon name="close" size={18} />
         </button>
       </header>
-      <div className="panel__body">
-        {error && !data ? (
-          <p className="panel__empty">대기열을 읽지 못했습니다.</p>
-        ) : !data ? (
-          <p className="panel__empty">불러오는 중…</p>
-        ) : items.length === 0 ? (
-          <p className="panel__empty">곡을 재생하면 다음에 나올 곡이 여기에 쌓입니다.</p>
-        ) : (
-          <>
-            {now && (
-              <>
-                <h3 className="panel__section">지금 재생 중</h3>
-                {row(now.track, `now-${current}`, true, () => undefined)}
-              </>
-            )}
-            {upcoming.length > 0 && <h3 className="panel__section">다음 곡</h3>}
-            {upcoming.map(({ item, index }) => row(item.track, `q-${index}-${item.track.videoId}`, false, () => jump(index)))}
-            {automix.length > 0 && <h3 className="panel__section">이어서 자동 재생</h3>}
-            {automix.map((t, i) => row(t, `a-${i}-${t.videoId}`, false, () => playTrack(t)))}
-          </>
-        )}
+      <div className="panel__body" role="tabpanel">
+        {tab === 'queue' ? <QueueTab /> : tab === 'related' ? <RelatedTab /> : <CommentsTab />}
       </div>
     </aside>
   );

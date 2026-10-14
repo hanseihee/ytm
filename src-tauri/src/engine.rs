@@ -21,7 +21,7 @@ const READY_TIMEOUT: Duration = Duration::from_secs(25);
 /// 요청 하나의 최대 시간(검색·목록 이어받기 포함).
 const CALL_TIMEOUT: Duration = Duration::from_secs(30);
 /// 엔진 스크립트가 제공하는 요청 이름. 그 밖의 이름은 엔진까지 보내지 않는다.
-const METHODS: &[&str] = &["api", "status", "state", "play", "queueAdd", "queue", "queueJump", "control", "eq", "eqStream"];
+const METHODS: &[&str] = &["api", "status", "state", "play", "queueAdd", "queue", "queueJump", "control", "eq", "eqStream", "avSwitch", "videoView"];
 /// 개발 빌드 전용: 엔진 창에서 임의 코드를 실행하는 조사 통로(배포판에는 없다).
 #[cfg(debug_assertions)]
 const DEBUG_METHODS: &[&str] = &["debugEval"];
@@ -204,7 +204,7 @@ fn on_status(app: &AppHandle, data: Value) {
         }
         crate::show_main(app);
     }
-    warn("화면에 엔진 상태 알리기", app.emit_to(MAIN, "engine-status", &status));
+    crate::emit_ui(app, "engine-status", &status);
 }
 
 fn on_state(app: &AppHandle, data: Value) {
@@ -213,7 +213,7 @@ fn on_state(app: &AppHandle, data: Value) {
         Ok(track) => crate::on_track_state(app, track),
         Err(err) => eprintln!("[ytm-desktop] 재생 상태 해석 실패: {err}"),
     }
-    warn("화면에 재생 상태 알리기", app.emit_to(MAIN, "player-state", &data));
+    crate::emit_ui(app, "player-state", &data);
 }
 
 #[tauri::command]
@@ -308,7 +308,14 @@ pub fn spawn_debug_inbox(app: &AppHandle) {
                     }
                 };
                 let name = item["name"].as_str().unwrap_or("unnamed").to_owned();
-                let result = call(&app, item["method"].as_str().unwrap_or_default(), item["args"].clone()).await;
+                // "window": 엔진 창 보이기·숨기기·크기(영상 화면 시험용)
+                let result = if item["method"] == "window" {
+                    debug_window(&app, &item["args"])
+                } else if item["method"] == "desktop" {
+                    debug_desktop(&app, &item["args"]).await
+                } else {
+                    call(&app, item["method"].as_str().unwrap_or_default(), item["args"].clone()).await
+                };
                 let body = match result {
                     Ok(v) => serde_json::json!({ "ok": true, "data": v }),
                     Err(e) => serde_json::json!({ "ok": false, "error": e }),
@@ -318,4 +325,46 @@ pub fn spawn_debug_inbox(app: &AppHandle) {
             }
         }
     });
+}
+
+#[cfg(debug_assertions)]
+fn debug_window(app: &AppHandle, args: &Value) -> Result<Value, String> {
+    let window = app.get_webview_window(ENGINE).ok_or("engine_missing")?;
+    if let (Some(w), Some(h)) = (args["w"].as_f64(), args["h"].as_f64()) {
+        window.set_size(tauri::LogicalSize::new(w, h)).map_err(|e| e.to_string())?;
+    }
+    if args["show"].as_bool() == Some(true) {
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+    } else if args["show"].as_bool() == Some(false) {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(Value::Bool(true))
+}
+
+/// 개발 빌드 전용: 데스크톱 부가 기능(영상 창·미니 플레이어·설정)을 화면 없이 시험한다.
+#[cfg(debug_assertions)]
+async fn debug_desktop(app: &AppHandle, args: &Value) -> Result<Value, String> {
+    match args["action"].as_str().unwrap_or_default() {
+        "video" => crate::desktop::set_video(app, args["open"].as_bool().unwrap_or(true)).await.map(|_| Value::Bool(true)),
+        "mini" => crate::desktop::mini_window(app.clone(), args["open"].as_bool().unwrap_or(true)).map(|_| Value::Bool(true)),
+        "prefs" => {
+            let prefs: crate::desktop::Prefs = serde_json::from_value(args["prefs"].clone()).map_err(|e| e.to_string())?;
+            crate::desktop::set_prefs(app.clone(), prefs)
+        }
+        "notify" => {
+            // 알림 경로 시험: 곡이 바뀐 것처럼 부른다.
+            let prev = crate::TrackState { video_id: "a".into(), title: "이전 곡".into(), ..Default::default() };
+            let next = crate::TrackState { video_id: "b".into(), title: args["title"].as_str().unwrap_or("시험 알림").into(), artist: "YTM".into(), ..Default::default() };
+            crate::desktop::on_track_changed(app, &prev, &next);
+            Ok(Value::Bool(true))
+        }
+        "shortcut" => {
+            use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
+            let code = match args["key"].as_str().unwrap_or("P") { "N" => Code::KeyN, "B" => Code::KeyB, "L" => Code::KeyL, "M" => Code::KeyM, _ => Code::KeyP };
+            crate::desktop::on_shortcut(app, &Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), code), ShortcutState::Pressed);
+            Ok(Value::Bool(true))
+        }
+        other => Err(format!("unknown_action {other}")),
+    }
 }

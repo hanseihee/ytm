@@ -1,9 +1,34 @@
 // 앱 상태와 동작. 데스크톱 화면의 state/(player·library·nav·ui)와 같은 일을 한다.
+import MediaPlayer
 import Observation
 import SwiftUI
 
 enum AppTab: Hashable {
-    case home, search, charts, library, settings
+    case home, explore, search, charts, library
+}
+
+/// 보관함 안 묶음(src/state/nav.ts LibraryTab과 같다)
+enum LibraryTab: String, CaseIterable, Identifiable {
+    case playlists, albums, artists, subscriptions, history
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .playlists: "재생목록"
+        case .albums: "앨범"
+        case .artists: "아티스트"
+        case .subscriptions: "구독"
+        case .history: "최근 재생"
+        }
+    }
+}
+
+/// 수면 타이머(src/state/sleep.ts와 같다)
+enum SleepMode: Equatable {
+    case off
+    /// 이 시각에 멈춘다(마지막 10초는 소리를 줄인다)
+    case time(Date)
+    /// 이 곡이 끝나면 멈춘다
+    case track(String)
 }
 
 enum Route: Hashable {
@@ -14,6 +39,8 @@ enum Route: Hashable {
     case browse(id: String, params: String?, title: String?)
     /// 차트 탭 밖에서 여는 Spotify 플레이리스트(붙여 넣은 링크)
     case chart(String)
+    case settings
+    case stats
 }
 
 /// browseId 종류에 맞는 화면(src/state/nav.ts routeForBrowse와 같다)
@@ -60,6 +87,9 @@ enum Endpoints {
 @MainActor
 @Observable
 final class AppModel {
+    /// 단축어(App Intents)가 쓰는 지금 앱 상태
+    @ObservationIgnored static weak var shared: AppModel?
+
     @ObservationIgnored let engine = Engine()
     @ObservationIgnored let core = JSCore()
     @ObservationIgnored let nowPlayingCenter = NowPlayingCenter()
@@ -72,6 +102,10 @@ final class AppModel {
     var status = EngineStatus()
     var player = PlayerState()
     var playerReceivedAt = Date()
+    /// 영상 모드에서 영상 색(지금 재생 배경이 따라간다)
+    var ambient: AmbientColors?
+    /// 영상 전체 화면(가로)
+    private(set) var videoFullscreen = false
 
     // 보관함
     var account: Account?
@@ -88,8 +122,15 @@ final class AppModel {
     var showNowPlaying = false
     /// 지금 재생 화면을 열 때 처음 보일 것("artwork"·"lyrics"·"queue")
     var nowPlayingMode = "artwork"
+    /// 대기열 화면의 탭("queue"·"related"·"comments"), 다시 열어도 유지
+    var upNextTab = "queue"
     var engineVisible = false
     var sheet: AppSheet?
+    var libraryTab: LibraryTab = .playlists
+    /// 수면 타이머
+    var sleep: SleepMode = .off
+    @ObservationIgnored private var sleepTask: Task<Void, Never>?
+    @ObservationIgnored private var fadeFrom: Double?
     var searchText = ""
     /// 바깥(차트의 "직접 검색" 등)에서 검색을 시킬 때
     var searchRequest: String?
@@ -120,41 +161,107 @@ final class AppModel {
         let scale = defaults.double(forKey: Keys.lyricScale)
         lyricScale = Self.lyricScales.contains(scale) ? scale : 1
         chartId = defaults.string(forKey: Keys.chart) ?? Self.koreaTop50
+        Self.shared = self
+        WidgetBridge.handler = { [weak self] action in
+            guard let self else { return }
+            if action == "toggle" { self.togglePlay() } else { self.control(action) }
+        }
 
         core.commandHandler = { [weak self] cmd, args in
             guard let self else { throw BridgeError("ipc_unavailable") }
             return try await self.handleCommand(cmd, args)
         }
-        engine.onStatus = { [weak self] s in self?.applyStatus(s) }
-        engine.onState = { [weak self] s in
-            guard let self else { return }
-            self.player = s
-            self.playerReceivedAt = Date()
-            self.nowPlayingCenter.update(s)
+        engine.onStatus = { [weak self] s in
+            #if DEBUG
+            if DebugRemote.url != nil { return }
+            #endif
+            self?.applyStatus(s)
+        }
+        engine.onState = { [weak self] s in self?.applyState(s) }
+        engine.onEvent = { [weak self] kind, json in
+            guard kind == "ambient", let colors = try? JSONDecoder().decode(AmbientColors.self, from: Data(json.utf8)) else { return }
+            self?.ambient = colors
         }
         engine.onLoginFinished = { [weak self] in
             self?.engineVisible = false
             self?.toast("로그인했습니다")
         }
-        nowPlayingCenter.onCommand = { [weak self] name, value in self?.engine.control(name, value) }
+        nowPlayingCenter.onCommand = { [weak self] name, value in self?.engineControl(name, value) }
         engine.start()
         #if DEBUG
         debugInbox.start(model: self)
+        if DebugRemote.url != nil { startRemoteEngine() }
         #endif
+    }
+
+    #if DEBUG
+    /// 시뮬레이터 시험: 맥 시험 엔진의 상태를 1초마다 받아 온다.
+    private func startRemoteEngine() {
+        log("[dev] 원격 시험 엔진 사용: \(DebugRemote.url?.absoluteString ?? "")")
+        applyStatus(EngineStatus(ready: true, host: "music.youtube.com", path: "/", loggedIn: true, subscriber: true))
+        Task { [weak self] in
+            while !Task.isCancelled {
+                if let json = try? await DebugRemote.send("engine_call", ["method": "state", "args": [String: Any]()]),
+                   let state = try? JSONDecoder().decode(PlayerState.self, from: Data(json.utf8)) {
+                    self?.applyState(state)
+                }
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+    #endif
+
+    /// 엔진 요청(개발판은 원격 시험 엔진으로 보낼 수 있다)
+    func engineCall(_ method: String, argsJSON: String = "null") async throws -> String {
+        #if DEBUG
+        if DebugRemote.url != nil {
+            return try await DebugRemote.send("engine_call", ["method": method, "args": jsonObject(argsJSON) ?? NSNull()])
+        }
+        #endif
+        return try await engine.call(method, argsJSON: argsJSON)
+    }
+
+    /// 답을 기다리지 않는 재생 제어(잠금 화면·수면 타이머)
+    func engineControl(_ command: String, _ value: Double? = nil) {
+        #if DEBUG
+        if DebugRemote.url != nil {
+            var args: [String: Any] = ["command": command]
+            if let value { args["value"] = value }
+            Task { _ = try? await engineCall("control", argsJSON: jsonString(args)) }
+            return
+        }
+        #endif
+        engine.control(command, value)
     }
 
     /// 데이터 묶음(JS)이 부르는 앱 명령
     private func handleCommand(_ cmd: String, _ args: [String: Any]) async throws -> String {
         switch cmd {
         case "engine_call":
-            return try await engine.call(args["method"] as? String ?? "", argsJSON: jsonString(args["args"]))
+            return try await engineCall(args["method"] as? String ?? "", argsJSON: jsonString(args["args"]))
         case "spotify_playlist":
             return try await ChartPages.spotifyPlaylist(id: args["id"] as? String ?? "")
-        case "melon_chart_page":
-            return try await ChartPages.melonPage()
+        case "chart_fetch":
+            let raw = try JSONSerialization.data(withJSONObject: args["req"] ?? [:])
+            return try await ChartPages.chartFetch(try JSONDecoder().decode(ChartRequestInfo.self, from: raw))
         default:
             throw BridgeError("unknown_command \(cmd)")
         }
+    }
+
+    private func applyState(_ s: PlayerState) {
+        player = s
+        playerReceivedAt = Date()
+        nowPlayingCenter.update(s)
+        // 청취 통계(이 기기): 30초 이상 또는 절반 넘게 들은 곡을 기록한다(src/lib/stats.ts).
+        let api = api
+        Task { await api.recordState(s) }
+    }
+
+    /// 앱이 뒤로 갈 때 지금 곡까지 기록을 남긴다.
+    func flushPlays() {
+        let api = api
+        Task { await api.flushPlays() }
     }
 
     // MARK: 엔진 상태 → 보관함
@@ -235,6 +342,13 @@ final class AppModel {
         paths[tab, default: []].append(route)
     }
 
+    func openLibrary(_ tab: LibraryTab) {
+        showNowPlaying = false
+        self.tab = .library
+        paths[.library] = []
+        libraryTab = tab
+    }
+
     func openCharts(_ id: String? = nil) {
         showNowPlaying = false
         if let id { chartId = id }
@@ -295,7 +409,7 @@ final class AppModel {
             do {
                 var args: [String: Any] = ["command": command]
                 if let value { args["value"] = value }
-                _ = try await engine.call("control", argsJSON: jsonString(args))
+                _ = try await engineCall("control", argsJSON: jsonString(args))
             } catch {
                 toastError(error, failure)
             }
@@ -340,6 +454,142 @@ final class AppModel {
                 toastError(error, "대기열에 추가하지 못했습니다")
             }
         }
+    }
+
+    /// 노래(음원) ↔ 영상(뮤직비디오) 바꾸기
+    func setAVMode(video: Bool) {
+        guard player.avAvailable, player.avVideo != video else { return }
+        player.avVideo = video
+        Task {
+            do {
+                try await api.avSwitch(video)
+            } catch {
+                player.avVideo = !video
+                toastError(error, video ? "영상으로 바꾸지 못했습니다" : "노래로 바꾸지 못했습니다")
+            }
+        }
+    }
+
+    /// 영상 전체 화면 켜고 끄기: 화면을 가로로 돌리고, 끄면 세로로 되돌린다.
+    func setVideoFullscreen(_ on: Bool) {
+        guard videoFullscreen != on else { return }
+        videoFullscreen = on
+        guard UIDevice.current.userInterfaceIdiom != .pad else { return }
+        AppDelegate.orientationMask = on ? .landscape : .portrait
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+        var controller = scene.keyWindow?.rootViewController
+        while let current = controller {
+            current.setNeedsUpdateOfSupportedInterfaceOrientations()
+            controller = current.presentedViewController
+        }
+        // 기기를 이미 가로로 들고 있으면 그 방향으로
+        let device = UIDevice.current.orientation
+        let landscape: UIInterfaceOrientationMask = device == .landscapeRight ? .landscapeLeft : .landscapeRight
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: on ? landscape : .portrait)) { error in
+            log("[video] 화면 방향 바꾸기 실패: \(error)")
+        }
+    }
+
+    /// 화면 속 화면(영상 모드에서만)
+    func togglePictureInPicture() {
+        Task {
+            do { _ = try await engineCall("pip") } catch { toastError(error, "화면 속 화면으로 띄우지 못했습니다") }
+        }
+    }
+
+    // MARK: 수면 타이머
+
+    static let sleepMinutes = [5, 10, 15, 30, 45, 60, 90, 120]
+    private static let fadeSeconds = 10.0
+
+    func startSleep(minutes: Int) {
+        restoreVolume()
+        sleep = .time(Date().addingTimeInterval(Double(minutes) * 60))
+        runSleep()
+        toast("\(minutes)분 뒤에 재생을 멈춥니다")
+    }
+
+    func startSleepAfterTrack() {
+        guard !player.videoId.isEmpty else { return }
+        restoreVolume()
+        sleep = .track(player.videoId)
+        runSleep()
+        toast("지금 곡이 끝나면 멈춥니다")
+    }
+
+    func cancelSleep(quiet: Bool = false) {
+        sleepTask?.cancel()
+        sleepTask = nil
+        restoreVolume()
+        sleep = .off
+        if !quiet { toast("수면 타이머를 껐습니다") }
+    }
+
+    /// 남은 시간 "12:30" 또는 "곡 끝"
+    func sleepLabel(at now: Date = Date()) -> String {
+        switch sleep {
+        case .off: return ""
+        case .track: return "곡 끝"
+        case .time(let end):
+            let left = max(0, Int((end.timeIntervalSince(now)).rounded()))
+            return String(format: "%d:%02d", left / 60, left % 60)
+        }
+    }
+
+    private func restoreVolume() {
+        guard let v = fadeFrom else { return }
+        fadeFrom = nil
+        engineControl("volume", v)
+    }
+
+    private func runSleep() {
+        sleepTask?.cancel()
+        sleepTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard let self, !Task.isCancelled else { return }
+                if self.sleepTick() { return }
+            }
+        }
+    }
+
+    /// 멈출 때가 되면 true
+    private func sleepTick() -> Bool {
+        let p = player
+        switch sleep {
+        case .off:
+            return true
+        case .time(let end):
+            let left = end.timeIntervalSinceNow
+            if left <= 0 {
+                stopForSleep()
+                return true
+            }
+            if left <= Self.fadeSeconds && p.playing {
+                if fadeFrom == nil { fadeFrom = p.muted ? 0 : p.volume }
+                engineControl("volume", ((fadeFrom ?? 0) * left / Self.fadeSeconds).rounded())
+            }
+        case .track(let videoId):
+            // 곡이 바뀌었거나(자동으로 다음 곡이 시작됨) 끝나기 직전이면 멈춘다.
+            if !p.videoId.isEmpty && p.videoId != videoId || p.duration > 0 && position() >= p.duration - 1.2 {
+                stopForSleep()
+                return true
+            }
+        }
+        return false
+    }
+
+    private func stopForSleep() {
+        sleep = .off
+        sleepTask = nil
+        engineControl("pause")
+        player.playing = false
+        // 다음에 틀 때는 원래 음량으로
+        Task {
+            try? await Task.sleep(for: .milliseconds(1200))
+            restoreVolume()
+        }
+        toast("수면 타이머로 재생을 멈췄습니다")
     }
 
     // MARK: 보관함 동작
@@ -419,6 +669,28 @@ final class AppModel {
         }
     }
 
+    func setSubscribed(_ channelId: String, name: String, on: Bool, params: String?) async -> Bool {
+        do {
+            try await api.setSubscribed(channelId, on, params: params)
+            toast(on ? "\(name) 구독했습니다" : "\(name) 구독을 취소했습니다")
+            revision += 1
+            return true
+        } catch {
+            toastError(error, "구독을 바꾸지 못했습니다")
+            return false
+        }
+    }
+
+    func movePlaylistItem(_ playlistId: String, setVideoId: String, before: String?) async -> Bool {
+        do {
+            try await api.movePlaylistItem(playlistId, setVideoId: setVideoId, before: before)
+            return true
+        } catch {
+            toastError(error, "순서를 바꾸지 못했습니다")
+            return false
+        }
+    }
+
     func setSaved(_ playlistId: String, title: String, saved: Bool) async -> Bool {
         do {
             try await api.setCollectionSaved(playlistId, saved)
@@ -476,10 +748,18 @@ final class AppModel {
         case "tab":
             switch item["value"] as? String {
             case "home": tab = .home
+            case "explore": tab = .explore
             case "search": tab = .search
             case "charts": tab = .charts
-            case "library": tab = .library
-            default: tab = .settings
+            case "settings":
+                tab = .home
+                paths[.home] = [.settings]
+            case "stats":
+                tab = .library
+                paths[.library] = [.stats]
+            default:
+                tab = .library
+                libraryTab = LibraryTab(rawValue: item["library"] as? String ?? "") ?? .playlists
             }
             return true
         case "go":
@@ -490,6 +770,7 @@ final class AppModel {
             return true
         case "nowPlaying":
             nowPlayingMode = item["mode"] as? String ?? "artwork"
+            if let t = item["upNext"] as? String { upNextTab = t }
             showNowPlaying = item["value"] as? Bool ?? true
             return true
         case "fakePlayer":
@@ -503,6 +784,7 @@ final class AppModel {
             p.duration = item["duration"] as? Double ?? 0
             p.position = item["position"] as? Double ?? 0
             p.playing = item["playing"] as? Bool ?? true
+            p.avAvailable = item["avAvailable"] as? Bool ?? false
             player = p
             playerReceivedAt = Date()
             return true
@@ -518,6 +800,60 @@ final class AppModel {
         case "engine":
             if item["value"] as? Bool == false { hideEngine() } else { showEngine(item["mode"] as? String ?? "web") }
             return true
+        case "av":
+            setAVMode(video: item["value"] as? Bool ?? false)
+            return true
+        case "sleep":
+            if let minutes = item["minutes"] as? Int { startSleep(minutes: minutes) }
+            else if item["track"] as? Bool == true { startSleepAfterTrack() }
+            else { cancelSleep() }
+            return sleepLabel()
+        case "pip":
+            togglePictureInPicture()
+            return true
+        case "fullscreen":
+            setVideoFullscreen(item["value"] as? Bool ?? !videoFullscreen)
+            return videoFullscreen
+        case "nowPlaying.system":
+            // 잠금 화면에 실제로 쓰이는 재생 정보 + 우리 앱이 넣은 정보
+            let mine = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+            return [
+                "system": await SystemNowPlaying.read(),
+                "app": [
+                    "title": mine[MPMediaItemPropertyTitle] as? String ?? NSNull(),
+                    "hasArtwork": mine[MPMediaItemPropertyArtwork] != nil,
+                    "artworkSize": "\(nowPlayingCenter.artworkSize)",
+                ] as [String: Any],
+            ] as [String: Any]
+        case "snapshot":
+            // 앱 창만 그림으로 남긴다(Documents/debug/shot.png). 전체 화면·다른 앱은 찍지 않는다.
+            guard let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(where: \.isKeyWindow) else { return "no_window" }
+            let format = UIGraphicsImageRendererFormat(for: window.traitCollection)
+            format.scale = item["scale"] as? Double ?? 1
+            let image = UIGraphicsImageRenderer(bounds: window.bounds, format: format).image { _ in
+                window.drawHierarchy(in: window.bounds, afterScreenUpdates: item["update"] as? Bool ?? false)
+            }
+            let file = DebugInbox.directory.appendingPathComponent(item["file"] as? String ?? "shot.png")
+            try? image.pngData()?.write(to: file)
+            return ["file": file.lastPathComponent, "size": "\(image.size)", "stage": "\(ambient.map { "\($0.top) \($0.bottom)" } ?? "none")"]
+        case "scroll":
+            // 화면에서 가장 큰 스크롤 영역을 내린다(시뮬레이터 화면 시험용).
+            let dy = item["by"] as? Double ?? 600
+            let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+            func scrollViews(_ v: UIView) -> [UIScrollView] {
+                (v as? UIScrollView).map { [$0] }.map { $0 + v.subviews.flatMap(scrollViews) } ?? v.subviews.flatMap(scrollViews)
+            }
+            let visible = windows.flatMap { w in scrollViews(w).filter { !$0.isHidden && $0.alpha > 0 && $0.window != nil && $0.contentSize.height > $0.bounds.height && $0.bounds.width > 200 } }
+            let target = item["index"] as? Int
+            let candidates = visible.filter { sv in
+                let frame = sv.convert(sv.bounds, to: nil)
+                return frame.intersects(sv.window?.bounds ?? .zero)
+            }.sorted { $0.bounds.height * $0.bounds.width > $1.bounds.height * $1.bounds.width }
+            guard let sv = target.map({ $0 < candidates.count ? candidates[$0] : nil }) ?? candidates.first else { return "no_scroll" }
+            let maxY = max(0, sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
+            let y = item["to"] as? Double ?? min(maxY, max(-sv.adjustedContentInset.top, sv.contentOffset.y + dy))
+            sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: y), animated: false)
+            return ["y": y, "max": maxY, "count": candidates.count]
         default:
             return "unknown_action"
         }

@@ -149,6 +149,8 @@ struct CollectionPage: Codable {
     var tracks: [Track]
     var continuation: Continuation?
     var shelves: [Shelf]
+    /// 내 재생목록 아래 "추천" 곡 묶음을 부르는 값
+    var sectionsContinuation: Continuation?
 }
 
 struct ArtistPage: Codable {
@@ -160,6 +162,7 @@ struct ArtistPage: Codable {
     var radio: JSONValue?
     var channelId: String?
     var subscribed: Bool?
+    var subscribeParams: String?
     var shelves: [Shelf]
 }
 
@@ -217,7 +220,20 @@ struct ChartInfo: Codable, Hashable, Identifiable {
     var code: String
     var label: String
     var id: String
+    /// "spotify" 또는 멜론·지니 등(src/lib/charts)
     var source: String
+    /// 고르기 화면의 묶음 이름
+    var group: String
+
+    var shortLabel: String { source == "spotify" ? "Spotify \(label)" : label }
+}
+
+/// 차트 곡 요청 하나(src/lib/charts ChartRequest)
+struct ChartRequestInfo: Codable {
+    var url: String
+    var method: String?
+    var headers: [String: String]?
+    var body: String?
 }
 
 struct ChartTrack: Codable, Hashable, Identifiable {
@@ -290,11 +306,20 @@ struct PlayerState: Codable, Equatable {
     var `repeat` = "NONE"
     var volume: Double = 100
     var muted = false
+    /// 노래(음원)↔영상(뮤직비디오) 짝이 있는지
+    var avAvailable = false
+    /// 지금 영상 쪽인지
+    var avVideo = false
+    /// 실제 영상 화면이 나오는지(노래 쪽은 소리만 받는다)
+    var hasPicture = false
+    /// 짝 버전 videoId와 시간 차이(짝 버전 위치 = 지금 위치 + avShift초)
+    var avOther = ""
+    var avShift = 0.0
     /// 엔진이 상태를 읽은 시각(ms, 엔진 시계). 앱은 받은 시각(receivedAt)으로 위치를 이어서 계산한다.
     var at: Double = 0
 
     enum CodingKeys: String, CodingKey {
-        case videoId, title, artist, album, artwork, duration, position, playing, buffering, ad, likeStatus, `repeat`, volume, muted, at
+        case videoId, title, artist, album, artwork, duration, position, playing, buffering, ad, likeStatus, `repeat`, volume, muted, avAvailable, avVideo, hasPicture, avOther, avShift, at
     }
 
     init() {}
@@ -315,6 +340,88 @@ struct PlayerState: Codable, Equatable {
         `repeat` = try c.decodeIfPresent(String.self, forKey: .repeat) ?? "NONE"
         volume = try c.decodeIfPresent(Double.self, forKey: .volume) ?? 100
         muted = try c.decodeIfPresent(Bool.self, forKey: .muted) ?? false
+        avAvailable = try c.decodeIfPresent(Bool.self, forKey: .avAvailable) ?? false
+        avVideo = try c.decodeIfPresent(Bool.self, forKey: .avVideo) ?? false
+        hasPicture = try c.decodeIfPresent(Bool.self, forKey: .hasPicture) ?? false
+        avOther = try c.decodeIfPresent(String.self, forKey: .avOther) ?? ""
+        avShift = try c.decodeIfPresent(Double.self, forKey: .avShift) ?? 0
         at = try c.decodeIfPresent(Double.self, forKey: .at) ?? 0
     }
+}
+
+// MARK: 둘러보기·댓글·통계
+
+struct MoodItem: Codable, Hashable {
+    var label: String
+    var browseId: String
+    var params: String?
+    /// "#rrggbb"
+    var color: String?
+}
+
+struct MoodSection: Codable, Hashable {
+    var title: String
+    var items: [MoodItem]
+}
+
+struct MoodsPage: Codable {
+    var title: String
+    var sections: [MoodSection]
+}
+
+struct Comment: Codable, Hashable, Identifiable {
+    var id: String
+    var author: String
+    var avatar: String?
+    var text: String
+    var published: String
+    var likes: String
+    var replies: String
+    var isArtist: Bool
+}
+
+struct CommentsPage: Codable {
+    var countText: String?
+    var comments: [Comment]
+    var continuation: String?
+}
+
+struct StatsTrack: Codable, Hashable, Identifiable {
+    var id: String
+    var title: String
+    var artist: String
+    var artwork: String
+    var count: Int
+    var seconds: Double
+}
+
+struct StatsArtist: Codable, Hashable, Identifiable {
+    var name: String
+    var count: Int
+    var seconds: Double
+    var id: String { name }
+}
+
+struct StatsDay: Codable, Hashable {
+    var label: String
+    var seconds: Double
+}
+
+struct StatsSummary: Codable {
+    var range: String
+    var totalSeconds: Double
+    var playCount: Int
+    var topTracks: [StatsTrack]
+    var topArtists: [StatsArtist]
+    var days: [StatsDay]
+}
+
+/// 영상 모드에서 엔진이 알려 주는 영상 위·아래 평균색(0~255, RGB)
+struct AmbientColors: Codable, Equatable {
+    var top: [Int]
+    var bottom: [Int]
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
 }

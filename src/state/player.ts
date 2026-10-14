@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createStore, useStore } from '../lib/store';
 import { getPlayerState, onPlayerState, type PlayerState } from '../lib/tauri';
+import { flushPlays, recordState } from '../lib/stats';
 
 export const EMPTY_PLAYER: PlayerState = {
   videoId: '',
@@ -28,10 +29,15 @@ export function patchPlayer(patch: Partial<PlayerState>) {
   playerStore.set((s) => ({ ...s, ...patch, at: Date.now() }));
 }
 
-export async function startPlayerSync() {
+export async function startPlayerSync(record = true) {
   const first = await getPlayerState();
   if (first && typeof first === 'object' && 'videoId' in first) playerStore.set({ ...EMPTY_PLAYER, ...first });
-  return onPlayerState((s) => playerStore.set({ ...EMPTY_PLAYER, ...s }));
+  // 청취 기록(이 기기에만): 미니 플레이어 창은 기록하지 않는다(같은 곡이 두 번 세어지지 않게).
+  if (record) window.addEventListener('beforeunload', () => flushPlays());
+  return onPlayerState((s) => {
+    playerStore.set({ ...EMPTY_PLAYER, ...s });
+    if (record) recordState({ ...EMPTY_PLAYER, ...s });
+  });
 }
 
 export function currentPosition(s: PlayerState, now = Date.now()): number {

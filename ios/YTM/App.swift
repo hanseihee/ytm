@@ -10,17 +10,33 @@ import SwiftUI
 @main
 struct YTMApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(model)
+                // 위젯을 누르면(ytm://now-playing) 지금 재생 화면을 연다.
+                .onOpenURL { url in
+                    if url.scheme == "ytm", url.host() == "now-playing", !model.player.videoId.isEmpty { model.showNowPlaying = true }
+                }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // 앱이 뒤로 가면 지금 곡까지 청취 기록을 남긴다(앱이 꺼져도 남게).
+            if phase == .background { model.flushPlays() }
         }
     }
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    /// 아이폰은 평소 세로만, 영상 전체 화면일 때만 가로(AppModel.setVideoFullscreen이 바꾼다). 아이패드는 모두.
+    @MainActor static var orientationMask: UIInterfaceOrientationMask = .portrait
+
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        UIDevice.current.userInterfaceIdiom == .pad ? .all : Self.orientationMask
+    }
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // 무음 스위치와 상관없이 소리를 내고, 화면을 꺼도 계속 재생한다(Info.plist UIBackgroundModes audio와 함께).
         do {

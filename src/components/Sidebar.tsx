@@ -70,9 +70,11 @@ export function Sidebar() {
       </div>
       <div className="side__group">
         <NavItem icon="home" label="홈" active={route.name === 'home'} onClick={() => go({ name: 'home' })} />
+        <NavItem icon="compass" label="둘러보기" active={route.name === 'explore' || route.name === 'mood'} onClick={() => go({ name: 'explore' })} />
         <NavItem icon="search" label="검색" active={route.name === 'search'} onClick={() => go({ name: 'search', query: '' })} />
         <NavItem icon="library" label="보관함" active={route.name === 'library'} onClick={() => go({ name: 'library' })} />
         <NavItem icon="chart" label="차트" active={route.name === 'spotify'} onClick={() => go({ name: 'spotify', id: lastChartId() })} />
+        <NavItem icon="stats" label="청취 통계" active={route.name === 'stats'} onClick={() => go({ name: 'stats' })} />
       </div>
 
       <div className="side__section">

@@ -9,10 +9,18 @@ export type Route =
   | { name: 'artist'; id: string }
   | { name: 'browse'; id: string; params?: string; title?: string }
   | { name: 'liked' }
-  | { name: 'library' }
+  | { name: 'library'; tab?: LibraryTab }
+  /** 둘러보기: 분위기·장르, 최신 음악, YouTube Music 차트 */
+  | { name: 'explore' }
+  /** 분위기·장르 한 가지(출퇴근, K-Pop …) */
+  | { name: 'mood'; params: string; title: string }
+  /** 내 청취 통계 */
+  | { name: 'stats' }
   /** Spotify 플레이리스트를 YouTube Music으로 듣기 */
   | { name: 'spotify'; id: string }
   | { name: 'settings' };
+
+export type LibraryTab = 'playlists' | 'albums' | 'artists' | 'subscriptions' | 'history';
 
 interface NavState {
   stack: Route[];
@@ -55,5 +63,7 @@ export function routeForBrowse(browseId: string, params?: string, title?: string
     return { name: 'playlist', id: browseId };
   }
   if (browseId.startsWith('UC') && !params) return { name: 'artist', id: browseId };
+  if (browseId === 'FEmusic_moods_and_genres_category' && params) return { name: 'mood', params, title: title ?? '' };
+  if (browseId === 'FEmusic_history') return { name: 'library', tab: 'history' };
   return { name: 'browse', id: browseId, params, title };
 }

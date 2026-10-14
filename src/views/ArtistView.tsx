@@ -1,10 +1,33 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useAsync } from '../lib/useAsync';
 import * as ytm from '../lib/ytm/client';
 import { playEndpoint } from '../state/library';
+import { toast, toastError } from '../state/ui';
 import { ShelfView } from '../components/Cards';
 import { Icon } from '../components/Icon';
 import { ErrorState, Loading } from './common';
+
+function SubscribeButton({ channelId, name, initial, params }: { channelId: string; name: string; initial: boolean; params?: string }) {
+  const [on, setOn] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await ytm.setSubscribed(channelId, !on, params);
+      setOn(!on);
+      toast(on ? `${name} 구독을 취소했습니다` : `${name}을(를) 구독했습니다`);
+    } catch (err) {
+      toastError(err, '구독을 바꾸지 못했습니다');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button type="button" className={`btn btn--quiet${on ? ' is-on' : ''}`} aria-pressed={on} disabled={busy} onClick={toggle}>
+      <Icon name="bell" size={17} /> {on ? '구독 중' : '구독'}
+    </button>
+  );
+}
 
 export function ArtistView({ id }: { id: string }) {
   const res = useAsync(`artist:${id}`, () => ytm.artist(id));
@@ -31,6 +54,7 @@ export function ArtistView({ id }: { id: string }) {
                 <Icon name="radio" size={17} /> 라디오
               </button>
             )}
+            {a.channelId && <SubscribeButton key={a.channelId} channelId={a.channelId} name={a.name} initial={!!a.subscribed} params={a.subscribeParams} />}
           </div>
         </div>
       </header>

@@ -6,6 +6,45 @@ import SwiftUI
 struct LibraryView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.palette) private var palette
+
+    var body: some View {
+        @Bindable var model = model
+        VStack(spacing: 0) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(LibraryTab.allCases) { t in
+                        Button { model.libraryTab = t } label: {
+                            Text(t.label)
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .foregroundStyle(model.libraryTab == t ? palette.night : palette.ink)
+                                .background(Capsule().fill(model.libraryTab == t ? palette.ink : palette.plum))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(model.libraryTab == t ? .isSelected : [])
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+            .scrollIndicators(.hidden)
+            switch model.libraryTab {
+            case .playlists: PlaylistsTab()
+            case .history: HistoryTab()
+            default: CardsTab(tab: model.libraryTab)
+            }
+        }
+        .background(palette.night)
+        .navigationTitle("보관함")
+        .settingsButton(model)
+    }
+}
+
+/// 재생목록: 좋아요·차트·통계 바로가기 + 내 플레이리스트
+private struct PlaylistsTab: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.palette) private var palette
     @State private var deleting: Card?
 
     var body: some View {
@@ -19,7 +58,12 @@ struct LibraryView: View {
                 Button { model.openCharts() } label: {
                     pin(icon: AnyView(Text("100").font(.system(size: 15, weight: .black)).foregroundStyle(palette.onAccent)),
                         title: "차트",
-                        subtitle: "멜론 TOP 100 · Spotify Top 50을 YouTube Music으로")
+                        subtitle: "멜론·지니·Spotify·빌보드 등을 YouTube Music으로")
+                }
+                Button { model.go(.stats) } label: {
+                    pin(icon: AnyView(Image(systemName: "chart.pie.fill").font(.title3).foregroundStyle(palette.onAccent)),
+                        title: "청취 통계",
+                        subtitle: "이 기기에서 많이 들은 곡·아티스트")
                 }
             }
             .listRowBackground(palette.dusk)
@@ -56,7 +100,6 @@ struct LibraryView: View {
         }
         .scrollContentBackground(.hidden)
         .background(palette.night)
-        .navigationTitle("보관함")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { model.sheet = .newPlaylist([], openAfter: true) } label: { Image(systemName: "plus") }
@@ -87,6 +130,112 @@ struct LibraryView: View {
             Spacer()
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(palette.faint)
         }
+    }
+}
+
+/// 앨범·아티스트·구독: 카드 격자 + 이어받기
+private struct CardsTab: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.palette) private var palette
+    let tab: LibraryTab
+    @State private var state: Loadable<[Card]> = .loading
+    @State private var continuation: Continuation?
+
+    var body: some View {
+        ScrollView {
+            switch state {
+            case .loading:
+                LoadingView()
+            case .failed(let message):
+                ErrorView(message: message) { Task { await load() } }
+            case .loaded(let cards):
+                if cards.isEmpty {
+                    ContentUnavailableView(emptyText, systemImage: tab == .albums ? "square.stack" : "person.2")
+                        .padding(.top, 40)
+                } else {
+                    VStack(spacing: 0) {
+                        CardGrid(cards: cards)
+                        if let c = continuation { LoadMoreRow { await more(c) } }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+        }
+        .refreshable { await load() }
+        .task(id: "\(tab.rawValue)#\(model.revision)") { await load() }
+    }
+
+    private var emptyText: String {
+        switch tab {
+        case .albums: "보관함에 저장한 앨범이 없습니다"
+        case .artists: "보관함 곡의 아티스트가 없습니다"
+        default: "구독한 아티스트가 없습니다"
+        }
+    }
+
+    private func load() async {
+        do {
+            let page: BrowsePage
+            switch tab {
+            case .albums: page = try await model.api.libraryAlbums()
+            case .artists: page = try await model.api.libraryArtists()
+            default: page = try await model.api.librarySubscriptions()
+            }
+            continuation = page.shelves.first?.continuation
+            state = .loaded(page.shelves.flatMap(\.cards))
+        } catch {
+            if state.value == nil { state = .failed(AppModel.describe(error)) }
+        }
+    }
+
+    private func more(_ c: Continuation) async {
+        guard continuation == c, case .loaded(let cards) = state else { return }
+        do {
+            let page = try await model.api.libraryMore(c)
+            continuation = page.continuation
+            state = .loaded(cards + page.cards)
+        } catch {
+            log("[library] 더 불러오기 실패: \(error)")
+            continuation = nil
+        }
+    }
+}
+
+/// 최근 재생(YouTube Music 계정의 재생 기록)
+private struct HistoryTab: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.palette) private var palette
+    @State private var state: Loadable<BrowsePage> = .loading
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 24) {
+                switch state {
+                case .loading:
+                    LoadingView()
+                case .failed(let message):
+                    ErrorView(message: message) { Task { await load() } }
+                case .loaded(let page):
+                    Text("YouTube Music 계정의 재생 기록이라 다른 기기에서 들은 곡도 나옵니다.")
+                        .font(.footnote)
+                        .foregroundStyle(palette.mist)
+                        .padding(.horizontal, 16)
+                    if page.shelves.isEmpty {
+                        ContentUnavailableView("최근에 들은 곡이 없습니다", systemImage: "clock")
+                    }
+                    ForEach(Array(page.shelves.enumerated()), id: \.offset) { _, shelf in
+                        ShelfSection(shelf: shelf)
+                    }
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        .refreshable { await load() }
+        .task { await load() }
+    }
+
+    private func load() async {
+        do { state = .loaded(try await model.api.history()) } catch { if state.value == nil { state = .failed(AppModel.describe(error)) } }
     }
 }
 
@@ -160,6 +309,7 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .background(palette.night)
         .navigationTitle("설정")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

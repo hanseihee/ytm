@@ -37,6 +37,7 @@ struct HomeView: View {
         }
         .background(palette.night)
         .navigationTitle("홈")
+        .settingsButton(model)
         .refreshable { await load() }
         .task(id: model.status.loggedIn) { await load() }
     }
@@ -53,7 +54,7 @@ struct HomeView: View {
                     .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(palette.accent))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("인기 차트").font(.headline).foregroundStyle(palette.ink)
-                    Text("멜론 TOP 100과 Spotify 20개 나라 Top 50을 YouTube Music으로")
+                    Text("멜론·지니·벅스·FLO·Spotify·빌보드 등 76개 차트를 YouTube Music으로")
                         .font(.caption)
                         .foregroundStyle(palette.mist)
                         .lineLimit(2)
@@ -298,6 +299,8 @@ struct ArtistView: View {
     @Environment(\.palette) private var palette
     let id: String
     @State private var state: Loadable<ArtistPage> = .loading
+    @State private var subscribed: Bool?
+    @State private var subscribing = false
 
     var body: some View {
         ScrollView {
@@ -355,6 +358,26 @@ struct ArtistView: View {
                     }
                     if let radio = a.radio {
                         PillButton(title: "라디오", systemImage: "dot.radiowaves.left.and.right") { model.playEndpoint(radio, what: "라디오를 시작") }
+                    }
+                    if let channelId = a.channelId {
+                        let on = subscribed ?? a.subscribed ?? false
+                        Button {
+                            subscribing = true
+                            Task {
+                                if await model.setSubscribed(channelId, name: a.name, on: !on, params: a.subscribeParams) { subscribed = !on }
+                                subscribing = false
+                            }
+                        } label: {
+                            Text(on ? "구독 중" : "구독")
+                                .font(.subheadline.weight(.bold))
+                                .padding(.horizontal, 16)
+                                .frame(height: 46)
+                                .foregroundStyle(on ? palette.ink : palette.night)
+                                .background(Capsule().fill(on ? AnyShapeStyle(palette.plum) : AnyShapeStyle(palette.ink)))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(subscribing)
+                        .accessibilityLabel(on ? "구독 취소" : "구독")
                     }
                 }
                 .padding(.top, 4)

@@ -25,6 +25,13 @@ import { LibraryView } from './views/LibraryView';
 import { SearchView } from './views/SearchView';
 import { SpotifyView } from './views/SpotifyView';
 import { SettingsView } from './views/SettingsView';
+import { ExploreView, MoodView } from './views/ExploreView';
+import { StatsView } from './views/StatsView';
+import { onVideoWindow } from './lib/tauri';
+import { startPrefsSync } from './state/prefs';
+import { toggleLike } from './state/library';
+import { layoutStore } from './state/ui';
+import { startAlbumTheme } from './lib/theme';
 
 function View({ route }: { route: Route }) {
   switch (route.name) {
@@ -43,7 +50,13 @@ function View({ route }: { route: Route }) {
     case 'browse':
       return <BrowseView id={route.id} params={route.params} title={route.title} />;
     case 'library':
-      return <LibraryView />;
+      return <LibraryView tab={route.tab} />;
+    case 'explore':
+      return <ExploreView />;
+    case 'mood':
+      return <MoodView params={route.params} title={route.title} />;
+    case 'stats':
+      return <StatsView />;
     case 'spotify':
       return <SpotifyView id={route.id} />;
     case 'settings':
@@ -119,7 +132,10 @@ export function App() {
       startPlayerSync(),
       startLibrarySync(),
       startEqSync((reason) => toast(describeEqFailure(reason), 'error')),
+      onVideoWindow((open) => layoutStore.set((s) => ({ ...s, video: open }))),
+      Promise.resolve(startAlbumTheme(() => playerStore.get().artwork, (fn) => playerStore.subscribe(fn))),
     ];
+    startPrefsSync();
     stops.push(
       onMenuAction((action) => {
         if (action === 'lyrics') toggleLyrics();
@@ -130,6 +146,12 @@ export function App() {
           toggleLyrics(true);
         }
         else if (action === 'home') go({ name: 'home' });
+        else if (action === 'explore') go({ name: 'explore' });
+        else if (action === 'stats') go({ name: 'stats' });
+        else if (action === 'like-current') {
+          const p = playerStore.get();
+          if (p.videoId && !p.ad) void toggleLike({ videoId: p.videoId, title: p.title });
+        }
         else if (action === 'settings') go({ name: 'settings' });
         else if (action === 'spotify') go({ name: 'spotify', id: lastChartId() });
         else if (action.startsWith('theme:')) setTheme(action.slice(6) as ThemeId);

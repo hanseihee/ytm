@@ -1,8 +1,8 @@
 // 멜론 TOP 100(실시간 차트) 곡 목록.
-// 페이지(www.melon.com/chart/index.htm)는 앱(데스크톱 Rust melon.rs, iOS Swift)이 받아 오고, 해석은 여기서 한다.
+// 페이지(www.melon.com/chart/index.htm)는 앱(데스크톱 Rust charts.rs, iOS Swift)이 받아 오고, 해석은 여기서 한다.
+// 차트 목록·받는 순서는 charts/index.ts(이 해석기에 글자 참조·글자만 있는 가수 보정을 더한 parseMelonRealtime).
 // 2026-10-14 확인: 곡마다 <tr class="lst50|lst100" data-song-no="…">, 제목 .rank01 a, 가수 .rank02 a,
 // 앨범 .rank03 a, 표지 img(…/melon/resize/120/…), 기준 시각 .year·.hour. 곡 길이는 차트에 없다.
-import { invoke } from '@tauri-apps/api/core';
 import type { SpotifyPlaylist, SpotifyTrack } from './spotify';
 
 export const MELON_TOP100 = 'melon-top100';
@@ -62,8 +62,4 @@ export function parseMelonChart(html: string): SpotifyPlaylist {
     cover,
     tracks,
   };
-}
-
-export async function fetchMelonChart(): Promise<SpotifyPlaylist> {
-  return parseMelonChart(await invoke<string>('melon_chart_page'));
 }

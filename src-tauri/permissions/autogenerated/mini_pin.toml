@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mini-pin"
+description = "Enables the mini_pin command without any pre-configured scope."
+commands.allow = ["mini_pin"]
+
+[[permission]]
+identifier = "deny-mini-pin"
+description = "Denies the mini_pin command without any pre-configured scope."
+commands.deny = ["mini_pin"]

@@ -33,6 +33,17 @@ const PATHS = {
   chart: 'M5 20v-8M10 20V5M15 20v-6M20 20V9',
   eq: 'M6 4v6M6 14v6M12 4v2M12 10v10M18 4v9M18 17v3M3.5 12h5M9.5 8h5M15.5 15h5',
   note: 'M9 18.5V5.5l11-2v13M9 18.5a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 9 18.5zM20 16.5a2.5 2.5 0 1 1-2.5-2.5 2.5 2.5 0 0 1 2.5 2.5z',
+  video: 'M3.5 6.5h17v11h-17zM10 9.5v5l4.5-2.5z',
+  moon: 'M19.5 14.5A7.8 7.8 0 1 1 9.5 4.5a6.2 6.2 0 0 0 10 10z',
+  mini: 'M3.5 5.5h17v13h-17zM12 12h6.5v4.5H12z',
+  link: 'M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1',
+  compass: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z',
+  stats: 'M12 3.5v8.5h8.5A8.5 8.5 0 1 1 12 3.5zM15 3.8A8.5 8.5 0 0 1 20.2 9H15z',
+  bell: 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0',
+  grip: 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
+  comment: 'M4.5 5.5h15v10h-8.5l-4.5 3.5v-3.5h-2z',
+  related: 'M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9zM18.5 16l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z',
+  history: 'M4 12a8 8 0 1 0 2.4-5.7M4 4.5v3h3M12 8v4.5l3 2',
 } as const;
 
 export type IconName = keyof typeof PATHS;
@@ -56,7 +67,7 @@ export function Icon({ name, size = 20, filled, ...rest }: Props) {
       viewBox="0 0 24 24"
       fill={fill ? 'currentColor' : 'none'}
       stroke={fill && FILLED.has(name) ? 'none' : 'currentColor'}
-      strokeWidth={name === 'more' ? 3 : 1.8}
+      strokeWidth={name === 'more' || name === 'grip' ? 3 : 1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
