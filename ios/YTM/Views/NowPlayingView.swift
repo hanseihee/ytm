@@ -99,6 +99,10 @@ struct NowPlayingView: View {
         .environment(\.colorScheme, .dark)
         .presentationDragIndicator(.visible)
         .animation(.easeInOut(duration: 0.25), value: mode)
+        .onAppear {
+            mode = model.nowPlayingMode == "lyrics" ? .lyrics : model.nowPlayingMode == "queue" ? .queue : .artwork
+            model.nowPlayingMode = "artwork"
+        }
     }
 
     private var tools: some View {

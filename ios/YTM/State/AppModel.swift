@@ -86,6 +86,8 @@ final class AppModel {
     var tab: AppTab = .home
     var paths: [AppTab: [Route]] = [:]
     var showNowPlaying = false
+    /// 지금 재생 화면을 열 때 처음 보일 것("artwork"·"lyrics"·"queue")
+    var nowPlayingMode = "artwork"
     var engineVisible = false
     var sheet: AppSheet?
     var searchText = ""
@@ -487,7 +489,21 @@ final class AppModel {
             if !(paths[tab] ?? []).isEmpty { paths[tab]?.removeLast() }
             return true
         case "nowPlaying":
+            nowPlayingMode = item["mode"] as? String ?? "artwork"
             showNowPlaying = item["value"] as? Bool ?? true
+            return true
+        case "fakePlayer":
+            // 로그인 없는 시뮬레이터에서 지금 재생·가사 화면을 그려 보기 위한 가짜 재생 상태
+            var p = PlayerState()
+            p.videoId = item["videoId"] as? String ?? "fake"
+            p.title = item["title"] as? String ?? ""
+            p.artist = item["artist"] as? String ?? ""
+            p.artwork = item["artwork"] as? String ?? ""
+            p.duration = item["duration"] as? Double ?? 0
+            p.position = item["position"] as? Double ?? 0
+            p.playing = item["playing"] as? Bool ?? true
+            player = p
+            playerReceivedAt = Date()
             return true
         case "search":
             search(item["value"] as? String ?? "")

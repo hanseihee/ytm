@@ -120,11 +120,14 @@ const cache = new Map<string, Promise<Lyrics | null>>();
 export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
   const hit = cache.get(q.videoId);
   if (hit) return hit;
+  // LRCLIB가 잠깐 실패(503 등)하면 이번 결과는 기억하지 않아 다음에 열 때 다시 찾는다(2026-10-14 503 관찰).
+  let lrclibFailed = false;
   const task = (async (): Promise<Lyrics | null> => {
     let record: LrclibRecord | undefined;
     try {
       record = await fromLrclib(q);
     } catch (err) {
+      lrclibFailed = true;
       console.warn('[lyrics] LRCLIB 실패', err);
     }
     if (record?.syncedLyrics) {
@@ -142,7 +145,10 @@ export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
   })();
   cache.set(q.videoId, task);
   // 실패(네트워크)는 다음에 다시 시도할 수 있게 지운다.
-  task.catch(() => cache.delete(q.videoId));
+  task.then(
+    () => lrclibFailed && cache.delete(q.videoId),
+    () => cache.delete(q.videoId),
+  );
   return task;
 }
 
