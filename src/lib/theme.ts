@@ -53,6 +53,19 @@ function load(): ThemeId {
 export const themeStore = createStore<ThemeId>(load());
 export const useTheme = () => useStore(themeStore, (s) => s);
 
+// 실제 색이 바뀐 뒤에 부를 함수들. 앨범 색은 표지를 불러온 뒤에야 바뀌고 시스템 모드는 고른 값 그대로 바뀌어서,
+// themeStore만 구독하면 캔버스가 이전 색으로 남는다.
+const colorListeners = new Set<() => void>();
+const colorsChanged = () => {
+  for (const fn of colorListeners) fn();
+};
+
+/** 화면 색(CSS 변수)이 바뀔 때마다 fn을 부른다. 캔버스처럼 색을 직접 읽는 곳이 쓴다. 해제 함수를 돌려준다. */
+export function onThemeColors(fn: () => void): () => void {
+  colorListeners.add(fn);
+  return () => colorListeners.delete(fn);
+}
+
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 export function resolveTheme(id: ThemeId): Resolved {
@@ -62,6 +75,7 @@ export function resolveTheme(id: ThemeId): Resolved {
 function apply() {
   const resolved = resolveTheme(themeStore.get());
   document.documentElement.dataset.theme = resolved;
+  colorsChanged();
   const info = THEMES.find((t) => t.id === resolved)!;
   // 창 제목 막대 밝기와 창 바탕색(화면을 다시 그리기 전 잠깐 보이는 색)도 맞춘다.
   try {
@@ -156,6 +170,7 @@ function setAccent(h: { a: number; b: number; sat: number } | null) {
   const root = document.documentElement.style;
   if (!h) {
     for (const v of ACCENT_VARS) root.removeProperty(v);
+    colorsChanged();
     return;
   }
   const s = Math.max(0.55, Math.min(0.85, h.sat + 0.25));
@@ -177,6 +192,7 @@ function setAccent(h: { a: number; b: number; sat: number } | null) {
   root.setProperty('--plum', hex(hsl(h.a, 0.22, 0.16)));
   root.setProperty('--plum-2', hex(hsl(h.a, 0.2, 0.21)));
   root.setProperty('--bg-rgb', rgbVar(night));
+  colorsChanged();
 }
 
 /**

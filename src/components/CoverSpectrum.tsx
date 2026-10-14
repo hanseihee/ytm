@@ -1,16 +1,22 @@
 // 앨범 표지 아래 스펙트럼(앨범 표지 화면·전체 화면 모드가 같이 쓴다).
 import { useEffect, useRef, useState } from 'react';
 import { keepVisualizer, onSpectrum } from '../lib/eq';
-import { cssColor, themeStore } from '../lib/theme';
+import { cssColor, onThemeColors } from '../lib/theme';
 
 /** 막대 수: 받는 막대(30Hz~16kHz 로그 간격) 48개를 이퀄라이저 패널과 같은 순서로 그대로 그린다. */
 const BARS = 48;
+/** 화면 색이 바뀌면(앨범 색 테마에서 곡이 바뀌면) 이전 색에서 새 색으로 이만큼(ms) 걸려 넘어간다. */
+const FADE_MS = 600;
+
+type Rgb = [number, number, number];
+const mix = (a: Rgb, b: Rgb, k: number) => a.map((v, i) => v + (b[i] - v) * k) as Rgb;
+const rgb = (c: Rgb) => `rgb(${c.map(Math.round).join(', ')})`;
 
 /**
  * 앨범 표지 아래 스펙트럼: 왼쪽 저음 → 가운데 보컬 → 오른쪽 고음(이퀄라이저 패널과 같은 순서), 은은한 빛과 바닥에 비친 그림자.
  * 처음에는 가운데가 저음인 좌우 대칭이었는데, 패널과 다르게 움직여 보여 같은 순서로 바꿨다(2026-10-14).
- * 색은 테마를 따른다(앨범 색 테마면 표지에서 뽑은 색). 맥은 오디오 캡처를 이미 허용했을 때만 움직이고(권한을 묻지 않는다),
- * 멈췄거나 소리 정보가 없으면 작은 점들이 천천히 숨 쉬듯 움직인다.
+ * 색은 테마를 따르고(앨범 색 테마면 표지에서 뽑은 색), 바뀔 때는 0.6초 동안 부드럽게 넘어간다.
+ * 맥은 오디오 캡처를 이미 허용했을 때만 움직이고(권한을 묻지 않는다), 멈췄거나 소리 정보가 없으면 작은 점들이 천천히 숨 쉬듯 움직인다.
  */
 export function CoverSpectrum({ playing, width, className = 'lyrics__aura' }: { playing: boolean; width: string; className?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -39,12 +45,32 @@ export function CoverSpectrum({ playing, width, className = 'lyrics__aura' }: { 
     const ctx = el?.getContext('2d');
     if (!el || !ctx) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let colors = { low: '', high: '' };
-    const readColors = () => {
-      colors = { low: cssColor('--violet', '#7b3ff2'), high: cssColor('--rose', '#ff4d6d') };
+    /** 캔버스 위쪽 빈 곳(빛이 번질 자리, CSS --aura-glow). 막대는 그 아래에만 그린다. */
+    const glow = parseFloat(getComputedStyle(el).getPropertyValue('--aura-glow')) || 0;
+    /** CSS 색을 캔버스에 넣었다 빼서 '#rrggbb'로 맞춘 뒤 숫자로 바꾼다(어떤 색 표기든 섞을 수 있게). */
+    const toRgb = (color: string): Rgb => {
+      ctx.fillStyle = '#000000';
+      ctx.fillStyle = color;
+      const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(ctx.fillStyle));
+      return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
     };
-    readColors();
-    const stopTheme = themeStore.subscribe(() => requestAnimationFrame(readColors));
+    const read = () => ({ low: toRgb(cssColor('--violet', '#7b3ff2')), high: toRgb(cssColor('--rose', '#ff4d6d')) });
+    let from = read();
+    let to = from;
+    let fadeAt = 0;
+    /** 지금 그릴 색. 넘어가는 중이면 이전 색과 새 색 사이(처음과 끝은 천천히). */
+    const colorsAt = (now: number) => {
+      const p = reduce ? 1 : Math.min(1, Math.max(0, (now - fadeAt) / FADE_MS));
+      const k = p * p * (3 - 2 * p);
+      return { low: mix(from.low, to.low, k), high: mix(from.high, to.high, k) };
+    };
+    const stopTheme = onThemeColors(() => {
+      // 넘어가는 도중에 또 바뀌면 지금 보이는 색에서 다시 출발한다.
+      const now = performance.now();
+      from = colorsAt(now);
+      to = read();
+      fadeAt = now;
+    });
     // 높이 = 최근 가장 큰 소리 아래 40dB 안에서 얼마나 큰지(대역 사이 크기 차이는 그대로 살린다)를 1.8제곱, 최대 92%.
     // 합성 팝으로 맞춘 값(2026-10-14): 끝까지(90% 이상) 차는 시간 0.9%(예전 표지 54%), 평균 높이 0.42,
     // 이퀄라이저 패널 막대와의 상관 0.98(같이 움직인다).
@@ -99,17 +125,20 @@ export function CoverSpectrum({ playing, width, className = 'lyrics__aura' }: { 
       const gap = Math.max(2, (w / n) * 0.42);
       const bw = (w - gap * (n - 1)) / n;
       const dot = Math.min(bw, 4);
-      const grad = ctx.createLinearGradient(0, h, 0, 0);
-      grad.addColorStop(0, colors.low);
-      grad.addColorStop(1, colors.high);
+      const colors = colorsAt(now);
+      const high = rgb(colors.high);
+      const area = h - glow;
+      const grad = ctx.createLinearGradient(0, h, 0, glow);
+      grad.addColorStop(0, rgb(colors.low));
+      grad.addColorStop(1, high);
       ctx.fillStyle = grad;
-      ctx.shadowColor = colors.high;
+      ctx.shadowColor = high;
       const t = now / 1000;
       for (let i = 0; i < n; i++) {
         const v = shown[i];
         // 쉬는 동안에는 왼쪽에서 오른쪽으로 물결치듯 아주 조금 오르내린다.
         const breathe = reduce ? 0 : ((Math.sin(t * 1.7 - i * 0.38) + 1) / 2) * (1 - Math.min(1, v * 4)) * 3;
-        const bh = Math.min(h, dot + v * (h - dot) + breathe);
+        const bh = Math.min(area, dot + v * (area - dot) + breathe);
         ctx.globalAlpha = 0.5 + 0.5 * Math.min(1, v * 1.6);
         ctx.shadowBlur = 6 + 14 * v;
         ctx.beginPath();

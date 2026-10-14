@@ -1,12 +1,12 @@
 // 전체 화면 모드: 모니터에 틀어 두는 화면(YouTube 플레이리스트 채널 essential; 영상처럼 차분하게).
-// 흐린 표지 배경 위에 큰 앨범 표지, 앨범·제목·가수, 지금 가사 세 줄(이전·지금·다음), 스펙트럼, 맨 아래 얇은 진행 막대.
+// 흐린 표지 배경 위에 큰 앨범 표지, 앨범·제목·가수, 위로 굴러 올라가는 가사(지난 줄·지금 줄·다음 줄이 보인다), 스펙트럼, 맨 아래 얇은 진행 막대.
 // 마우스를 3초 움직이지 않으면 커서와 조작 단추를 숨긴다. 이 모드 동안은 화면이 꺼지지 않는다. Esc로 나간다.
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { t } from '../i18n';
-import { activeLine, type Lyrics } from '../lib/lyrics';
+import { activeLine, type LyricLine, type Lyrics } from '../lib/lyrics';
 import * as ytm from '../lib/ytm/client';
 import { formatTime, patchPlayer, playerStore, usePlayer, usePosition } from '../state/player';
 import { toastError } from '../state/ui';
@@ -16,6 +16,10 @@ import { Icon } from './Icon';
 
 /** 이만큼 움직임이 없으면 커서·조작 단추를 숨긴다 */
 const IDLE_MS = 3000;
+/** 지금 줄의 위쪽 끝을 가사 창 높이의 이 비율에 둔다(위에 지난 줄 하나, 아래에 다음 줄이 보인다. 지금 줄이 두 줄이어도). */
+const LYRIC_ANCHOR = 0.3;
+/** 줄이 바뀔 때 아래 줄일수록 이만큼(ms)씩 늦게 출발한다(최대 4줄). 탄력 있게 말려 올라가는 느낌. */
+const LYRIC_STAGGER_MS = 55;
 
 const run = (p: Promise<unknown>) => p.catch((err) => toastError(err));
 
@@ -86,12 +90,9 @@ export function FullStage({ lyrics, offset, onExit }: { lyrics?: Lyrics | null; 
     void run(ytm.control('toggle'));
   };
 
-  // 시간 맞춤 가사가 있을 때만 이전·지금·다음 줄(첫 줄 전에는 ♪와 첫 줄)
-  const lines = lyrics?.synced?.filter((l) => l.text.trim()) ?? [];
+  // 시간 맞춤 가사가 있을 때만(첫 줄 전에는 ♪가 지금 줄)
+  const lines = useMemo(() => lyrics?.synced?.filter((l) => l.text.trim()) ?? [], [lyrics]);
   const at = lines.length ? activeLine(lines, position + offset) : -1;
-  const prev = at > 0 ? lines[at - 1].text : '';
-  const now = at >= 0 ? lines[at].text : '♪';
-  const next = lines[at + 1]?.text ?? '';
   const art = artwork && !ad ? largeArt(artwork) : '';
   const pct = duration > 0 ? Math.min(100, (position / duration) * 100) : 0;
 
@@ -109,13 +110,7 @@ export function FullStage({ lyrics, offset, onExit }: { lyrics?: Lyrics | null; 
           {album && !ad && <div className="stage__album">{album}</div>}
           <h1 className="stage__title">{ad ? t('광고') : title || t('재생 중인 곡이 없습니다')}</h1>
           {artist && <div className="stage__artist">{ad ? 'YouTube Music' : artist}</div>}
-          {lines.length > 0 && !ad && (
-            <div className="stage__lyrics">
-              <p className="stage__line stage__line--prev">{prev}</p>
-              <p key={at} className="stage__line stage__line--now">{now}</p>
-              <p className="stage__line stage__line--next">{next}</p>
-            </div>
-          )}
+          {lines.length > 0 && !ad && <StageLyrics lines={lines} at={at} />}
           <CoverSpectrum playing={playing} width="min(100%, 560px)" className="stage__aura" />
         </div>
       </div>
@@ -144,3 +139,63 @@ export function FullStage({ lyrics, offset, onExit }: { lyrics?: Lyrics | null; 
     document.body,
   );
 }
+
+/**
+ * 전체 화면 가사: 모든 줄을 세로로 늘어놓고, 지금 줄이 늘 같은 높이에 오도록 목록을 위로 굴린다.
+ * 아래 줄일수록 조금씩 늦게 출발하고 살짝 지나쳤다 돌아오는 곡선(CSS)이라, 줄이 바뀔 때 탄력 있게 말려 올라간다.
+ * 맨 앞에는 첫 줄 전에 보이는 ♪를 둔다. 새 곡이거나 창 크기가 바뀌었을 때는 굴리지 않고 바로 그 자리에 둔다.
+ */
+const StageLyrics = memo(function StageLyrics({ lines, at }: { lines: LyricLine[]; at: number }) {
+  const box = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  /** 지금 줄의 순번(맨 앞 ♪ 때문에 한 칸 밀린다) */
+  const now = at + 1;
+  const nowRef = useRef(now);
+  nowRef.current = now;
+  const placedLines = useRef<LyricLine[] | null>(null);
+
+  /** 지금 줄이 기준 높이에 오도록 목록 전체를 옮긴다(--shift). instant면 애니메이션 없이. */
+  const place = (instant: boolean) => {
+    const el = box.current;
+    const list = track.current;
+    const row = list?.children[nowRef.current] as HTMLElement | undefined;
+    if (!el || !list || !row) return;
+    if (instant) list.classList.add('is-instant');
+    list.style.setProperty('--shift', `${Math.round(el.clientHeight * LYRIC_ANCHOR - row.offsetTop)}px`);
+    if (instant) {
+      // 옮긴 자리를 먼저 반영한 다음 애니메이션을 다시 켠다(안 그러면 켜는 순간 굴러간다).
+      void list.offsetHeight;
+      list.classList.remove('is-instant');
+    }
+  };
+
+  useLayoutEffect(() => {
+    place(placedLines.current !== lines);
+    placedLines.current = lines;
+  }, [lines, now]);
+
+  // 창 크기가 바뀌면 줄 바꿈·글자 크기가 달라지므로 다시 잰다.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => place(true));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={box} className="stage__lyrics">
+      <div ref={track} className="stage__track">
+        {['♪', ...lines.map((l) => l.text)].map((text, i) => (
+          <p
+            key={i}
+            className={`stage__line${i === now ? ' is-now' : ''}`}
+            style={{ '--d': `${Math.min(4, Math.max(0, i - now + 1)) * LYRIC_STAGGER_MS}ms` } as CSSProperties}
+          >
+            {text}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+});

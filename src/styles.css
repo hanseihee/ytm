@@ -525,8 +525,11 @@ button.top-card:hover { background: var(--plum); }
 }
 .lyrics__art { flex: none; border-radius: 14px; object-fit: cover; box-shadow: 0 30px 80px rgb(0 0 0 / 0.45); transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
 .lyrics__art.is-paused { transform: scale(0.92); }
+/* 스펙트럼 캔버스: 막대가 끝까지 찼을 때 위로 번지는 빛이 잘리지 않게 위쪽에 --aura-glow만큼 빈 곳을 두고 그만큼 위로 당긴다.
+   (CoverSpectrum이 이 값을 읽어 그 아래에만 막대를 그린다) */
+.lyrics__aura, .stage__aura { --aura-glow: 22px; pointer-events: none; }
 .lyrics__aura {
-  flex: none; height: 38px; margin: -6px 0 -2px;
+  flex: none; height: calc(38px + var(--aura-glow)); margin: calc(-6px - var(--aura-glow)) 0 -2px;
   /* 바닥에 비친 듯한 그림자 */
   -webkit-box-reflect: below 3px linear-gradient(transparent 30%, rgb(255 255 255 / 0.22));
 }
@@ -969,18 +972,25 @@ kbd { display: inline-block; min-width: 64px; padding: 2px 8px; margin-right: 8p
   overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
 .stage__artist { font-size: clamp(16px, 1.7cqw, 30px); font-weight: 500; color: rgb(255 255 255 / 0.72); }
-.stage__lyrics { margin-top: clamp(18px, 4cqh, 56px); display: flex; flex-direction: column; gap: 0.45em; }
-.stage__line { margin: 0; min-height: 1.3em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.stage__line--prev { font-size: clamp(14px, 1.35cqw, 24px); color: rgb(255 255 255 / 0.3); }
-.stage__line--now {
-  font-size: clamp(22px, 2.6cqw, 48px); font-weight: 700; line-height: 1.25;
-  text-shadow: 0 2px 24px rgb(0 0 0 / 0.3);
-  animation: stage-line 0.6s ease both;
+/* 가사(StageLyrics): 높이가 정해진 창 안에서 줄 목록을 위로 굴린다(--shift). 위아래 끝은 서서히 사라진다.
+   줄은 모두 같은 글자 크기로 놓고 지금 줄만 원래 크기·밝게, 나머지는 scale로 작고 흐리게 둬서 커지고 작아지는 것도 부드럽게.
+   움직임: 살짝 지나쳤다 돌아오는 곡선 + 아래 줄일수록 조금씩 늦게 출발(--d)해서 쫄깃하게 말려 올라간다. */
+.stage__lyrics {
+  flex: none; height: 6.4em; margin-top: clamp(18px, 4cqh, 56px); overflow: hidden;
+  font-size: clamp(20px, min(2.4cqw, 4.2cqh), 44px);
+  mask-image: linear-gradient(transparent, #000 0.7em, #000 calc(100% - 1.5em), transparent);
 }
-.stage__line--next { font-size: clamp(14px, 1.35cqw, 24px); color: rgb(255 255 255 / 0.45); }
-@keyframes stage-line { from { opacity: 0; transform: translateY(0.35em); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.stage__track { position: relative; display: flex; flex-direction: column; gap: 0.45em; }
+.stage__line {
+  margin: 0; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  opacity: 0.32; transform: translateY(var(--shift, 0px)) scale(0.72); transform-origin: left center;
+  transition: transform 0.75s cubic-bezier(0.34, 1.45, 0.64, 1) var(--d, 0ms), opacity 0.45s ease var(--d, 0ms);
+}
+.stage__line.is-now { opacity: 1; transform: translateY(var(--shift, 0px)); text-shadow: 0 2px 24px rgb(0 0 0 / 0.3); }
+.stage__track.is-instant .stage__line { transition: none; }
 .stage__aura {
-  margin-top: clamp(16px, 3.5cqh, 44px); height: clamp(34px, 6cqh, 64px);
+  margin-top: calc(clamp(16px, 3.5cqh, 44px) - var(--aura-glow)); height: calc(clamp(34px, 6cqh, 64px) + var(--aura-glow));
   -webkit-box-reflect: below 3px linear-gradient(transparent 30%, rgb(255 255 255 / 0.2));
 }
 .stage__foot { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 0 8cqw 5cqh; }
@@ -997,8 +1007,10 @@ kbd { display: inline-block; min-width: 64px; padding: 2px 8px; margin-right: 8p
 @container stage (orientation: portrait) {
   .stage__main { --stage-art: min(44cqh, 80cqw); grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: center; text-align: center; gap: 5cqh; padding: 7cqh 8cqw 2cqh; }
   .stage__info { align-items: center; }
+  .stage__lyrics { align-self: stretch; }
+  .stage__line { transform-origin: center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .stage__line--now { animation: none; }
+  .stage__line { transition: opacity 0.3s; }
   .stage__art { transition: none; }
 }

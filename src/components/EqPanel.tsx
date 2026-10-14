@@ -16,7 +16,7 @@ import {
   useEq,
   useEqStatus,
 } from '../lib/eq';
-import { cssColor, themeStore } from '../lib/theme';
+import { cssColor, onThemeColors } from '../lib/theme';
 import { usePlayer } from '../state/player';
 import { togglePanel } from '../state/ui';
 import { Icon } from './Icon';
@@ -44,7 +44,7 @@ function Spectrum() {
     const ctx = el.getContext('2d');
     if (!ctx) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // 캔버스는 CSS 변수를 못 쓰므로 테마가 바뀔 때마다 색을 다시 읽는다.
+    // 캔버스는 CSS 변수를 못 쓰므로 화면 색이 바뀔 때마다(테마, 앨범 색 테마의 곡 변경) 다시 읽는다.
     let colors = { low: '', high: '', peak: '' };
     const readColors = () => {
       colors = {
@@ -54,7 +54,7 @@ function Spectrum() {
       };
     };
     readColors();
-    const stopTheme = themeStore.subscribe(() => requestAnimationFrame(readColors));
+    const stopTheme = onThemeColors(readColors);
     const shown: number[] = [];
     const peaks: number[] = [];
     let raf = 0;
