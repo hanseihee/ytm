@@ -4,6 +4,8 @@ YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 �
 
 **내려받기**: [최신 릴리즈](https://github.com/hanseihee/ytm/releases/latest) — 맥(Apple 실리콘) `.dmg`, 윈도우(64비트) 설치 파일. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md).
 
+![YTM Desktop — 멜론 TOP 100을 YouTube Music 곡과 짝지어 듣는 차트 화면](docs/screenshot-desktop.png)
+
 - **YTM Desktop**(맥·윈도우): Rust(Tauri 2) + React
 - **YTM**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
 
