@@ -1,0 +1,8 @@
+{
+  "_comment": "Partner Center → 앱 → 제품 관리 → 제품 ID(Product identity)에 나오는 값. 이름을 예약한 뒤 채운다.",
+  "displayName": "YTMusic",
+  "identityName": "",
+  "publisher": "",
+  "publisherDisplayName": "",
+  "description": "YouTube Music 계정으로 쓰는 데스크톱 음악 플레이어"
+}

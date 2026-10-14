@@ -1,0 +1,43 @@
+# Microsoft Store용 MSIX 만들기: Actions → "MSIX (Microsoft Store)" → Run workflow (또는 gh workflow run msix.yml)
+# Store용 빌드(GitHub 새 버전 알림 끔)를 scripts/msix.ps1로 묶어 아티팩트 YTMusic-msix로 남긴다.
+# 제출은 Partner Center 또는 msstore CLI(msstore publish --inputFile <msix> --appId <제품 ID>)로 한다.
+name: MSIX (Microsoft Store)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_identity:
+        description: 'Partner Center 값 없이 시험용 이름으로 묶기(빌드 확인용, 제출 불가)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  msix:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Tauri 빌드(Store용, 설치 파일 없이)
+        run: npx tauri build --no-bundle
+        env:
+          VITE_DISTRIBUTION: store
+      - name: MSIX 묶기
+        shell: pwsh
+        run: ./scripts/msix.ps1
+        env:
+          MSIX_TEST_IDENTITY: ${{ inputs.test_identity && '1' || '0' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YTMusic-msix
+          path: release/msix/*.msix
+          if-no-files-found: error

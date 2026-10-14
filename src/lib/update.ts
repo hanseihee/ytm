@@ -4,6 +4,9 @@
 export const REPO = 'hanseihee/ytm';
 const DISMISS_KEY = 'ytm-desktop:update-dismissed';
 
+/** Microsoft Store 배포본(VITE_DISTRIBUTION=store로 빌드)은 Store가 업데이트를 맡으므로 GitHub 새 버전을 알리지 않는다. */
+export const UPDATE_CHECK_ENABLED = import.meta.env.VITE_DISTRIBUTION !== 'store';
+
 export interface UpdateInfo {
   version: string;
   url: string;

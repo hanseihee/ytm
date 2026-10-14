@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { LangKeyed, useLang } from './i18n/react';
 import { rustStrings } from './i18n/rust';
 import { UpdateBanner } from './components/UpdateBanner';
+import { UPDATE_CHECK_ENABLED } from './lib/update';
 import * as ytm from './lib/ytm/client';
 import { onMenuAction } from './lib/tauri';
 import { startLibrarySync } from './state/library';
@@ -198,7 +199,7 @@ export function App() {
         <ContextMenuHost />
         <DialogHost />
         <Toasts />
-        <UpdateBanner />
+        {UPDATE_CHECK_ENABLED && <UpdateBanner />}
       </div>
     </LangKeyed>
   );
