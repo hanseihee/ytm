@@ -666,7 +666,8 @@ fn tick(app: &AppHandle) {
     }
 }
 
-/// 링 버퍼의 최근 FFT_SIZE 표본 → 30Hz~16kHz 로그 간격 막대 48개(0~255, Web Audio 분석기와 같은 눈금).
+/// 링 버퍼의 최근 FFT_SIZE 표본 → 30Hz~16kHz 로그 간격 막대 48개(0~255 = −100~−10dB, 윈도우 Web Audio 분석기와 같은 눈금).
+/// 윗한계가 −30dB이던 때는 요즘 음악의 저음이 늘 255에 붙어 움직이지 않았다(2026-10-14 합성 팝으로 확인: 값의 30%가 255).
 fn spectrum(planner: &mut FftPlanner<f32>, smooth: &mut [f32], shared: &Shared, rate: f32) -> Vec<u8> {
     let mut frame = vec![Complex32::new(0.0, 0.0); FFT_SIZE];
     {
@@ -695,7 +696,7 @@ fn spectrum(planner: &mut FftPlanner<f32>, smooth: &mut [f32], shared: &Shared, 
             let i1 = (((f1 / nyquist) * half as f32).ceil() as usize).clamp(i0, half - 1);
             let m = smooth[i0.min(half - 1)..=i1].iter().cloned().fold(0.0f32, f32::max);
             let db = 20.0 * m.max(1e-9).log10();
-            (((db + 100.0) / 70.0) * 255.0).clamp(0.0, 255.0) as u8
+            (((db + 100.0) / 90.0) * 255.0).clamp(0.0, 255.0) as u8
         })
         .collect()
 }

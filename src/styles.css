@@ -431,7 +431,8 @@ button.top-card:hover { background: var(--plum); }
 /* ── 재생 바 ───────────────────────────────────────────────────────────── */
 .player {
   grid-area: player;
-  display: grid; grid-template-columns: minmax(200px, 1fr) minmax(320px, 2fr) minmax(200px, 1fr);
+  /* 오른쪽(아이콘·음량)은 내용만큼 늘 확보한다. 창 폭의 1/4로 두면 아이콘이 눌려 간격이 들쭉날쭉해졌다. */
+  display: grid; grid-template-columns: minmax(200px, 1fr) minmax(320px, 2fr) minmax(max-content, 1fr);
   align-items: center; gap: 16px; padding: 0 18px;
   background: var(--dusk); border-top: 1px solid var(--line);
   z-index: 30;
@@ -454,6 +455,7 @@ button.top-card:hover { background: var(--plum); }
 @keyframes pulse { 50% { filter: brightness(0.8); } }
 .repeat__one { position: absolute; right: 4px; bottom: 4px; font-size: 9px; font-weight: 800; }
 .player__side { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.player__side .icon-btn { flex: none; }
 
 .seek { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 640px; }
 .seek__time { font-size: 12px; color: var(--mist); width: 42px; font-variant-numeric: tabular-nums; }
@@ -884,9 +886,12 @@ kbd { display: inline-block; min-width: 64px; padding: 2px 8px; margin-right: 8p
   .side__account { justify-content: center; padding: 8px 0; }
 }
 /* 재생 바: 좁으면 음량 막대, 더 좁으면 셔플·반복·좋아요를 숨긴다 */
+/* 아이콘과 음량 막대가 다 들어가지 않는 폭부터 음량 막대를 숨긴다(아이콘은 줄이지 않는다) */
+@media (max-width: 1040px) {
+  .volume__range { display: none; }
+}
 @media (max-width: 920px) {
   .player { grid-template-columns: minmax(0, 1fr) minmax(240px, 1.4fr) auto; gap: 10px; padding: 0 12px; }
-  .volume__range { display: none; }
 }
 @media (max-width: 760px) {
   .player__buttons > .icon-btn:first-child, .player__buttons .repeat, .player__like { display: none; }

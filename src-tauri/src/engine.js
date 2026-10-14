@@ -930,6 +930,9 @@
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 4096;
     analyser.smoothingTimeConstant = 0.72;
+    // 맥 탭(mac_tap.rs spectrum)과 같은 눈금: 0~255 = −100~−10dB(기본 −30dB 위는 잘려 저음이 늘 끝까지 찼다)
+    analyser.minDecibels = -100;
+    analyser.maxDecibels = -10;
     const source = ctx.createMediaElementSource(video);
     source.connect(preamp);
     let node = preamp;
