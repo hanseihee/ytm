@@ -1,0 +1,51 @@
+# YTM iOS 앱 (XcodeGen). Xcode 프로젝트(YTM.xcodeproj)는 만들어 쓰는 파일이라 저장소에 넣지 않는다:
+#   npm run ios:project    (= 데이터 묶음 빌드 + xcodegen generate)
+# - 화면: SwiftUI(YTM/Views)
+# - 데이터: 데스크톱과 같은 TypeScript(../src/lib)를 묶은 build/ytm-core.js를 JavaScriptCore로 돌린다.
+# - 재생 엔진: 데스크톱과 같은 ../src-tauri/src/engine.js를 숨은 WKWebView에 넣는다.
+name: YTM
+options:
+  bundleIdPrefix: dev.seihee
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: RT556U3WKT
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  YTM:
+    type: application
+    platform: iOS
+    sources:
+      - path: YTM
+      - path: build/ytm-core.js
+        buildPhase: resources
+      - path: ../src-tauri/src/engine.js
+        buildPhase: resources
+    preBuildScripts:
+      - name: 데이터 묶음 빌드(ytm-core.js)
+        basedOnDependencyAnalysis: false
+        script: |
+          # Xcode에서 바로 빌드해도 TypeScript 데이터 코드가 최신이 되게 한다(node가 없으면 있던 파일을 쓴다).
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          cd "$SRCROOT/.."
+          if command -v npx >/dev/null 2>&1; then
+            npx vite build --config vite.core.config.ts --logLevel warn || exit 1
+          elif [ ! -f "$SRCROOT/build/ytm-core.js" ]; then
+            echo "error: node가 없어 ios/build/ytm-core.js를 만들 수 없습니다 (npm run build:ios-core)"; exit 1
+          fi
+    settings:
+      base:
+        PRODUCT_NAME: YTM
+        PRODUCT_BUNDLE_IDENTIFIER: dev.seihee.ytmmobile
+        INFOPLIST_FILE: YTM/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: NO
+        ENABLE_USER_SCRIPT_SANDBOXING: NO

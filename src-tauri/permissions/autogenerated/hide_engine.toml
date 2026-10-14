@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-hide-engine"
+description = "Enables the hide_engine command without any pre-configured scope."
+commands.allow = ["hide_engine"]
+
+[[permission]]
+identifier = "deny-hide-engine"
+description = "Denies the hide_engine command without any pre-configured scope."
+commands.deny = ["hide_engine"]

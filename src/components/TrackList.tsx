@@ -1,0 +1,133 @@
+import { memo, type MouseEvent } from 'react';
+import type { Ref, Track } from '../lib/ytm/types';
+import { toggleLike, playTrack, useLiked } from '../state/library';
+import { go, routeForBrowse } from '../state/nav';
+import { formatTime, usePlayer } from '../state/player';
+import { openMenu } from '../state/ui';
+import { Cover } from './Cover';
+import { Icon } from './Icon';
+import { trackMenu, type TrackMenuContext } from './menus';
+
+export function ArtistLinks({ artists, className = '' }: { artists: Ref[]; className?: string }) {
+  if (!artists.length) return null;
+  return (
+    <span className={`artist-links ${className}`}>
+      {artists.map((a, i) => (
+        <span key={`${a.name}${i}`}>
+          {i > 0 && ', '}
+          {a.id ? (
+            <button type="button" className="link" onClick={(e) => { e.stopPropagation(); go(routeForBrowse(a.id!)); }}>
+              {a.name}
+            </button>
+          ) : (
+            a.name
+          )}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function Bars() {
+  return (
+    <span className="bars" aria-label="재생 중">
+      <i /><i /><i />
+    </span>
+  );
+}
+
+interface RowProps extends TrackMenuContext {
+  track: Track;
+  position: number;
+  numbered: boolean;
+  showCover: boolean;
+  showAlbum: boolean;
+}
+
+const Row = memo(function Row({ track, position, numbered, showCover, showAlbum, editablePlaylistId, onRemoved }: RowProps) {
+  const isCurrent = usePlayer((s) => s.videoId === track.videoId);
+  const isPlaying = usePlayer((s) => s.videoId === track.videoId && s.playing);
+  const liked = useLiked(track.videoId);
+  const menu = (e: MouseEvent) => {
+    e.preventDefault();
+    openMenu(e.clientX, e.clientY, trackMenu(track, { editablePlaylistId, onRemoved }));
+  };
+  const lead = numbered ? (track.index ?? position + 1) : null;
+  return (
+    <div
+      className={`track${isCurrent ? ' is-current' : ''}${track.available ? '' : ' is-unavailable'}`}
+      role="row"
+      onDoubleClick={() => playTrack(track)}
+      onContextMenu={menu}
+    >
+      <div className="track__lead" role="cell">
+        {showCover && <Cover src={track.thumbnail} size={40} />}
+        {lead !== null && !showCover && <span className="track__num">{isPlaying ? <Bars /> : lead}</span>}
+        <button type="button" className="track__play" aria-label={`${track.title} 재생`} onClick={() => playTrack(track)} disabled={!track.available}>
+          <Icon name="play" size={16} />
+        </button>
+        {showCover && isPlaying && <span className="track__cover-bars"><Bars /></span>}
+      </div>
+      <div className="track__main" role="cell">
+        <span className="track__title" title={track.title}>
+          {track.title}
+          {track.isVideo && <span className="track__badge">영상</span>}
+        </span>
+        <ArtistLinks artists={track.artists} className="track__artists" />
+      </div>
+      {showAlbum && (
+        <div className="track__album" role="cell">
+          {track.album?.id ? (
+            <button type="button" className="link" onClick={() => go({ name: 'album', id: track.album!.id! })}>{track.album.name}</button>
+          ) : (
+            track.album?.name
+          )}
+        </div>
+      )}
+      <div className="track__tail" role="cell">
+        <button
+          type="button"
+          className={`icon-btn track__like${liked ? ' is-on' : ''}`}
+          aria-label={liked ? '좋아요 취소' : '좋아요'}
+          aria-pressed={liked}
+          onClick={() => toggleLike(track)}
+        >
+          <Icon name="heart" size={17} filled={liked} />
+        </button>
+        <span className="track__time">{track.duration !== undefined ? formatTime(track.duration) : ''}</span>
+        <button type="button" className="icon-btn track__more" aria-label="더 보기" onClick={menu}>
+          <Icon name="more" size={18} />
+        </button>
+      </div>
+    </div>
+  );
+});
+
+interface Props extends TrackMenuContext {
+  tracks: Track[];
+  /** 앨범처럼 수록 순서가 의미 있을 때 번호를 보인다 */
+  numbered?: boolean;
+  showCover?: boolean;
+  showAlbum?: boolean;
+  limit?: number;
+}
+
+export function TrackList({ tracks, numbered = false, showCover = true, showAlbum = true, limit, editablePlaylistId, onRemoved }: Props) {
+  const list = limit ? tracks.slice(0, limit) : tracks;
+  return (
+    <div className={`tracks${showAlbum ? '' : ' tracks--no-album'}`} role="table">
+      {list.map((t, i) => (
+        <Row
+          key={`${t.videoId}-${t.setVideoId ?? i}`}
+          track={t}
+          position={i}
+          numbered={numbered}
+          showCover={showCover}
+          showAlbum={showAlbum}
+          editablePlaylistId={editablePlaylistId}
+          onRemoved={onRemoved}
+        />
+      ))}
+    </div>
+  );
+}

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-eq-visualizer"
+description = "Enables the eq_visualizer command without any pre-configured scope."
+commands.allow = ["eq_visualizer"]
+
+[[permission]]
+identifier = "deny-eq-visualizer"
+description = "Denies the eq_visualizer command without any pre-configured scope."
+commands.deny = ["eq_visualizer"]

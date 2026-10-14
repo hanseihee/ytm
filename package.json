@@ -1,0 +1,34 @@
+{
+  "name": "ytm-desktop",
+  "private": true,
+  "version": "0.2.0",
+  "scripts": {
+    "dev": "tauri dev",
+    "vite": "vite",
+    "vite:build": "tsc --noEmit && vite build",
+    "check:parsers": "tsx scripts/check-parsers.ts",
+    "icons": "tauri icon src-tauri/icons/app-icon.png",
+    "build:mac": "tauri build --bundles app,dmg",
+    "build:win": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis",
+    "tauri": "tauri",
+    "build:ios-core": "tsc --noEmit && vite build --config vite.core.config.ts",
+    "ios:project": "npm run build:ios-core && cd ios && xcodegen generate"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.2",
+    "@types/node": "^24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  },
+  "type": "module",
+  "dependencies": {
+    "@tauri-apps/api": "2.12.3",
+    "pretendard": "1.3.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

@@ -1,0 +1,712 @@
+// YTM 엔진 스크립트 — 숨은 "engine" 창(music.youtube.com)에 페이지 스크립트보다 먼저 들어간다(데스크톱·iOS 공용).
+// 앱 화면(main 창)은 이 스크립트를 통해서만 YouTube Music과 이야기한다.
+//
+// 분석 근거 (2026-10-14, 플레이어 player_es6 22cb88bc / 클라이언트 WEB_REMIX 1.20261011.16.00):
+// - 플레이어는 `navigator.mediaSession && window.MediaMetadata`일 때만 mediaSession 모듈을 만들고
+//   곡 정보·재생 상태·위치·동작(play/pause/seekto/nexttrack/previoustrack)을 등록한다.
+// - 컴포넌트는 `yt-navigate` CustomEvent({endpoint})로 화면 이동·재생을 요청한다.
+// - 대기열은 <ytmusic-player-queue>의 Redux 저장소(getState/dispatch)가 관리한다(아래 4절).
+// - 내부 API 인증: `SAPISIDHASH <초>_<sha1("<초> <SAPISID> <출처>")>`, 1P·3P 쿠키로 만든 값도 함께 보낸다.
+// - 플레이어 바 버튼: `.next-button`, `.previous-button`, `#play-pause-button`.
+(() => {
+  'use strict';
+  if (window.top !== window || window.__ytmEngine) return;
+  if (!/(^|\.)youtube\.com$/.test(location.hostname)) return;
+
+  const ON_MUSIC = location.hostname === 'music.youtube.com';
+  const SIGNIN_URL =
+    'https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true' +
+    '&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop' +
+    '%26hl%3Dko%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F&hl=ko';
+
+  // 앱과의 통로: 데스크톱은 Tauri, iOS 앱은 ios/YTM/Engine.swift가 먼저 넣는 window.__ytmIpc.
+  const bridge = () => window.__ytmIpc || window.__TAURI_INTERNALS__;
+  const invoke = (cmd, args) => {
+    const ipc = bridge();
+    if (!ipc || typeof ipc.invoke !== 'function') return Promise.reject(new Error('ipc_unavailable'));
+    return ipc.invoke(cmd, args);
+  };
+  const emit = (kind, data) =>
+    invoke('engine_event', { kind, data }).catch((err) => console.warn('[ytm-engine] 이벤트 전달 실패', kind, err));
+
+  // ── 1. mediaSession 바꿔 끼우기 ─────────────────────────────────────────
+  const session = { metadata: null, playbackState: 'none', handlers: Object.create(null) };
+  const fakeSession = {
+    get metadata() { return session.metadata; },
+    set metadata(value) { session.metadata = value || null; schedule(); },
+    get playbackState() { return session.playbackState; },
+    set playbackState(value) { session.playbackState = String(value); schedule(); },
+    setActionHandler(action, handler) {
+      session.handlers[action] = typeof handler === 'function' ? handler : null;
+    },
+    setPositionState() { schedule(); },
+    setCameraActive() {},
+    setMicrophoneActive() {},
+  };
+  try {
+    Object.defineProperty(navigator, 'mediaSession', { configurable: true, enumerable: true, get: () => fakeSession });
+  } catch (err) {
+    console.warn('[ytm-engine] mediaSession을 바꾸지 못했습니다', err);
+  }
+  if (typeof window.MediaMetadata !== 'function') {
+    window.MediaMetadata = class MediaMetadata {
+      constructor(init = {}) {
+        this.title = init.title || '';
+        this.artist = init.artist || '';
+        this.album = init.album || '';
+        this.artwork = Array.isArray(init.artwork) ? init.artwork : [];
+      }
+    };
+  }
+
+  // ── 2. 공통 도구 ────────────────────────────────────────────────────────
+  const cfg = (key) => {
+    try {
+      return window.ytcfg && typeof window.ytcfg.get === 'function' ? window.ytcfg.get(key) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const player = () => document.getElementById('movie_player');
+  const app = () => document.querySelector('ytmusic-app');
+  const bar = () => document.querySelector('ytmusic-player-bar');
+  const call = (target, method, ...args) => {
+    try {
+      return target && typeof target[method] === 'function' ? target[method](...args) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const finite = (value, fallback) =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+
+  // ── 3. 내부 API (InnerTube) 호출 ────────────────────────────────────────
+  const cookie = (name) => {
+    for (const part of document.cookie.split('; ')) {
+      const at = part.indexOf('=');
+      if (at > 0 && part.slice(0, at) === name) return decodeURIComponent(part.slice(at + 1));
+    }
+    return '';
+  };
+  async function sha1Hex(text) {
+    const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function authorization() {
+    const origin = location.origin;
+    const now = Math.floor(Date.now() / 1000);
+    const hash = async (label, value) => `${label} ${now}_${await sha1Hex(`${now} ${value} ${origin}`)}`;
+    const parts = [];
+    const sapisid = cookie('SAPISID') || cookie('__Secure-3PAPISID');
+    if (sapisid) parts.push(await hash('SAPISIDHASH', sapisid));
+    const first = cookie('__Secure-1PAPISID');
+    if (first) parts.push(await hash('SAPISID1PHASH', first));
+    const third = cookie('__Secure-3PAPISID');
+    if (third) parts.push(await hash('SAPISID3PHASH', third));
+    return parts.join(' ');
+  }
+
+  async function api({ endpoint, body = {}, query = {} }) {
+    if (!ON_MUSIC) throw new Error('not_on_music');
+    if (typeof endpoint !== 'string' || !/^[a-z_]+(\/[a-z_]+)*$/.test(endpoint)) throw new Error('bad_endpoint');
+    // 페이지 맥락에는 시간이 지나면 만료되는 값(request.consistencyTokenJars)과 클릭 추적값이 들어 있어
+    // 가끔 400 "invalid argument"가 났다(2026-10-14 관찰). 그 값들은 빼고 보낸다.
+    const full = JSON.parse(JSON.stringify(cfg('INNERTUBE_CONTEXT') || {
+      client: { clientName: 'WEB_REMIX', clientVersion: cfg('INNERTUBE_CLIENT_VERSION') || '1.20261011.16.00' },
+    }));
+    delete full.clickTracking;
+    delete full.adSignalsInfo;
+    if (full.request) delete full.request.consistencyTokenJars;
+    // 그래도 400이 나면 꼭 필요한 값만 담아 한 번 더 보낸다.
+    const minimal = {
+      client: Object.fromEntries(['clientName', 'clientVersion', 'hl', 'gl', 'visitorData', 'platform', 'userAgent', 'timeZone']
+        .filter((k) => full.client && full.client[k] !== undefined).map((k) => [k, full.client[k]])),
+      user: full.user || {},
+    };
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-AuthUser': String(cfg('SESSION_INDEX') ?? '0'),
+      'X-Origin': location.origin,
+      'X-Youtube-Client-Name': String(cfg('INNERTUBE_CONTEXT_CLIENT_NAME') ?? '67'),
+      'X-Youtube-Client-Version': String(cfg("INNERTUBE_CLIENT_VERSION") ?? (full.client && full.client.clientVersion) ?? ""),
+    };
+    const visitor = cfg('VISITOR_DATA');
+    if (visitor) headers['X-Goog-Visitor-Id'] = visitor;
+    const pageId = cfg('DELEGATED_SESSION_ID');
+    if (pageId) headers['X-Goog-PageId'] = pageId;
+
+    const url = new URL(`/youtubei/v1/${endpoint}`, location.origin);
+    url.searchParams.set('prettyPrint', 'false');
+    for (const [key, value] of Object.entries(query || {})) url.searchParams.set(key, String(value));
+    const send = async (context) => {
+      const auth = await authorization();
+      return fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: auth ? { ...headers, Authorization: auth } : headers,
+        body: JSON.stringify({ ...body, context }),
+      });
+    };
+    // 앱을 켠 직후 첫 요청이 400으로 실패하고 몇 초 뒤 같은 요청은 성공했다(2026-10-14 관찰,
+    // 페이지가 로그인 쿠키를 새로 고치는 중으로 보임). 400이면 잠깐 기다렸다 다시 보낸다.
+    let res = await send(full);
+    if (res.status === 400) res = await send(minimal);
+    for (const wait of [1200, 2500]) {
+      if (res.status !== 400) break;
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      res = await send(full);
+    }
+    const text = await res.text();
+    if (!res.ok) throw new Error(`http_${res.status} ${text.slice(0, 300)}`);
+    return JSON.parse(text);
+  }
+
+  function status() {
+    return {
+      ready: ON_MUSIC && !!cfg('INNERTUBE_CONTEXT'),
+      host: location.hostname,
+      path: location.pathname,
+      loggedIn: ON_MUSIC ? cfg('LOGGED_IN') === true : false,
+      subscriber: cfg('IS_SUBSCRIBER') === true,
+    };
+  }
+
+  // ── 4. 재생 시작·대기열 ─────────────────────────────────────────────────
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function navigate({ endpoint }) {
+    const root = app();
+    if (!root) throw new Error('app_missing');
+    if (!endpoint || typeof endpoint !== 'object') throw new Error('bad_endpoint');
+    const before = readState().videoId;
+    const beforeQueue = queueState();
+    const beforeLen = beforeQueue && beforeQueue.items ? beforeQueue.items.length : 0;
+    const target = endpoint.watchEndpoint && endpoint.watchEndpoint.videoId;
+    root.dispatchEvent(new CustomEvent('yt-navigate', { bubbles: true, composed: true, detail: { endpoint } }));
+    // 곡은 바로 바뀌지만 새 대기열(믹스·목록)은 조금 뒤에 채워진다. 그 사이 대기열은 비어 있다
+    // (2026-10-14 재현: 이때 "바로 뒤에 넣기"가 끼어들어 2위 곡이 1위를 덮어씀). 그래서 대기열이 채워지고
+    // 그 곡이 현재 곡으로 잡힐 때까지 기다린다. 또 YouTube Music이 곡을 멈춘 채 두는 경우가 있어
+    // (직전 세션 대기열이 멈춘 채 복원돼 있을 때) 재생 중이 아니면 재생을 건다.
+    const until = Date.now() + 10000;
+    while (Date.now() < until) {
+      await sleep(250);
+      const s = readState();
+      const q = queueState();
+      const queueReady = !!(q && q.items && q.items.length > 0 && q.selectedItemIndex >= 0);
+      const arrived = target
+        ? s.videoId === target && queueReady && selectedVideoIds().includes(target)
+        : s.videoId && queueReady && (s.videoId !== before || q.items.length !== beforeLen);
+      if (!arrived || s.duration <= 0) continue;
+      if (!s.playing) {
+        await sleep(500);
+        if (!readState().playing) runHandler('play') || callPlayer('playVideo');
+      }
+      schedule();
+      return true;
+    }
+    return false;
+  }
+
+  // 대기열은 <ytmusic-player-queue>에 붙은 Redux 저장소가 관리한다(getState().queue: items, automixItems,
+  // selectedItemIndex, nextQueueItemId, repeatMode). YouTube Music 자체의 "끼워 넣기"는
+  // music/get_queue로 곡 데이터를 받아 ADD_ITEMS {nextQueueItemId, index, items, shouldAssignIds}를 보낸다(2026-10-14 분석).
+  const queueEl = () => document.querySelector('ytmusic-player-queue');
+  const queueState = () => {
+    const el = queueEl();
+    try {
+      return el && typeof el.getState === 'function' ? el.getState().queue : null;
+    } catch {
+      return null;
+    }
+  };
+
+  async function queueAdd({ videoId, videoIds, playlistId, position }) {
+    const ids = Array.isArray(videoIds) ? videoIds.filter((v) => typeof v === 'string' && v).slice(0, 200) : [];
+    if (videoId) ids.unshift(videoId);
+    if (!ids.length && !playlistId) throw new Error('bad_target');
+    const el = queueEl();
+    let state = queueState();
+    const empty = (q) => !q || !q.items || q.items.length === 0;
+    // 곡은 올라와 있는데 대기열이 비었으면 새 대기열을 받는 중이다 — 채워질 때까지 잠깐(최대 5초) 기다린다.
+    if (empty(state) && readState().videoId) {
+      for (let i = 0; i < 25 && empty(state); i++) {
+        await sleep(200);
+        state = queueState();
+      }
+    }
+    // 정말 빈 대기열(아무것도 재생한 적 없음)이면 넣을 곡을 바로 재생하고 나머지를 뒤에 붙인다.
+    if (!el || empty(state)) {
+      if (!ids.length) return navigate({ endpoint: { watchPlaylistEndpoint: { playlistId } } });
+      await navigate({ endpoint: { watchEndpoint: { videoId: ids[0] } } });
+      return ids.length > 1 ? queueAdd({ videoIds: ids.slice(1), position }) : true;
+    }
+    // 여러 곡도 한 번에 받는다(순서 유지).
+    const res = await api({ endpoint: 'music/get_queue', body: ids.length ? { videoIds: ids } : { playlistId } });
+    const items = (res.queueDatas || []).map((d) => d && d.content).filter(Boolean);
+    if (!items.length) throw new Error('queue_empty_response');
+    const fresh = queueState() || state;
+    const index = position === 'end'
+      ? fresh.items.length
+      : Math.min(fresh.items.length, Math.max(0, fresh.selectedItemIndex) + 1);
+    el.dispatch({ type: 'ADD_ITEMS', payload: { nextQueueItemId: fresh.nextQueueItemId, index, items, shouldAssignIds: true } });
+    schedule();
+    return { added: items.length, index };
+  }
+
+  /** 대기열에서 현재 선택된 항목의 videoId들(음원/영상 짝이면 둘 다) */
+  function selectedVideoIds() {
+    const q = queueState();
+    const item = q && q.items && q.items[q.selectedItemIndex];
+    if (!item) return [];
+    const w = item.playlistPanelVideoWrapperRenderer;
+    const ids = [];
+    const add = (r) => r && r.playlistPanelVideoRenderer && ids.push(r.playlistPanelVideoRenderer.videoId);
+    if (w) {
+      add(w.primaryRenderer);
+      for (const c of w.counterpart || []) add(c && c.counterpartRenderer);
+    } else {
+      add(item);
+    }
+    return ids;
+  }
+
+  // 대기열 항목의 renderer(음원/영상 짝이면 지금 보이는 쪽)에서 화면에 필요한 값만 꺼낸다.
+  const QUEUE_FIELDS = ['videoId', 'title', 'longBylineText', 'shortBylineText', 'lengthText', 'thumbnail', 'navigationEndpoint', 'playlistSetVideoId'];
+  function slimItem(item) {
+    const wrapper = item && item.playlistPanelVideoWrapperRenderer;
+    const r = wrapper
+      ? (wrapper.primaryRenderer && wrapper.primaryRenderer.playlistPanelVideoRenderer)
+      : item && (item.playlistPanelVideoRenderer || item.automixPreviewVideoRenderer && item.automixPreviewVideoRenderer.content && item.automixPreviewVideoRenderer.content.automixPlaylistVideoRenderer);
+    if (!r || !r.videoId) return null;
+    const data = {};
+    for (const key of QUEUE_FIELDS) if (r[key] !== undefined) data[key] = r[key];
+    return data;
+  }
+
+  function readQueue() {
+    const state = queueState();
+    if (!state) return { items: [], automix: [], selected: -1 };
+    const items = (state.items || []).map(slimItem);
+    return {
+      // 자리 번호가 queueJump와 맞아야 하므로 못 읽은 항목도 null로 남긴다.
+      items,
+      automix: (state.automixItems || []).map(slimItem).filter(Boolean),
+      selected: typeof state.selectedItemIndex === 'number' ? state.selectedItemIndex : -1,
+    };
+  }
+
+  // 대기열의 곡으로 건너뛰기: 저장소 위치(SET_INDEX)를 바꾸면 플레이어가 그 곡을 처음부터 재생한다(2026-10-14 시험).
+  function queueJump({ index }) {
+    const el = queueEl();
+    const state = queueState();
+    const i = Number(index);
+    if (!el || !state || !state.items || !state.items[i]) throw new Error('no_queue_item');
+    el.dispatch({ type: 'SET_INDEX', payload: i });
+    schedule();
+    return true;
+  }
+
+  // ── 5. 현재 곡 상태 ────────────────────────────────────────────────────
+  const largestArtwork = (list) => {
+    let best = '';
+    let bestArea = -1;
+    for (const item of Array.isArray(list) ? list : []) {
+      if (!item || !/^https:\/\//.test(item.src || '')) continue;
+      const [w, h] = String(item.sizes || '').split('x').map(Number);
+      const area = (w || 0) * (h || 0);
+      if (area > bestArea) {
+        best = item.src;
+        bestArea = area;
+      }
+    }
+    return best;
+  };
+
+  function readState() {
+    const p = player();
+    const meta = session.metadata;
+    const data = call(p, 'getVideoData') || {};
+    const video = document.querySelector('video');
+    // 플레이어 상태: -1 시작 전, 0 끝남, 1 재생, 2 일시정지, 3 버퍼링, 5 대기
+    const code = call(p, 'getPlayerState');
+    let playing;
+    if (code === 1 || code === 3) playing = true;
+    else if (code === 0 || code === 2 || code === 5) playing = false;
+    else playing = session.playbackState === 'playing' || (!!video && !video.paused && !video.ended);
+
+    let artwork = largestArtwork(meta && meta.artwork);
+    if (!artwork) {
+      const img = document.querySelector('ytmusic-player-bar img.image');
+      if (img && /^https:\/\//.test(img.src)) artwork = img.src;
+    }
+    if (!artwork && data.video_id) artwork = `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`;
+
+    const b = bar();
+    const likeEl = b && b.querySelector('ytmusic-like-button-renderer');
+    const qs = queueState();
+    let store = null;
+    try {
+      store = queueEl() && queueEl().getState();
+    } catch {
+      store = null;
+    }
+    const repeatAttr = (qs && qs.repeatMode) || (b && b.getAttribute('repeat-mode'));
+    return {
+      videoId: String(data.video_id || ''),
+      title: String((meta && meta.title) || data.title || ''),
+      artist: String((meta && meta.artist) || data.author || ''),
+      album: String((meta && meta.album) || ''),
+      artwork,
+      duration: finite(call(p, 'getDuration'), finite(video && video.duration, 0)),
+      position: finite(call(p, 'getCurrentTime'), finite(video && video.currentTime, 0)),
+      playing,
+      buffering: code === 3,
+      ad: !!(store && store.player && store.player.adPlaying) || !!(p && p.classList && p.classList.contains('ad-showing')),
+      likeStatus: (likeEl && likeEl.getAttribute('like-status')) || 'INDIFFERENT',
+      repeat: repeatAttr || 'NONE',
+      volume: finite(call(p, 'getVolume'), 100),
+      muted: call(p, 'isMuted') === true,
+      at: Date.now(),
+    };
+  }
+
+  // ── 6. 상태 보고 (바뀐 것이 있을 때만) ─────────────────────────────────
+  let last = null;
+  let lastKey = '';
+  let lastSentAt = 0;
+  let pending = 0;
+
+  function report() {
+    if (!ON_MUSIC) return;
+    const state = readState();
+    const now = state.at;
+    const key = [state.videoId, state.title, state.artist, state.album, state.artwork, state.playing,
+      state.buffering, state.ad, Math.round(state.duration), state.likeStatus, state.repeat,
+      Math.round(state.volume), state.muted].join('\u0001');
+    if (last && key === lastKey) {
+      // 위치가 예상과 1초 넘게 어긋나면(탐색·버퍼링) 바로, 아니면 5초마다 보정값을 보낸다.
+      const expected = last.position + (last.playing ? (now - lastSentAt) / 1000 : 0);
+      if (Math.abs(state.position - expected) < 1 && now - lastSentAt < 5000) return;
+    }
+    last = state;
+    lastKey = key;
+    lastSentAt = now;
+    emit('state', state);
+  }
+
+  function schedule() {
+    clearTimeout(pending);
+    pending = setTimeout(report, 100);
+  }
+
+  // ── 7. 재생 제어 ───────────────────────────────────────────────────────
+  const clickBar = (selector) => {
+    const b = bar();
+    const el = b && b.querySelector(selector);
+    if (!el || el.hidden || el.hasAttribute('disabled')) return false;
+    el.click();
+    return true;
+  };
+  const runHandler = (action, details) => {
+    const handler = session.handlers[action];
+    if (!handler) return false;
+    try {
+      handler({ action, ...details });
+      return true;
+    } catch (err) {
+      console.warn('[ytm-engine] 동작 실패', action, err);
+      return false;
+    }
+  };
+  const callPlayer = (method, ...args) => {
+    const p = player();
+    if (!p || typeof p[method] !== 'function') return false;
+    p[method](...args);
+    return true;
+  };
+
+  function control(command, value) {
+    const playing = readState().playing;
+    let done = true;
+    switch (command) {
+      case 'play':
+        if (!playing) done = runHandler('play') || clickBar('#play-pause-button') || callPlayer('playVideo');
+        break;
+      case 'pause':
+        if (playing) done = runHandler('pause') || clickBar('#play-pause-button') || callPlayer('pauseVideo');
+        break;
+      case 'toggle':
+        return control(playing ? 'pause' : 'play');
+      case 'next':
+        // 대기열은 YouTube Music 화면이 관리하므로 사용자가 누르는 버튼을 먼저 쓴다.
+        done = clickBar('.next-button') || runHandler('nexttrack') || callPlayer('nextVideo');
+        break;
+      case 'previous':
+        done = clickBar('.previous-button') || runHandler('previoustrack') || callPlayer('previousVideo');
+        break;
+      case 'seek': {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds) || seconds < 0) throw new Error('bad_value');
+        done = runHandler('seekto', { seekTime: seconds }) || callPlayer('seekTo', seconds, true);
+        break;
+      }
+      case 'seekBy': {
+        const delta = Number(value);
+        if (!Number.isFinite(delta)) throw new Error('bad_value');
+        return control('seek', Math.max(0, readState().position + delta));
+      }
+      case 'volume': {
+        const volume = Math.round(Math.min(100, Math.max(0, Number(value))));
+        if (!Number.isFinite(volume)) throw new Error('bad_value');
+        done = callPlayer('setVolume', volume);
+        if (volume > 0) callPlayer('unMute');
+        break;
+      }
+      case 'mute':
+        done = callPlayer('mute');
+        break;
+      case 'unmute':
+        done = callPlayer('unMute');
+        break;
+      case 'repeat':
+        done = clickBar('.repeat');
+        break;
+      case 'shuffle':
+        done = clickBar('.shuffle');
+        break;
+      case 'like':
+        done = clickBar('ytmusic-like-button-renderer #button-shape-like button') ||
+          clickBar('ytmusic-like-button-renderer .like');
+        break;
+      case 'dislike':
+        done = clickBar('ytmusic-like-button-renderer #button-shape-dislike button') ||
+          clickBar('ytmusic-like-button-renderer .dislike');
+        break;
+      default:
+        throw new Error(`unknown_command ${command}`);
+    }
+    schedule();
+    return done;
+  }
+
+  // ── 7.5 이퀄라이저·스펙트럼 ─────────────────────────────────────────────
+  // 플레이어 <video>의 소리를 Web Audio로 받아 프리앰프 → 10밴드 필터 → 분석기 → 출력으로 보낸다.
+  // createMediaElementSource는 한 번 연결하면 되돌릴 수 없어서, EQ나 시각화를 켤 때만 연결하고
+  // 연결 직후 소리가 실제로 흐르는지 확인한다(안 흐르면 화면에 알려 페이지를 다시 불러온다).
+  const EQ_BANDS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+  const SPECTRUM_BARS = 48;
+  const eq = {
+    ctx: null, video: null, source: null, preamp: null, filters: [], analyser: null, bins: null,
+    settings: { enabled: false, gains: EQ_BANDS.map(() => 0), preamp: 0 },
+    streamUntil: 0, timer: 0, hookedAt: 0, heardSound: false, failed: false,
+  };
+  const mediaElement = () => (player() && player().querySelector('video')) || document.querySelector('video');
+  const dbToGain = (db) => Math.pow(10, db / 20);
+  const clampDb = (v) => Math.max(-12, Math.min(12, Number(v) || 0));
+
+  async function ensureGraph() {
+    if (eq.failed) throw new Error('eq_unsupported');
+    const video = mediaElement();
+    if (!video) throw new Error('no_media');
+    if (eq.ctx && eq.video === video) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) throw new Error('no_webaudio');
+    const ctx = eq.ctx || new Ctx({ latencyHint: 'playback' });
+    if (ctx.state !== 'running') {
+      // 사용자 동작 없이 부른 resume이 끝나지 않는 웹뷰도 있어 2초만 기다린다.
+      try { await Promise.race([ctx.resume(), sleep(2000)]); } catch { /* 아래에서 상태로 판단 */ }
+    }
+    eq.ctx = ctx;
+    // 멈춘 오디오 장치에 연결하면 소리가 끊기므로, 돌아가는 것을 확인한 뒤에만 연결한다.
+    if (ctx.state !== 'running') throw new Error('audio_context_suspended');
+    const preamp = ctx.createGain();
+    const filters = EQ_BANDS.map((freq, i) => {
+      const f = ctx.createBiquadFilter();
+      f.type = i === 0 ? 'lowshelf' : i === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking';
+      f.frequency.value = freq;
+      f.Q.value = 1.05;
+      f.gain.value = 0;
+      return f;
+    });
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.72;
+    const source = ctx.createMediaElementSource(video);
+    source.connect(preamp);
+    let node = preamp;
+    for (const f of filters) { node.connect(f); node = f; }
+    node.connect(analyser);
+    analyser.connect(ctx.destination);
+    Object.assign(eq, { ctx, video, source, preamp, filters, analyser, bins: new Uint8Array(analyser.frequencyBinCount), hookedAt: Date.now(), heardSound: false });
+    applyEqSettings();
+    startEqTimer();
+  }
+
+  function applyEqSettings() {
+    if (!eq.ctx) return;
+    const { enabled, gains, preamp } = eq.settings;
+    const t = eq.ctx.currentTime;
+    eq.filters.forEach((f, i) => f.gain.setTargetAtTime(enabled ? clampDb(gains[i]) : 0, t, 0.03));
+    eq.preamp.gain.setTargetAtTime(enabled ? dbToGain(clampDb(preamp)) : 1, t, 0.03);
+  }
+
+  async function setEq({ enabled, gains, preamp }) {
+    eq.settings = {
+      enabled: !!enabled,
+      gains: EQ_BANDS.map((_, i) => clampDb(Array.isArray(gains) ? gains[i] : 0)),
+      preamp: clampDb(preamp),
+    };
+    // 꺼져 있고 아직 연결 전이면 연결하지 않는다(원래 소리 경로 그대로).
+    if (eq.settings.enabled) await ensureGraph();
+    else applyEqSettings();
+    return { bands: EQ_BANDS, hooked: !!eq.ctx, sampleRate: eq.ctx ? eq.ctx.sampleRate : null };
+  }
+
+  /** 화면이 스펙트럼을 보는 동안 주기적으로 불러 준다(안 부르면 몇 초 뒤 보내기를 멈춘다). */
+  async function eqStream({ on }) {
+    if (!on) {
+      eq.streamUntil = 0;
+      return { hooked: !!eq.ctx };
+    }
+    await ensureGraph();
+    eq.streamUntil = Date.now() + 8000;
+    return { hooked: true, bands: EQ_BANDS };
+  }
+
+  function spectrumBars() {
+    const { analyser, bins, ctx } = eq;
+    analyser.getByteFrequencyData(bins);
+    const nyquist = ctx.sampleRate / 2;
+    const lo = Math.log10(30);
+    const hi = Math.log10(16000);
+    const out = new Array(SPECTRUM_BARS);
+    let energy = 0;
+    for (let b = 0; b < SPECTRUM_BARS; b++) {
+      const f0 = Math.pow(10, lo + ((hi - lo) * b) / SPECTRUM_BARS);
+      const f1 = Math.pow(10, lo + ((hi - lo) * (b + 1)) / SPECTRUM_BARS);
+      const i0 = Math.max(0, Math.floor((f0 / nyquist) * bins.length));
+      const i1 = Math.min(bins.length - 1, Math.max(i0, Math.ceil((f1 / nyquist) * bins.length)));
+      let m = 0;
+      for (let i = i0; i <= i1; i++) if (bins[i] > m) m = bins[i];
+      out[b] = m;
+      energy += m;
+    }
+    return { out, energy };
+  }
+
+  function startEqTimer() {
+    if (eq.timer) return;
+    // 숨은 창에서는 requestAnimationFrame이 돌지 않아 타이머를 쓴다(창 절전은 꺼 둠).
+    eq.timer = setInterval(() => {
+      if (!eq.analyser) return;
+      const video = eq.video;
+      const now = Date.now();
+      const playing = video && !video.paused && !video.ended && !video.muted && video.volume > 0;
+      const { out, energy } = spectrumBars();
+      if (energy > 0) eq.heardSound = true;
+      // 연결 후 3~8초 동안 재생 중인데 신호가 전혀 없으면 이 웹뷰에서는 연결이 소리를 끊은 것으로 본다.
+      if (!eq.heardSound && playing && now - eq.hookedAt > 3000 && video.currentTime > 2) {
+        eq.failed = true;
+        clearInterval(eq.timer);
+        eq.timer = 0;
+        emit('eq', { failed: 'webaudio' });
+        return;
+      }
+      if (now < eq.streamUntil && playing) emit('spectrum', out);
+    }, 40);
+  }
+
+  // ── 8. 앱 화면 요청 처리 ───────────────────────────────────────────────
+  const methods = {
+    api,
+    status,
+    state: () => readState(),
+    play: navigate,
+    queueAdd,
+    queue: () => readQueue(),
+    queueJump,
+    control: ({ command, value }) => control(command, value),
+    eq: setEq,
+    eqStream,
+  };
+
+  async function handle(id, method, args) {
+    try {
+      const fn = methods[method];
+      if (!fn) throw new Error(`unknown_method ${method}`);
+      const data = await fn(args || {});
+      await invoke('engine_reply', { reply: { id, ok: true, data: data === undefined ? null : data } });
+    } catch (err) {
+      const error = err && err.message ? err.message : String(err);
+      invoke('engine_reply', { reply: { id, ok: false, error } }).catch((e) =>
+        console.warn('[ytm-engine] 응답 전달 실패', e));
+    }
+  }
+
+  Object.defineProperty(window, '__ytmEngine', {
+    value: Object.freeze({ handle, control }),
+    configurable: false,
+    writable: false,
+  });
+
+  // ── 9. 시작 ────────────────────────────────────────────────────────────
+  for (const type of ['play', 'playing', 'pause', 'ended', 'seeked', 'durationchange', 'loadedmetadata', 'emptied', 'volumechange', 'waiting']) {
+    document.addEventListener(type, schedule, true);
+  }
+  setInterval(report, 1000);
+
+  function announce() {
+    emit('status', status());
+    schedule();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', announce);
+  else announce();
+  window.addEventListener('load', announce);
+
+  // 플레이어 바 속성(좋아요·반복)이 바뀌면 바로 보고한다.
+  const watchBar = () => {
+    const b = bar();
+    if (!b) return false;
+    new MutationObserver(schedule).observe(b, { attributes: true, subtree: true, attributeFilter: ['like-status', 'repeat-mode'] });
+    return true;
+  };
+  if (ON_MUSIC) {
+    const timer = setInterval(() => { if (watchBar()) clearInterval(timer); }, 1000);
+  }
+
+  // ── 10. youtube.com(로그인 전 안내 페이지 등)에서 돌아가는 길 ───────────
+  if (ON_MUSIC) return;
+
+  function addReturnBar() {
+    if (!document.body || document.getElementById('ytm-desktop-return')) return;
+    const host = document.createElement('div');
+    host.id = 'ytm-desktop-return';
+    host.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:2147483647;';
+    const root = host.attachShadow({ mode: 'closed' });
+    const signedOut = cfg('LOGGED_IN') === false;
+    // youtube.com은 Trusted Types 정책이라 innerHTML에 문자열을 넣으면 막힌다 → 요소를 직접 만든다.
+    const style = document.createElement('style');
+    style.textContent = `
+      .bar { display:flex; gap:8px; font:600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      a { display:inline-flex; align-items:center; height:36px; padding:0 14px; border-radius:18px;
+          text-decoration:none; color:#fff; background:#212121; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+      a.primary { background:#c13584; }
+      a:hover { filter:brightness(1.15); }`;
+    const wrap = document.createElement('div');
+    wrap.className = 'bar';
+    const link = (text, href, primary) => {
+      const a = document.createElement('a');
+      a.textContent = text;
+      a.href = href;
+      if (primary) a.className = 'primary';
+      wrap.appendChild(a);
+    };
+    if (signedOut) link('로그인', SIGNIN_URL, true);
+    link('YouTube Music으로 돌아가기', 'https://music.youtube.com/', false);
+    root.append(style, wrap);
+    document.body.appendChild(host);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addReturnBar);
+  else addReturnBar();
+  setInterval(addReturnBar, 3000);
+})();

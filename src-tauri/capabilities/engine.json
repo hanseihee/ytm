@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "engine",
+  "description": "숨은 YouTube Music 창: 엔진 답장(engine_reply)과 상태 알림(engine_event)만 부를 수 있다. 다른 Tauri 기능은 열지 않는다.",
+  "windows": ["engine"],
+  "remote": {
+    "urls": ["https://music.youtube.com/*", "https://www.youtube.com/*"]
+  },
+  "permissions": ["allow-engine-reply", "allow-engine-event"]
+}

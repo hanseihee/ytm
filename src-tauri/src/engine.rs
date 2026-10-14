@@ -1,0 +1,321 @@
+//! 앱 화면(main) ↔ 숨은 YouTube Music 창(engine) 중계.
+//!
+//! - 화면이 `engine_call`을 부르면 번호를 붙여 엔진 창에 `window.__ytmEngine.handle(...)`을 실행하고,
+//!   엔진 스크립트가 `engine_reply`로 같은 번호의 답을 돌려줄 때까지 기다린다.
+//! - 엔진 스크립트는 `engine_event`로 상태(status)와 재생 정보(state)를 알린다.
+
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
+use std::time::Duration;
+
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tauri::{AppHandle, Emitter, Manager, Webview};
+use tokio::sync::{oneshot, watch};
+
+use crate::{lock, warn, ENGINE, MAIN};
+
+/// 엔진 창이 준비될 때까지 기다리는 최대 시간.
+const READY_TIMEOUT: Duration = Duration::from_secs(25);
+/// 요청 하나의 최대 시간(검색·목록 이어받기 포함).
+const CALL_TIMEOUT: Duration = Duration::from_secs(30);
+/// 엔진 스크립트가 제공하는 요청 이름. 그 밖의 이름은 엔진까지 보내지 않는다.
+const METHODS: &[&str] = &["api", "status", "state", "play", "queueAdd", "queue", "queueJump", "control", "eq", "eqStream"];
+/// 개발 빌드 전용: 엔진 창에서 임의 코드를 실행하는 조사 통로(배포판에는 없다).
+#[cfg(debug_assertions)]
+const DEBUG_METHODS: &[&str] = &["debugEval"];
+#[cfg(not(debug_assertions))]
+const DEBUG_METHODS: &[&str] = &[];
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct EngineStatus {
+    /// music.youtube.com에서 엔진 스크립트와 ytcfg가 준비됨
+    pub ready: bool,
+    pub host: String,
+    pub path: String,
+    pub logged_in: bool,
+    pub subscriber: bool,
+}
+
+type Reply = Result<Value, String>;
+
+pub struct Engine {
+    next_id: AtomicU64,
+    pending: Mutex<HashMap<u64, oneshot::Sender<Reply>>>,
+    status: watch::Sender<EngineStatus>,
+    /// 마지막 재생 상태(화면이 새로 열렸을 때 바로 보여 주기 위함)
+    last_state: Mutex<Value>,
+    /// 로그인 창을 띄운 뒤 로그인이 끝나면 엔진 창을 다시 숨긴다.
+    login_in_progress: std::sync::atomic::AtomicBool,
+}
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self {
+            next_id: AtomicU64::new(1),
+            pending: Mutex::new(HashMap::new()),
+            status: watch::channel(EngineStatus::default()).0,
+            last_state: Mutex::new(Value::Null),
+            login_in_progress: Default::default(),
+        }
+    }
+}
+
+impl Engine {
+    pub fn set_login_in_progress(&self, value: bool) {
+        self.login_in_progress.store(value, Ordering::SeqCst);
+    }
+
+    /// 엔진 창이 다른 주소로 이동하면 기다리던 요청은 답을 받을 수 없으므로 모두 실패로 끝낸다.
+    pub fn fail_pending(&self, reason: &str) {
+        for (_, tx) in lock(&self.pending).drain() {
+            // 받는 쪽이 이미 시간 초과로 사라졌으면 보낼 곳이 없을 뿐이다.
+            let _ = tx.send(Err(reason.to_owned()));
+        }
+    }
+
+    pub fn mark_navigating(&self) {
+        self.status.send_modify(|s| s.ready = false);
+    }
+}
+
+#[tauri::command]
+pub async fn engine_call(app: AppHandle, method: String, args: Option<Value>) -> Result<Value, String> {
+    call(&app, &method, args.unwrap_or(Value::Null)).await
+}
+
+/// 엔진 창에 요청 하나를 보내고 답을 기다린다.
+pub async fn call(app: &AppHandle, method: &str, args: Value) -> Result<Value, String> {
+    if !METHODS.contains(&method) && !DEBUG_METHODS.contains(&method) {
+        return Err(format!("unknown_method {method}"));
+    }
+    let engine = app.state::<Engine>();
+
+    let mut status = engine.status.subscribe();
+    // 감시 채널의 참조(Ref)는 await 너머로 들고 있을 수 없어 바로 참/거짓으로 바꾼다.
+    // 조사용 요청(개발 빌드)은 어느 페이지에서든 바로 실행한다.
+    let ready = DEBUG_METHODS.contains(&method)
+        || matches!(
+            tokio::time::timeout(READY_TIMEOUT, status.wait_for(|s| s.ready)).await,
+            Ok(Ok(_))
+        );
+    if !ready {
+        return Err("engine_not_ready".into());
+    }
+
+    let Some(window) = app.get_webview_window(ENGINE) else {
+        return Err("engine_missing".into());
+    };
+    let id = engine.next_id.fetch_add(1, Ordering::SeqCst);
+    let (tx, rx) = oneshot::channel();
+    lock(&engine.pending).insert(id, tx);
+
+    let script = if DEBUG_METHODS.contains(&method) {
+        // 페이지의 Trusted Types 정책은 eval을 막지만 웹뷰가 직접 실행하는 스크립트는 막지 않는다.
+        let code = args["code"].as_str().unwrap_or("undefined");
+        format!(
+            "(async () => {{ const reply = (r) => window.__TAURI_INTERNALS__.invoke('engine_reply', {{ reply: r }}); \
+             try {{ const v = await (async () => ({code}))(); reply({{ id: {id}, ok: true, data: v === undefined ? null : JSON.parse(JSON.stringify(v)) }}); }} \
+             catch (e) {{ reply({{ id: {id}, ok: false, error: String(e && e.stack || e) }}); }} }})();"
+        )
+    } else {
+        format!(
+            "window.__ytmEngine ? window.__ytmEngine.handle({id}, {}, {}) : void 0;",
+            serde_json::to_string(method).map_err(|e| e.to_string())?,
+            serde_json::to_string(&args).map_err(|e| e.to_string())?,
+        )
+    };
+    if let Err(err) = window.eval(script) {
+        lock(&engine.pending).remove(&id);
+        return Err(format!("engine_eval_failed {err}"));
+    }
+
+    match tokio::time::timeout(CALL_TIMEOUT, rx).await {
+        Ok(Ok(reply)) => reply,
+        Ok(Err(_)) => Err("engine_dropped".into()),
+        Err(_) => {
+            lock(&engine.pending).remove(&id);
+            Err("engine_timeout".into())
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EngineReply {
+    id: u64,
+    ok: bool,
+    #[serde(default)]
+    data: Value,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+#[tauri::command]
+pub fn engine_reply(app: AppHandle, webview: Webview, reply: EngineReply) {
+    if webview.label() != ENGINE {
+        return;
+    }
+    let tx = lock(&app.state::<Engine>().pending).remove(&reply.id);
+    if let Some(tx) = tx {
+        let result = if reply.ok {
+            Ok(reply.data)
+        } else {
+            Err(reply.error.unwrap_or_else(|| "engine_error".into()))
+        };
+        // 기다리던 쪽이 시간 초과로 이미 끝났으면 버린다.
+        let _ = tx.send(result);
+    }
+}
+
+#[tauri::command]
+pub fn engine_event(app: AppHandle, webview: Webview, kind: String, data: Value) {
+    if webview.label() != ENGINE {
+        return;
+    }
+    match kind.as_str() {
+        "status" => on_status(&app, data),
+        "state" => on_state(&app, data),
+        // 스펙트럼(초당 25번)과 EQ 알림은 화면에 그대로 넘긴다.
+        "spectrum" => warn("화면에 스펙트럼 보내기", app.emit_to(MAIN, "spectrum", &data)),
+        "eq" => warn("화면에 EQ 상태 알리기", app.emit_to(MAIN, "eq-event", &data)),
+        other => eprintln!("[ytm-desktop] 알 수 없는 엔진 이벤트: {other}"),
+    }
+}
+
+fn on_status(app: &AppHandle, data: Value) {
+    let status: EngineStatus = match serde_json::from_value(data) {
+        Ok(status) => status,
+        Err(err) => {
+            eprintln!("[ytm-desktop] 엔진 상태 해석 실패: {err}");
+            return;
+        }
+    };
+    let engine = app.state::<Engine>();
+    engine.status.send_replace(status.clone());
+    #[cfg(debug_assertions)]
+    eprintln!("[ytm-desktop] 엔진 상태: {status:?}");
+
+    // 로그인 창을 띄웠다면, YouTube Music으로 돌아와 로그인된 것을 확인한 뒤 다시 숨긴다.
+    if status.ready && status.logged_in && engine.login_in_progress.swap(false, Ordering::SeqCst) {
+        if let Some(window) = app.get_webview_window(ENGINE) {
+            warn("엔진 창 숨기기", window.hide());
+        }
+        crate::show_main(app);
+    }
+    warn("화면에 엔진 상태 알리기", app.emit_to(MAIN, "engine-status", &status));
+}
+
+fn on_state(app: &AppHandle, data: Value) {
+    *lock(&app.state::<Engine>().last_state) = data.clone();
+    match serde_json::from_value::<crate::TrackState>(data.clone()) {
+        Ok(track) => crate::on_track_state(app, track),
+        Err(err) => eprintln!("[ytm-desktop] 재생 상태 해석 실패: {err}"),
+    }
+    warn("화면에 재생 상태 알리기", app.emit_to(MAIN, "player-state", &data));
+}
+
+#[tauri::command]
+pub fn get_engine_status(app: AppHandle) -> EngineStatus {
+    app.state::<Engine>().status.borrow().clone()
+}
+
+#[tauri::command]
+pub fn get_player_state(app: AppHandle) -> Value {
+    lock(&app.state::<Engine>().last_state).clone()
+}
+
+/// 화면(main 창)의 오류·경고를 터미널 기록으로 넘긴다(화면 개발자 도구 없이도 문제를 볼 수 있게).
+#[tauri::command]
+pub fn ui_log(webview: Webview, level: String, message: String) {
+    if webview.label() != MAIN {
+        return;
+    }
+    let message: String = message.chars().take(2000).collect();
+    eprintln!("[ytm-desktop:화면:{level}] {message}");
+}
+
+/// 개발 빌드 전용 시험: `YTM_SELFTEST=<요청목록.json>`이면 엔진이 준비된 뒤 목록의 요청을 차례로 보내고
+/// 답을 같은 폴더의 out/<이름>.json에 남긴다. 목록 형식: [{"name": "...", "method": "api", "args": {...}, "waitMs": 0}]
+#[cfg(debug_assertions)]
+pub fn spawn_selftest(app: &AppHandle) {
+    let Ok(path) = std::env::var("YTM_SELFTEST") else { return };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let list: Vec<Value> = match std::fs::read_to_string(&path).map_err(|e| e.to_string()).and_then(|t| serde_json::from_str(&t).map_err(|e| e.to_string())) {
+            Ok(list) => list,
+            Err(err) => {
+                eprintln!("[selftest] 목록을 읽지 못함 {path}: {err}");
+                return;
+            }
+        };
+        let out = std::path::Path::new(&path).parent().unwrap_or(std::path::Path::new(".")).join("out");
+        if let Err(err) = std::fs::create_dir_all(&out) {
+            eprintln!("[selftest] 출력 폴더를 만들지 못함: {err}");
+            return;
+        }
+        for item in list {
+            let name = item["name"].as_str().unwrap_or("unnamed").to_owned();
+            let method = item["method"].as_str().unwrap_or_default().to_owned();
+            if let Some(ms) = item["waitMs"].as_u64() {
+                tokio::time::sleep(Duration::from_millis(ms)).await;
+            }
+            let started = std::time::Instant::now();
+            let result = call(&app, &method, item["args"].clone()).await;
+            let elapsed = started.elapsed().as_millis();
+            match result {
+                Ok(value) => {
+                    let text = serde_json::to_string(&value).unwrap_or_default();
+                    let file = out.join(format!("{name}.json"));
+                    if let Err(err) = std::fs::write(&file, &text) {
+                        eprintln!("[selftest] {name}: 저장 실패 {err}");
+                    }
+                    eprintln!("[selftest] {name}: 성공 {}바이트 {elapsed}ms", text.len());
+                }
+                Err(err) => eprintln!("[selftest] {name}: 실패 {err} ({elapsed}ms)"),
+            }
+        }
+        eprintln!("[selftest] 끝");
+    });
+}
+
+/// 개발 빌드 전용: `YTM_DEBUG_DIR=<폴더>`이면 <폴더>/in/*.json(형식은 selftest 항목 하나)을 0.5초마다 집어
+/// 실행하고 <폴더>/out/<이름>.json에 답을 쓴 뒤 입력 파일을 지운다. 앱을 다시 빌드하지 않고 내부를 조사하는 용도.
+#[cfg(debug_assertions)]
+pub fn spawn_debug_inbox(app: &AppHandle) {
+    let Ok(dir) = std::env::var("YTM_DEBUG_DIR") else { return };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let inbox = std::path::Path::new(&dir).join("in");
+        let out = std::path::Path::new(&dir).join("out");
+        let _ = std::fs::create_dir_all(&inbox);
+        let _ = std::fs::create_dir_all(&out);
+        eprintln!("[debug] 요청 폴더 감시: {}", inbox.display());
+        loop {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            let Ok(entries) = std::fs::read_dir(&inbox) else { continue };
+            let mut files: Vec<_> = entries.filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect();
+            files.sort();
+            for file in files {
+                let text = std::fs::read_to_string(&file).unwrap_or_default();
+                let _ = std::fs::remove_file(&file);
+                let item: Value = match serde_json::from_str(&text) {
+                    Ok(v) => v,
+                    Err(err) => {
+                        eprintln!("[debug] {} 해석 실패: {err}", file.display());
+                        continue;
+                    }
+                };
+                let name = item["name"].as_str().unwrap_or("unnamed").to_owned();
+                let result = call(&app, item["method"].as_str().unwrap_or_default(), item["args"].clone()).await;
+                let body = match result {
+                    Ok(v) => serde_json::json!({ "ok": true, "data": v }),
+                    Err(e) => serde_json::json!({ "ok": false, "error": e }),
+                };
+                let _ = std::fs::write(out.join(format!("{name}.json")), body.to_string());
+                eprintln!("[debug] {name} 완료");
+            }
+        }
+    });
+}

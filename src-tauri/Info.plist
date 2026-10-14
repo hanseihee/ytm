@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- 맥 EQ: 이 앱 웹뷰가 내는 소리를 Core Audio 탭으로 받아 처리할 때 macOS가 보여 주는 설명 -->
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>이퀄라이저와 스펙트럼을 켜면, 이 앱에서 재생되는 음악 소리를 받아 음색을 조절한 뒤 다시 내보냅니다. 다른 앱의 소리는 받지 않고 녹음하거나 저장하지 않습니다.</string>
+</dict>
+</plist>

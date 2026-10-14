@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "YTM Desktop",
+  "version": "0.2.0",
+  "identifier": "dev.seihee.ytmdesktop",
+  "build": {
+    "beforeDevCommand": "npm run vite",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run vite:build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [],
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Music",
+    "shortDescription": "YouTube Music 계정으로 쓰는 데스크톱 음악 플레이어",
+    "longDescription": "검색·보관함·플레이리스트·가사·대기열을 갖춘 데스크톱 음악 플레이어. 재생은 숨은 창의 공식 YouTube Music 플레이어가 맡는다.",
+    "copyright": "개인용",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "Korean",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}
