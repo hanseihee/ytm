@@ -376,7 +376,7 @@ fn debug_window(app: &AppHandle, args: &Value) -> Result<Value, String> {
 async fn debug_desktop(app: &AppHandle, args: &Value) -> Result<Value, String> {
     match args["action"].as_str().unwrap_or_default() {
         "video" => crate::desktop::set_video(app, args["open"].as_bool().unwrap_or(true)).await.map(|_| Value::Bool(true)),
-        "mini" => crate::desktop::mini_window(app.clone(), args["open"].as_bool().unwrap_or(true)).map(|_| Value::Bool(true)),
+        "mini" => crate::desktop::open_mini(app, args["open"].as_bool().unwrap_or(true)).map(|_| Value::Bool(true)),
         "prefs" => {
             let prefs: crate::desktop::Prefs = serde_json::from_value(args["prefs"].clone()).map_err(|e| e.to_string())?;
             crate::desktop::set_prefs(app.clone(), prefs)

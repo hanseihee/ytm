@@ -157,8 +157,14 @@ pub fn on_track_changed(app: &AppHandle, prev: &TrackState, next: &TrackState) {
 
 // ── 미니 플레이어 ───────────────────────────────────────────────────────────
 
+/// 미니 플레이어 열기·닫기. 윈도우는 동기 명령·이벤트 처리기 안에서 창을 만들면 교착 상태에 빠져
+/// (Tauri WebviewWindowBuilder 문서의 알려진 문제, 화면은 멈추고 노래만 나왔다) 비동기 명령으로 받는다.
 #[tauri::command]
-pub fn mini_window(app: AppHandle, open: bool) -> Result<(), String> {
+pub async fn mini_window(app: AppHandle, open: bool) -> Result<(), String> {
+    open_mini(&app, open)
+}
+
+pub(crate) fn open_mini(app: &AppHandle, open: bool) -> Result<(), String> {
     if let Some(window) = app.get_webview_window(MINI) {
         if open {
             warn("미니 플레이어 보이기", window.show());
@@ -171,8 +177,8 @@ pub fn mini_window(app: AppHandle, open: bool) -> Result<(), String> {
     if !open {
         return Ok(());
     }
-    let builder = WebviewWindowBuilder::new(&app, MINI, WebviewUrl::App("index.html#mini".into()))
-        .title(l(&app, "YTM 미니 플레이어"))
+    let builder = WebviewWindowBuilder::new(app, MINI, WebviewUrl::App("index.html#mini".into()))
+        .title(l(app, "YTM 미니 플레이어"))
         .inner_size(380.0, 152.0)
         .resizable(false)
         .maximizable(false)
@@ -277,8 +283,10 @@ pub fn on_shortcut(app: &AppHandle, pressed: &Shortcut, state: ShortcutState) {
         // 좋아요는 화면의 보관함 상태와 같이 바뀌어야 해서 화면에 맡긴다.
         "like" => crate::emit_to_main(app, "menu-action", "like-current"),
         "mini" => {
+            // 단축키 처리기 안에서 바로 창을 만들면 윈도우에서 멈추므로 비동기 작업으로 넘긴다.
             let open = app.get_webview_window(MINI).is_none();
-            warn("미니 플레이어", mini_window(app.clone(), open));
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move { warn("미니 플레이어", open_mini(&app, open)) });
         }
         _ => {}
     }
