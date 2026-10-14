@@ -772,6 +772,12 @@ final class AppModel {
                 "toasts": toasts.map(\.text), "showNowPlaying": showNowPlaying, "engineVisible": engineVisible,
                 "account": account?.name ?? NSNull(), "liked": liked.count, "playlists": playlists.count,
             ] as [String: Any]
+        case "sync":
+            // 앱이 이어서 계산한 재생 위치와 엔진(페이지)의 실제 위치를 같은 순간에 비교한다(가사 싱크 조사).
+            let before = position()
+            let json = (try? await engine.evaluate("const p = document.getElementById('movie_player'); return p && p.getCurrentTime ? { position: p.getCurrentTime(), state: p.getPlayerState() } : null")) ?? "null"
+            let after = position()
+            return ["app": (before + after) / 2, "engine": jsonObject(json) ?? NSNull(), "playing": player.playing, "receivedAgo": Date().timeIntervalSince(playerReceivedAt)] as [String: Any]
         case "tab":
             switch item["value"] as? String {
             case "home": tab = .home
