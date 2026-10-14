@@ -12,7 +12,8 @@ Partner Center → YTMusic(제품 ID 9NSGBJ9R0WSJ, https://apps.microsoft.com/de
 | 웹 사이트 | https://github.com/hanseihee/ytm |
 | 지원 연락처 | https://github.com/hanseihee/ytm/issues |
 | 저작권 | © 2026 hanseihee |
-| 제한된 기능(runFullTrust) 사유 | Win32 데스크톱 앱(Tauri)이라 전체 신뢰로 실행해야 합니다. 창·트레이·전역 단축키·미디어 키(SMTC)를 씁니다. / This is a Win32 desktop app (Tauri) that needs full trust for its windows, tray icon, global shortcuts and media keys (SMTC). |
+| 제한된 기능(runFullTrust) 사유(500자 이하) | YTMusic is a Win32 desktop app built with Tauri (Rust + WebView2) and packaged as MSIX. It needs runFullTrust to run as a regular desktop process: it opens its own windows (main, mini player, video), shows a tray icon, registers optional global shortcuts for playback, uses Windows media controls (SMTC) and hosts WebView2. It installs no drivers or services and changes no system settings. |
+| 인증 참고 사항(추가 테스트 정보) | YouTube Music을 쓸 수 있는 Google 계정(무료 가능)으로 로그인. 별도 시험 계정 없음. |
 
 ## 한국어
 
