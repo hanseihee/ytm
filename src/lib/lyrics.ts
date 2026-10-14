@@ -1,4 +1,6 @@
-// 가사: 시간 맞춤 가사는 LRCLIB(공개 가사 데이터베이스, lrclib.net)와 벅스 싱크 가사에서, 둘 다 없으면 YouTube Music 가사.
+// 가사: YouTube Music 가사(그 곡에 붙은 가사라 다른 곡이 나오지 않는다)가 기준이고, 시간 정보는 LRCLIB(공개 가사 데이터베이스,
+// lrclib.net)와 벅스 싱크 가사에서 가져온다. 시간 맞춤 가사는 YouTube 가사와 같은 노래로 확인될 때만 쓰고,
+// 아니면 YouTube 가사를 그대로 보여 준다. YouTube에 가사가 없으면 시간 맞춤 가사를 폴백으로 쓴다.
 // - LRCLIB는 교차 출처를 허용(Access-Control-Allow-Origin: *)해서 앱 화면에서 바로 부른다(2026-10-14 확인).
 // - 벅스는 교차 출처를 허용하지 않아 앱의 chart_fetch(허용한 사이트만 받는 통로)로 받는다.
 //   검색 music.bugs.co.kr/search/track?q= → 곡 번호(trackId) → /player/lyrics/T/<번호> = {"lyrics":"6.7|가사＃9.9|가사＃…"}.
@@ -197,6 +199,27 @@ function withTimeout<T>(task: Promise<T>, ms: number, label: string): Promise<T>
 
 const HANGUL = /[\u3131-\u318e\uac00-\ud7a3]/;
 
+/**
+ * 시간 맞춤 가사가 기준 가사(YouTube)와 같은 노래인지: 글자 3개 묶음 중 기준 가사에도 있는 비율.
+ * 띄어쓰기·문장부호·줄바꿈이 달라도 같은 가사면 높게 나온다. 2026-10-14 재생 기록 200곡에서 같은 곡은 대부분 0.8 이상,
+ * 일부러 엇갈린 짝(다른 곡)은 가장 높아야 0.44였다. 한글 가사를 로마자로 적은 것도 낮게 나와 걸러진다.
+ */
+export function lyricsOverlap(lines: LyricLine[], reference: string): number {
+  const norm = (s: string) => s.toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]/gu, '');
+  const grams = (s: string) => {
+    const set = new Set<string>();
+    for (let i = 0; i + 3 <= s.length; i++) set.add(s.slice(i, i + 3));
+    return set;
+  };
+  const mine = grams(norm(lines.map((l) => l.text).join('')));
+  if (!mine.size) return 0;
+  const ref = grams(norm(reference));
+  let shared = 0;
+  for (const g of mine) if (ref.has(g)) shared++;
+  return shared / mine.size;
+}
+const SAME_LYRICS = 0.55;
+
 const cache = new Map<string, Promise<Lyrics | null>>();
 
 /** 출처 이름을 지금 언어로(언어를 바꾼 뒤 다시 열어도 맞게 기억값에는 원문을 둔다) */
@@ -205,56 +228,57 @@ const localizeSource = (l: Lyrics | null): Lyrics | null => (l && l.source === B
 export function loadLyrics(q: LyricsQuery): Promise<Lyrics | null> {
   const hit = cache.get(q.videoId);
   if (hit) return hit.then(localizeSource);
-  // LRCLIB가 잠깐 실패(503·느림)하면 이번 결과는 기억하지 않아 다음에 열 때 다시 찾는다(2026-10-14 503 관찰).
-  let lrclibFailed = false;
+  // YouTube·LRCLIB가 잠깐 실패(503·느림)하면 이번 결과는 기억하지 않아 다음에 열 때 다시 찾는다(2026-10-14 503 관찰).
+  // YouTube 가사는 시간 맞춤 가사를 맞춰 보는 기준이라, 실패한 채 기억하면 확인 안 된 가사가 남는다.
+  let retryLater = false;
   const task = (async (): Promise<Lyrics | null> => {
-    // 한글 곡은 벅스 싱크 가사를 먼저, 그 밖은 LRCLIB를 먼저 쓴다. 둘은 동시에 찾는다.
+    // YouTube 가사(기준)와 시간 맞춤 가사를 동시에 찾는다. 한글 곡은 벅스를, 그 밖은 LRCLIB를 먼저 맞춰 본다.
     const korean = HANGUL.test(`${q.title} ${q.artist}`);
+    const ytTask = withTimeout(ytLyrics(q.videoId), 8000, 'youtube').catch((err) => {
+      retryLater = true;
+      console.warn('[lyrics] YouTube Music 가사 실패', err);
+      return undefined;
+    });
     const lrclibTask = withTimeout(fromLrclib(q), 6000, 'lrclib').catch((err) => {
-      lrclibFailed = true;
+      retryLater = true;
       console.warn('[lyrics] LRCLIB 실패', err);
       return undefined;
     });
-    const bugsTask = () =>
-      withTimeout(fromBugs(q), 8000, 'bugs').catch((err) => {
+    let bugsTask: Promise<LyricLine[] | undefined> | undefined;
+    const bugs = () =>
+      (bugsTask ??= withTimeout(fromBugs(q), 8000, 'bugs').catch((err) => {
         console.warn('[lyrics] 벅스 싱크 가사 실패', err);
         return undefined;
-      });
-    const bugsEarly = korean ? bugsTask() : undefined;
-    const fromLrclibSynced = (record: LrclibRecord | undefined): Lyrics | undefined => {
+      }));
+    if (korean) bugs();
+    const lrclibSynced = async (): Promise<Lyrics | undefined> => {
+      const record = await lrclibTask;
       const synced = record?.syncedLyrics ? parseLrc(record.syncedLyrics) : [];
       return synced.length ? { synced, plain: record?.plainLyrics ?? undefined, source: 'LRCLIB' } : undefined;
     };
-    const fromBugsSynced = (lines: LyricLine[] | undefined): Lyrics | undefined =>
-      lines?.length ? { synced: lines, plain: lines.map((l) => l.text).join('\n'), source: BUGS_SOURCE } : undefined;
+    const bugsSynced = async (): Promise<Lyrics | undefined> => {
+      const lines = await bugs();
+      return lines?.length ? { synced: lines, plain: lines.map((l) => l.text).join('\n'), source: BUGS_SOURCE } : undefined;
+    };
 
-    let record: LrclibRecord | undefined;
-    if (bugsEarly) {
-      const bugs = fromBugsSynced(await bugsEarly);
-      if (bugs) return bugs;
-      record = await lrclibTask;
-      const lr = fromLrclibSynced(record);
-      if (lr) return lr;
-    } else {
-      record = await lrclibTask;
-      const lr = fromLrclibSynced(record);
-      if (lr) return lr;
-      const bugs = fromBugsSynced(await bugsTask());
-      if (bugs) return bugs;
+    const yt = await ytTask;
+    for (const find of korean ? [bugsSynced, lrclibSynced] : [lrclibSynced, bugsSynced]) {
+      const found = await find();
+      if (!found?.synced) continue;
+      if (!yt?.text) return found;
+      const overlap = lyricsOverlap(found.synced, yt.text);
+      if (overlap >= SAME_LYRICS) return found;
+      console.info(`[lyrics] ${found.source} 가사가 YouTube 가사와 달라 쓰지 않음(겹침 ${overlap.toFixed(2)}): ${q.title}`);
     }
-    try {
-      const yt = await ytLyrics(q.videoId);
-      if (yt?.text) return { plain: yt.text, source: yt.source?.replace(/^출처:\s*/, '') || 'YouTube Music' };
-    } catch (err) {
-      console.warn('[lyrics] YouTube Music 가사 실패', err);
-    }
+    if (yt?.text) return { plain: yt.text, source: yt.source?.replace(/^출처:\s*/, '') || 'YouTube Music' };
+    const record = await lrclibTask;
     if (record?.plainLyrics) return { plain: record.plainLyrics, source: 'LRCLIB' };
     return null;
   })();
   cache.set(q.videoId, task);
   // 실패(네트워크)는 다음에 다시 시도할 수 있게 지운다.
   task.then(
-    () => lrclibFailed && cache.delete(q.videoId),
+    () => retryLater && cache.delete(q.videoId),
     () => cache.delete(q.videoId),
   );
   return task.then(localizeSource);
