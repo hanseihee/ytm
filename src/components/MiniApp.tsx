@@ -1,6 +1,6 @@
 // 미니 플레이어 창(index.html#mini): 늘 위에 떠 있는 작은 재생기. 큰 창과 같은 엔진 상태를 받아 그린다.
 // 표지 오른쪽에 지금 부르는 가사 두 줄(지금 줄·다음 줄)이 작게 나오고(가사 단추로 끄고 켬), 다음 트랙 단추를 누르면 창이 아래로 늘어나
-// 다음 곡 목록이 나온다. 진행 막대는 눌러서·끌어서 옮긴다.
+// 다음 곡 목록이 나온다(펼친 동안은 세로 길이를 마우스로 늘이고 줄인다). 진행 막대는 눌러서·끌어서 옮긴다.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { currentMonitor, getCurrentWindow, LogicalSize, PhysicalPosition } from '@tauri-apps/api/window';
@@ -26,7 +26,10 @@ const run = (p: Promise<unknown>, what: string) => p.catch((err) => toastError(e
 const MINI_WIDTH = 380;
 const MINI_HEIGHT = 152;
 const MINI_OPEN_HEIGHT = 372;
+/** 다음 트랙을 펼쳤을 때 가장 낮은 높이(목록 두세 곡) */
+const MINI_OPEN_MIN = 250;
 const QUEUE_KEY = 'ytm-desktop:mini-queue';
+const HEIGHT_KEY = 'ytm-desktop:mini-queue-height';
 const LYRICS_KEY = 'ytm-desktop:mini-lyrics';
 
 function loadFlag(key: string, fallback: boolean): boolean {
@@ -46,12 +49,37 @@ function saveFlag(key: string, on: boolean) {
   }
 }
 
-/** 창 높이를 맞추고, 늘린 창이 화면(작업 영역) 아래로 넘치면 위로 올린다. */
+/** 펼쳤을 때 사용자가 마지막으로 맞춘 높이 */
+function loadOpenHeight(): number {
+  try {
+    const v = Number(localStorage.getItem(HEIGHT_KEY));
+    return v >= MINI_OPEN_MIN ? v : MINI_OPEN_HEIGHT;
+  } catch {
+    return MINI_OPEN_HEIGHT;
+  }
+}
+
+/**
+ * 창 높이를 맞춘다. 접으면 높이를 고정하고, 펼치면 세로로만 늘이고 줄일 수 있게 하며(너비는 그대로)
+ * 마지막으로 맞춘 높이로 연다. 늘린 창이 화면(작업 영역) 아래로 넘치면 위로 올린다.
+ */
 async function fitWindow(open: boolean) {
   const win = getCurrentWindow();
-  await win.setSize(new LogicalSize(MINI_WIDTH, open ? MINI_OPEN_HEIGHT : MINI_HEIGHT));
-  if (!open) return;
-  const [monitor, pos, size] = await Promise.all([currentMonitor(), win.outerPosition(), win.outerSize()]);
+  if (!open) {
+    await win.setResizable(false);
+    await win.setMinSize(null);
+    await win.setMaxSize(null);
+    await win.setSize(new LogicalSize(MINI_WIDTH, MINI_HEIGHT));
+    return;
+  }
+  const monitor = await currentMonitor();
+  // 작업 영역 높이에서 창 테두리·제목 막대 몫을 조금 남긴다.
+  const maxHeight = monitor ? Math.max(MINI_OPEN_MIN, Math.floor(monitor.workArea.size.height / monitor.scaleFactor) - 40) : 1200;
+  await win.setMinSize(new LogicalSize(MINI_WIDTH, MINI_OPEN_MIN));
+  await win.setMaxSize(new LogicalSize(MINI_WIDTH, maxHeight));
+  await win.setSize(new LogicalSize(MINI_WIDTH, Math.min(loadOpenHeight(), maxHeight)));
+  await win.setResizable(true);
+  const [pos, size] = await Promise.all([win.outerPosition(), win.outerSize()]);
   if (!monitor) return;
   const top = monitor.workArea.position.y;
   const bottom = top + monitor.workArea.size.height;
@@ -131,6 +159,48 @@ function MiniSeek() {
   );
 }
 
+/**
+ * 목록 아래 손잡이: 끌어서 창 세로 길이를 바꾼다(창 아래 가장자리를 끌어도 된다).
+ * 맥은 창 크기 끌기 시작(startResizeDragging)을 지원하지 않아 움직인 만큼 직접 창 크기를 바꾼다.
+ */
+function ResizeGrip() {
+  const start = useRef<{ y: number; height: number; max: number } | null>(null);
+  const frame = useRef(0);
+  const end = () => {
+    start.current = null;
+    cancelAnimationFrame(frame.current);
+  };
+  return (
+    <div
+      className="mini-queue__grip"
+      aria-hidden="true"
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          // 포인터를 잡지 못하면 창 밖으로 나갔을 때 멈출 뿐이다.
+        }
+        start.current = { y: e.screenY, height: window.innerHeight, max: Math.max(MINI_OPEN_MIN, (window.screen.availHeight || 1200) - 40) };
+      }}
+      onPointerMove={(e) => {
+        const s = start.current;
+        if (!s) return;
+        const height = Math.round(Math.max(MINI_OPEN_MIN, Math.min(s.max, s.height + e.screenY - s.y)));
+        cancelAnimationFrame(frame.current);
+        frame.current = requestAnimationFrame(() => {
+          void getCurrentWindow()
+            .setSize(new LogicalSize(MINI_WIDTH, height))
+            .catch((err) => console.warn('[mini] 창 크기를 바꾸지 못했습니다', err));
+        });
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+    />
+  );
+}
+
 /** 펼친 다음 트랙: 다음에 나올 곡과 이어서 자동 재생될 곡. 누르면 그 곡으로 간다. */
 function MiniQueue() {
   const { data, error, items, upcoming, automix, jump } = useQueue();
@@ -152,6 +222,7 @@ function MiniQueue() {
           ))}
         </div>
       )}
+      <ResizeGrip />
     </section>
   );
 }
@@ -204,6 +275,35 @@ export function MiniApp() {
 
   useEffect(() => {
     void fitWindow(queueOpen).catch((err) => console.warn('[mini] 창 크기를 바꾸지 못했습니다', err));
+  }, [queueOpen]);
+  // 펼친 동안 사용자가 맞춘 높이를 기억한다(다음에 펼칠 때·다음 실행에 그 높이로).
+  useEffect(() => {
+    if (!queueOpen) return;
+    let timer = 0;
+    let unlisten: Promise<() => void> | undefined;
+    try {
+      const win = getCurrentWindow();
+      unlisten = win.onResized(({ payload }) => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          void win.scaleFactor().then((scale) => {
+            const height = Math.round(payload.height / scale);
+            if (height < MINI_OPEN_MIN) return;
+            try {
+              localStorage.setItem(HEIGHT_KEY, String(height));
+            } catch {
+              // 저장하지 못해도 이번에는 그 크기로 쓴다.
+            }
+          });
+        }, 300);
+      });
+    } catch (err) {
+      console.warn('[mini] 창 크기를 지켜보지 못했습니다', err);
+    }
+    return () => {
+      window.clearTimeout(timer);
+      void unlisten?.then((stop) => stop());
+    };
   }, [queueOpen]);
   const toggleQueue = () => {
     setQueueOpen(!queueOpen);
