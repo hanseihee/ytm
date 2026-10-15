@@ -77,6 +77,11 @@ if (!skipBuild) {
   }
 }
 
+// 맥 앱 번들 서명 확인: 실행 파일에만 링커 서명이 붙은 번들은 내려받으면 "손상되었습니다"로 열리지 않는다(0.2.7까지).
+const macApp = path.join(root, 'src-tauri/target/release/bundle/macos/YTMusic.app');
+const verify = spawnSync('codesign', ['--verify', '--deep', '--strict', macApp], { encoding: 'utf8' });
+if (verify.status !== 0) fail(`맥 앱 서명이 올바르지 않습니다(tauri.conf.json의 bundle.macOS.signingIdentity 확인):\n${verify.stderr}`);
+
 // ── 5. 파일 모으기 ─────────────────────────────────────────────────────────
 const assets = [
   {
@@ -121,11 +126,11 @@ const notes = `${body}
 |---|---|---|
 ${assets.map((a) => `| ${a.label} | \`${a.name}\` | ${mb(a.size)} |`).join('\n')}
 
-코드 서명을 하지 않았습니다.
-- **맥**: 처음 열 때 Finder에서 앱을 우클릭한 뒤 "열기"를 고르세요.
+유료 개발자 인증서로 서명하지 않았습니다(맥은 임시 서명, 공증 없음).
+- **맥**: DMG를 열고 **YTMusic**을 옆의 **Applications** 폴더로 끌어 놓으세요. 처음 열 때 "확인할 수 없습니다" 경고가 뜨면 **완료**를 누르고, 시스템 설정 → 개인정보 보호 및 보안 → 아래쪽 "YTMusic이(가) 차단되었습니다" 옆 **그래도 열기**를 누르세요. (터미널: \`xattr -dr com.apple.quarantine /Applications/YTMusic.app\`)
 - **윈도우**: SmartScreen 경고가 뜨면 "추가 정보 → 실행"을 고르세요.
 
-iOS 앱은 서명 때문에 설치 파일로 나눠 줄 수 없습니다. 저장소의 \`ios/\`를 Xcode로 빌드하세요(README 참고).
+iOS 앱은 TestFlight 공개 테스트로 설치합니다: https://testflight.apple.com/join/g27zcffB (직접 빌드하려면 저장소의 \`ios/\`를 Xcode로, README 참고).
 
 <details><summary>SHA-256</summary>
 

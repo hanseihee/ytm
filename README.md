@@ -78,7 +78,9 @@ The same features on iPhone and iPad. The screens are new SwiftUI (iOS 26+, glas
 
 **Not available on iOS: the equalizer.** The YouTube player's audio comes from WebKit's ManagedMediaSource, and routing it into Web Audio yields silence (simulator test, 2026-10-14). The Mac works around this with a system audio tap, which iOS does not offer.
 
-Build and install:
+**TestFlight (public beta)**: install from https://testflight.apple.com/join/g27zcffB with the TestFlight app (the link opens once Apple's beta review passes).
+
+Build and install from source:
 
 ```sh
 npm install
@@ -93,8 +95,8 @@ Download from [GitHub Releases](https://github.com/hanseihee/ytm/releases).
 - Windows (64-bit): `YTMusic-<version>-windows-x64-setup.exe`
 - Verify downloads with `SHA256SUMS.txt`.
 
-The apps are not code-signed.
-- **macOS**: the first time, right-click the app in Finder and choose "Open".
+The apps are not signed with a paid developer certificate (macOS: ad-hoc signed, not notarized).
+- **macOS**: open the DMG and drag **YTMusic** onto the **Applications** folder next to it (not the disk icon). The first time you open it, macOS says it "could not verify" the app — click **Done**, then go to System Settings → Privacy & Security, scroll down to Security and click **Open Anyway** next to "YTMusic was blocked", and confirm. You only do this once per version. (Terminal alternative: `xattr -dr com.apple.quarantine /Applications/YTMusic.app`)
 - **Windows**: if SmartScreen warns you, choose "More info → Run anyway".
 
 On first launch you'll see a "Sign in with your Google account" screen.
@@ -297,7 +299,9 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
 **iOS에서 안 되는 것: 이퀄라이저.** YouTube 플레이어 소리는 WebKit의 ManagedMediaSource로 나오는데, Web Audio로 받으면 신호가 0입니다(2026-10-14 시뮬레이터 시험).
 맥은 시스템 오디오 탭으로 이 문제를 돌아갔지만 iOS에는 그런 방법이 없습니다.
 
-빌드·설치:
+**TestFlight(공개 테스트)**: TestFlight 앱으로 https://testflight.apple.com/join/g27zcffB 에서 설치합니다(Apple 베타 심사를 통과하면 열립니다).
+
+소스로 빌드·설치:
 
 ```sh
 npm install
@@ -312,8 +316,8 @@ open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서�
 - 윈도우(64비트): `YTMusic-<버전>-windows-x64-setup.exe`
 - `SHA256SUMS.txt`로 받은 파일을 확인할 수 있습니다.
 
-코드 서명을 하지 않았습니다.
-- **맥**: 처음 열 때 Finder에서 앱을 우클릭한 뒤 "열기"를 고르세요.
+유료 개발자 인증서로 서명하지 않았습니다(맥은 임시 서명, 공증 없음).
+- **맥**: DMG를 열고 **YTMusic**을 옆의 **Applications** 폴더로 끌어 놓으세요(디스크 아이콘이 아니라 앱을). 처음 열 때 "확인할 수 없습니다" 경고가 뜨면 **완료**를 누르고, 시스템 설정 → 개인정보 보호 및 보안 → 아래쪽 보안 칸의 "YTMusic이(가) 차단되었습니다" 옆 **그래도 열기**를 누른 뒤 확인하세요. 버전마다 한 번만 하면 됩니다. (터미널로 하려면 `xattr -dr com.apple.quarantine /Applications/YTMusic.app`)
 - **윈도우**: SmartScreen 경고가 뜨면 "추가 정보 → 실행"을 고르세요.
 
 처음 실행하면 "Google 계정으로 로그인" 화면이 나옵니다.
