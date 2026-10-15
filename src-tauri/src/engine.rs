@@ -229,11 +229,13 @@ pub fn get_player_state(app: AppHandle) -> Value {
 /// 화면(main 창)의 오류·경고를 터미널 기록으로 넘긴다(화면 개발자 도구 없이도 문제를 볼 수 있게).
 #[tauri::command]
 pub fn ui_log(webview: Webview, level: String, message: String) {
-    if webview.label() != MAIN {
+    let label = webview.label();
+    if label != MAIN && label != crate::desktop::MINI {
         return;
     }
     let message: String = message.chars().take(2000).collect();
-    eprintln!("[ytm-desktop:화면:{level}] {message}");
+    let place = if label == MAIN { "화면" } else { "미니" };
+    eprintln!("[ytm-desktop:{place}:{level}] {message}");
 }
 
 /// 개발 빌드 전용 시험: `YTM_SELFTEST=<요청목록.json>`이면 엔진이 준비된 뒤 목록의 요청을 차례로 보내고
@@ -377,6 +379,13 @@ async fn debug_desktop(app: &AppHandle, args: &Value) -> Result<Value, String> {
     match args["action"].as_str().unwrap_or_default() {
         "video" => crate::desktop::set_video(app, args["open"].as_bool().unwrap_or(true)).await.map(|_| Value::Bool(true)),
         "mini" => crate::desktop::open_mini(app, args["open"].as_bool().unwrap_or(true)).map(|_| Value::Bool(true)),
+        // 화면 창(main·mini) 안에서 스크립트 실행(미니 플레이어 시험용). 결과는 스크립트가 ui_log로 남긴다.
+        "eval" => {
+            let label = args["window"].as_str().unwrap_or(MAIN);
+            let window = app.get_webview_window(label).ok_or_else(|| format!("no_window {label}"))?;
+            window.eval(args["code"].as_str().unwrap_or_default()).map_err(|e| e.to_string())?;
+            Ok(Value::Bool(true))
+        }
         "prefs" => {
             let prefs: crate::desktop::Prefs = serde_json::from_value(args["prefs"].clone()).map_err(|e| e.to_string())?;
             crate::desktop::set_prefs(app.clone(), prefs)

@@ -51,7 +51,7 @@ Both apps share the same code for parsing YouTube Music responses, matching char
 - **OS integration**
   - macOS Now Playing and media keys; Windows media controls (SMTC).
   - Tray menu; music keeps playing when the window is closed. Korean menus on macOS.
-  - Mini player window (always on top), a notification when the song changes while you're not looking at the app, and the album-color theme.
+  - Mini player window (always on top): two lines of the current lyrics next to the cover, an up-next list that expands below (click a song to jump to it), and a seekable progress bar. A notification when the song changes while you're not looking at the app, and the album-color theme.
 
 Shortcuts: Space (play/pause), ⌘/Ctrl+←→ (previous/next song), Shift+←→ (±10 s), ⌘/Ctrl+F (search), ⌘/Ctrl+L (lyrics), ⌘U (queue), ⌘/Ctrl+E (equalizer), ⌘/Ctrl+[ ] (back/forward)
 
@@ -270,7 +270,7 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
 - **운영체제 연동**
   - 맥 "지금 재생"·미디어 키, 윈도우 미디어 컨트롤에 곡 정보가 나옵니다.
   - 트레이 메뉴가 있고, 창을 닫아도 음악은 계속 재생됩니다. 맥에는 한국어 메뉴가 있습니다.
-  - 미니 플레이어 창(늘 위), 앱을 보고 있지 않을 때 곡이 바뀌면 알림, 앨범 색 테마.
+  - 미니 플레이어 창(늘 위): 표지 옆에 지금 부르는 가사 두 줄, 아래로 펼치는 다음 트랙 목록(누르면 그 곡으로), 눌러서·끌어서 옮기는 진행 막대. 앱을 보고 있지 않을 때 곡이 바뀌면 알림, 앨범 색 테마.
 
 단축키: 스페이스(재생/일시정지), ⌘/Ctrl+←→(이전·다음 곡), Shift+←→(10초 이동), ⌘/Ctrl+F(검색), ⌘/Ctrl+L(가사), ⌘U(대기열), ⌘/Ctrl+E(이퀄라이저), ⌘/Ctrl+[ ](뒤로·앞으로)
 

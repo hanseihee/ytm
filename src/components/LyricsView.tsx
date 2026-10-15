@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { locale, t } from '../i18n';
-import { activeLine, loadLyrics, LYRIC_OFFSET_MAX, LYRIC_OFFSET_STEP, lyricsOffset, setLyricsOffset, type Lyrics } from '../lib/lyrics';
+import { activeLine, LYRIC_OFFSET_MAX, LYRIC_OFFSET_STEP, type Lyrics } from '../lib/lyrics';
 import * as ytm from '../lib/ytm/client';
+import { useTrackLyrics } from '../state/lyrics';
 import { patchPlayer, usePlayer, usePosition } from '../state/player';
 import { LYRIC_SCALES, setLyricsView, stepLyricScale, toastError, toggleLyrics, useLyricScale, useLyricsView } from '../state/ui';
 import { Cover, largeArt } from './Cover';
@@ -98,43 +99,13 @@ export function LyricsView() {
   const videoId = usePlayer((s) => s.videoId);
   const title = usePlayer((s) => s.title);
   const artist = usePlayer((s) => s.artist);
-  const album = usePlayer((s) => s.album);
-  const duration = usePlayer((s) => s.duration);
   const artwork = usePlayer((s) => s.artwork);
   const ad = usePlayer((s) => s.ad);
-  const avOther = usePlayer((s) => s.avOther ?? '');
-  const avShift = usePlayer((s) => s.avShift ?? 0);
-  const [state, setState] = useState<{ id: string; lyrics?: Lyrics | null; error?: boolean }>({ id: '' });
-  const current = useRef(state);
-  current.current = state;
-
-  useEffect(() => {
-    if (!videoId || ad || !title) return;
-    // 노래↔영상만 바꿨으면 짝 버전 가사를 그대로 쓰고 시간만 옮긴다(다시 찾느라 깜빡이지 않게).
-    if (avOther && current.current.id === avOther && current.current.lyrics) return;
-    let alive = true;
-    setState({ id: videoId });
-    loadLyrics({ videoId, title, artist, album, duration }).then(
-      (lyrics) => alive && setState({ id: videoId, lyrics }),
-      () => alive && setState({ id: videoId, error: true }),
-    );
-    return () => {
-      alive = false;
-    };
-    // 곡이 바뀔 때만 다시 찾는다(길이는 곡 시작 직후 0일 수 있어 첫 값만 쓴다).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId, ad, title]);
+  const state = useTrackLyrics();
+  const { loading, borrowed, offset, shift, nudge } = state;
 
   const scale = useLyricScale();
-  // 짝 버전(노래↔영상) 가사를 쓰는 중이면 그 버전 기준 시간으로 옮긴다(짝 버전 위치 = 지금 위치 + avShift).
-  const borrowed = !!avOther && state.id === avOther && state.id !== videoId;
-  const lyricsId = borrowed ? state.id : videoId;
-  const shift = borrowed ? avShift : 0;
-  const [offset, setOffset] = useState(() => lyricsOffset(lyricsId));
-  useEffect(() => setOffset(lyricsOffset(lyricsId)), [lyricsId]);
-  const nudge = (delta: number) => setOffset(setLyricsOffset(lyricsId, delta === 0 ? 0 : offset + delta));
   const bg = { '--art': artwork ? `url("${artwork}")` : 'none', '--lyric-scale': scale } as CSSProperties;
-  const loading = (state.id !== videoId && !borrowed) || (state.lyrics === undefined && !state.error);
   const view = useLyricsView();
   /** 전체 화면 모드(모니터에 틀어 두기) */
   const [stage, setStage] = useState(false);

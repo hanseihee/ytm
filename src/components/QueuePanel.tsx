@@ -21,13 +21,14 @@ const TABS: { id: PanelTab; label: string }[] = [
   { id: 'comments', label: tk('댓글') },
 ];
 
-function TrackItem({ track, current = false, onClick }: { track: Track; current?: boolean; onClick: () => void }) {
+/** 대기열·관련 항목의 곡 한 줄. 미니 플레이어는 우클릭 메뉴 없이(withMenu=false) 쓴다. */
+export function TrackItem({ track, current = false, onClick, withMenu = true }: { track: Track; current?: boolean; onClick: () => void; withMenu?: boolean }) {
   const menu = (e: MouseEvent) => {
     e.preventDefault();
     openMenu(e.clientX, e.clientY, trackMenu(track));
   };
   return (
-    <button type="button" className={`qitem${current ? ' is-current' : ''}`} onClick={onClick} onContextMenu={menu}>
+    <button type="button" className={`qitem${current ? ' is-current' : ''}`} onClick={onClick} onContextMenu={withMenu ? menu : (e) => e.preventDefault()}>
       <Cover src={track.thumbnail} size={40} />
       <span className="qitem__meta">
         <span className="qitem__title">{track.title}</span>
@@ -38,7 +39,8 @@ function TrackItem({ track, current = false, onClick }: { track: Track; current?
   );
 }
 
-function QueueTab() {
+/** 지금 대기열(큰 창 패널·미니 플레이어 공용): 곡이 바뀌면, 그리고 8초마다 다시 읽는다. */
+export function useQueue() {
   const videoId = usePlayer((s) => s.videoId);
   const [data, setData] = useState<QueueData | null>(null);
   const [error, setError] = useState(false);
@@ -71,6 +73,11 @@ function QueueTab() {
   const now = current >= 0 ? (items[current] as QueueItem) : undefined;
   const upcoming = items.map((item, index) => ({ item, index })).slice(current + 1).filter((x): x is { item: QueueItem; index: number } => !!x.item);
   const automix = data?.automix ?? [];
+  return { data, error, items, now, upcoming, automix, jump };
+}
+
+function QueueTab() {
+  const { data, error, items, now, upcoming, automix, jump } = useQueue();
 
   if (error && !data) return <p className="panel__empty">{t('대기열을 읽지 못했습니다.')}</p>;
   if (!data) return <p className="panel__empty">{t('불러오는 중…')}</p>;
