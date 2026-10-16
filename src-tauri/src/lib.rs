@@ -1,4 +1,4 @@
-//! YTMusic — 자체 화면(main 창)으로 YouTube Music을 쓰는 데스크톱 음악 플레이어.
+//! Garak — 자체 화면(main 창)으로 YouTube Music을 쓰는 데스크톱 음악 플레이어.
 //!
 //! - main 창: React 화면(검색·보관함·플레이리스트·가사·대기열·재생 바).
 //! - engine 창: 숨은 music.youtube.com. 공식 플레이어가 소리를 내고, `engine.js`가 내부 API 호출과
@@ -34,7 +34,7 @@ use engine::Engine;
 pub(crate) const MAIN: &str = "main";
 pub(crate) const ENGINE: &str = "engine";
 const TRAY: &str = "main";
-const APP_NAME: &str = "YTMusic";
+const APP_NAME: &str = "Garak";
 const HOME_URL: &str = "https://music.youtube.com/";
 /// music.youtube.com 첫 화면의 `ytcfg.SIGNIN_URL`에서 가져온 주소 (2026-10-14 관찰).
 const SIGNIN_URL: &str = "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dko%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F&hl=ko";
@@ -523,17 +523,17 @@ fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         APP_NAME,
         true,
         &[
-            &PredefinedMenuItem::about(app, Some(l(app, "YTMusic에 관하여").as_str()), Some(about))?,
+            &PredefinedMenuItem::about(app, Some(l(app, "Garak에 관하여").as_str()), Some(about))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "ui:settings", l(app, "설정…"), true, Some("CmdOrCtrl+,"))?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::services(app, Some(l(app, "서비스").as_str()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::hide(app, Some(l(app, "YTMusic 가리기").as_str()))?,
+            &PredefinedMenuItem::hide(app, Some(l(app, "Garak 가리기").as_str()))?,
             &PredefinedMenuItem::hide_others(app, Some(l(app, "기타 가리기").as_str()))?,
             &PredefinedMenuItem::show_all(app, Some(l(app, "모두 보기").as_str()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::quit(app, Some(l(app, "YTMusic 종료").as_str()))?,
+            &PredefinedMenuItem::quit(app, Some(l(app, "Garak 종료").as_str()))?,
         ],
     )?;
     let edit = Submenu::with_items(
@@ -761,7 +761,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("YTMusic을 시작하지 못했습니다");
+        .expect("Garak을 시작하지 못했습니다");
 
     app.run(|app, event| match event {
         RunEvent::ExitRequested { .. } => {

@@ -1,118 +1,118 @@
 {
   "sourceLanguage" : "ko",
   "strings" : {
-    "YTMusic에서 듣는 곡과 재생 단추" : {
+    "Garak에서 듣는 곡과 재생 단추" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Was in YTMusic läuft, mit Steuerung"
+            "value" : "Was in Garak läuft, mit Steuerung"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What’s playing in YTMusic, with controls"
+            "value" : "What’s playing in Garak, with controls"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lo que suena en YTMusic, con controles"
+            "value" : "Lo que suena en Garak, con controles"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le titre en cours dans YTMusic, avec commandes"
+            "value" : "Le titre en cours dans Garak, avec commandes"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lagu di YTMusic beserta kontrolnya"
+            "value" : "Lagu di Garak beserta kontrolnya"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicで再生中の曲と操作ボタン"
+            "value" : "Garakで再生中の曲と操作ボタン"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O que toca no YTMusic, com controles"
+            "value" : "O que toca no Garak, com controles"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic 正在播放的歌曲和控制按钮"
+            "value" : "Garak 正在播放的歌曲和控制按钮"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic 正在播放的歌曲和控制按鈕"
+            "value" : "Garak 正在播放的歌曲和控制按鈕"
           }
         }
       }
     },
-    "YTMusic을 열어 곡을 고르세요" : {
+    "Garak을 열어 곡을 고르세요" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffne YTMusic und wähle einen Song"
+            "value" : "Öffne Garak und wähle einen Song"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open YTMusic to pick a song"
+            "value" : "Open Garak to pick a song"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre YTMusic y elige una canción"
+            "value" : "Abre Garak y elige una canción"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrez YTMusic pour choisir un titre"
+            "value" : "Ouvrez Garak pour choisir un titre"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka YTMusic untuk memilih lagu"
+            "value" : "Buka Garak untuk memilih lagu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicを開いて曲を選んでください"
+            "value" : "Garakを開いて曲を選んでください"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abra o YTMusic e escolha uma música"
+            "value" : "Abra o Garak e escolha uma música"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开 YTMusic 选择歌曲"
+            "value" : "打开 Garak 选择歌曲"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟 YTMusic 選擇歌曲"
+            "value" : "開啟 Garak 選擇歌曲"
           }
         }
       }

@@ -126,7 +126,7 @@ fn restore_engine_window(window: &tauri::WebviewWindow) {
 fn video_title(app: &AppHandle) -> String {
     let track = lock(&app.state::<crate::AppState>().track).clone();
     if track.title.is_empty() {
-        l(app, "YTMusic 영상")
+        l(app, "Garak 영상")
     } else if track.artist.is_empty() {
         track.title
     } else {
@@ -141,7 +141,7 @@ pub fn on_language_changed(app: &AppHandle) {
         warn("엔진 창 제목", window.set_title(&title));
     }
     if let Some(window) = app.get_webview_window(MINI) {
-        warn("미니 플레이어 제목", window.set_title(&l(app, "YTMusic 미니 플레이어")));
+        warn("미니 플레이어 제목", window.set_title(&l(app, "Garak 미니 플레이어")));
     }
 }
 
@@ -178,7 +178,7 @@ pub(crate) fn open_mini(app: &AppHandle, open: bool) -> Result<(), String> {
         return Ok(());
     }
     let builder = WebviewWindowBuilder::new(app, MINI, WebviewUrl::App("index.html#mini".into()))
-        .title(l(app, "YTMusic 미니 플레이어"))
+        .title(l(app, "Garak 미니 플레이어"))
         .inner_size(380.0, 152.0)
         .resizable(false)
         .maximizable(false)

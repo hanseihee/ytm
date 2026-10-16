@@ -6,55 +6,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic-Widget"
+            "value" : "Garak-Widget"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic Widget"
+            "value" : "Garak Widget"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget de YTMusic"
+            "value" : "Widget de Garak"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget YTMusic"
+            "value" : "Widget Garak"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget YTMusic"
+            "value" : "Widget Garak"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic ウィジェット"
+            "value" : "Garak ウィジェット"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widget do YTMusic"
+            "value" : "Widget do Garak"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic 小组件"
+            "value" : "Garak 小组件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic 小工具"
+            "value" : "Garak 小工具"
           }
         }
       }

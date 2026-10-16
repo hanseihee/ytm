@@ -168,7 +168,7 @@ export function SettingsView() {
           <button type="button" className="btn btn--quiet" onClick={() => showEngine('login').catch((err) => toastError(err))}>{t('다른 계정으로 로그인')}</button>
           <button type="button" className="btn btn--quiet" onClick={() => showEngine('reload').catch((err) => toastError(err))}>{t('YouTube Music 다시 연결')}</button>
         </div>
-        {version && <p className="field__hint">YTMusic {version}</p>}
+        {version && <p className="field__hint">Garak {version}</p>}
       </section>
     </div>
   );

@@ -1,6 +1,6 @@
 {
-  "_comment": "Partner Center → YTMusic(9NSGBJ9R0WSJ) → 제품 관리 → 제품 ID의 값(2026-10-15 예약).",
-  "displayName": "YTMusic",
+  "_comment": "Partner Center → Garak(9NSGBJ9R0WSJ) → 제품 관리 → 제품 ID의 값. displayName은 앱 이름 관리에 예약한 이름(Garak, 2026-10-16)과 같아야 한다. identityName은 처음 예약한 이름(YTMusic, 2026-10-15)으로 Store가 정한 값이라 이름을 바꿔도 그대로 둔다(사용자에게 보이지 않음).",
+  "displayName": "Garak",
   "identityName": "realmasse.YTMusic",
   "publisher": "CN=E305625D-D3C0-4ECB-B915-63B1605DDB4F",
   "publisherDisplayName": "realmasse",

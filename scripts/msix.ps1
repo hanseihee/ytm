@@ -1,13 +1,13 @@
 # Microsoft Store용 MSIX 만들기(Windows 전용): pwsh scripts/msix.ps1
 # 미리 Store용으로 빌드해 둔다: VITE_DISTRIBUTION=store npx tauri build --no-bundle (GitHub Actions의 .github/workflows/msix.yml이 한다)
-# 결과: release/msix/YTMusic_<버전>.0_x64.msix (서명하지 않는다. Store가 서명한다)
+# 결과: release/msix/Garak_<버전>.0_x64.msix (서명하지 않는다. Store가 서명한다)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $id = Get-Content "$root/src-tauri/msix/identity.json" -Raw | ConvertFrom-Json
 # MSIX_TEST_IDENTITY=1: Partner Center 값 없이 시험용 이름으로 묶는다(빌드 확인용, Store에 낼 수 없다)
 $test = $env:MSIX_TEST_IDENTITY -eq '1'
 if ($test) {
-  $id.identityName = 'YTMusic.PipelineTest'
+  $id.identityName = 'Garak.PipelineTest'
   $id.publisher = 'CN=PipelineTest'
   $id.publisherDisplayName = 'Pipeline Test'
 }
@@ -17,14 +17,14 @@ foreach ($k in 'displayName', 'identityName', 'publisher', 'publisherDisplayName
 # Store는 버전 마지막 자리가 0이어야 한다
 $version = (Get-Content "$root/package.json" -Raw | ConvertFrom-Json).version + '.0'
 
-$exe = @("$root/src-tauri/target/release/YTMusic.exe", "$root/src-tauri/target/release/ytm-desktop.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+$exe = @("$root/src-tauri/target/release/Garak.exe", "$root/src-tauri/target/release/ytm-desktop.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $exe) { throw '빌드된 exe가 없습니다. 먼저 npx tauri build --no-bundle' }
 
 $out = "$root/release/msix"
 $layout = "$out/layout"
 Remove-Item $layout -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory "$layout/Assets" -Force | Out-Null
-Copy-Item $exe "$layout/YTMusic.exe"
+Copy-Item $exe "$layout/Garak.exe"
 foreach ($a in 'StoreLogo', 'Square44x44Logo', 'Square150x150Logo') {
   Copy-Item "$root/src-tauri/icons/$a.png" "$layout/Assets/$a.png"
 }
@@ -39,7 +39,7 @@ $values = @{
   '{{DISPLAY_NAME}}' = $id.displayName
   '{{DESCRIPTION}}' = $id.description
   '{{VERSION}}' = $version
-  '{{EXECUTABLE}}' = 'YTMusic.exe'
+  '{{EXECUTABLE}}' = 'Garak.exe'
 }
 foreach ($k in $values.Keys) { $manifest = $manifest.Replace($k, (& $esc $values[$k])) }
 if ($manifest -match '\{\{') { throw "설명 파일에 채우지 않은 자리가 남았습니다" }
@@ -58,7 +58,7 @@ if ($LASTEXITCODE -eq 0) {
 }
 if ($LASTEXITCODE -ne 0) { Write-Warning 'resources.pri를 만들지 못했습니다(없이 묶습니다)'; Remove-Item "$layout/resources.pri" -ErrorAction SilentlyContinue }
 
-$msix = if ($test) { "$out/YTMusic_${version}_x64-test.msix" } else { "$out/YTMusic_${version}_x64.msix" }
+$msix = if ($test) { "$out/Garak_${version}_x64-test.msix" } else { "$out/Garak_${version}_x64.msix" }
 & "$bin\makeappx.exe" pack /d $layout /p $msix /o
 if ($LASTEXITCODE -ne 0) { throw "makeappx pack 실패($LASTEXITCODE)" }
 Write-Host "만들었습니다: $msix"

@@ -20,7 +20,7 @@
     <Resource Language="en-US" />
   </Resources>
   <Applications>
-    <Application Id="YTMusic" Executable="{{EXECUTABLE}}" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="Garak" Executable="{{EXECUTABLE}}" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="{{DISPLAY_NAME}}"
         Description="{{DESCRIPTION}}"

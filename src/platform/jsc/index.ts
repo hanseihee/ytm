@@ -84,7 +84,7 @@ const api: Record<string, (...args: never[]) => unknown> = {
   chartTitle: spotify.chartTitle,
   todayLabel: spotify.todayLabel,
   playInChartOrder: spotify.playInChartOrder,
-  syncToYouTubeMusic: (p: spotify.SpotifyPlaylist, tracks: never[]) => spotify.syncToYouTubeMusic(p, tracks, 'YTM'),
+  syncToYouTubeMusic: (p: spotify.SpotifyPlaylist, tracks: never[]) => spotify.syncToYouTubeMusic(p, tracks, 'Garak'),
   describeSpotifyError: spotify.describeSpotifyError,
 };
 

@@ -67,7 +67,7 @@ export function Sidebar() {
     <nav className="side" aria-label={t('주 메뉴')}>
       <div className="side__brand" data-tauri-drag-region>
         <Logo size={24} />
-        <span className="side__brand-text">YTMusic</span>
+        <span className="side__brand-text">Garak</span>
       </div>
       <div className="side__group">
         <NavItem icon="home" label={t('홈')} active={route.name === 'home'} onClick={() => go({ name: 'home' })} />

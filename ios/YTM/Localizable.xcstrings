@@ -2984,292 +2984,292 @@
         }
       }
     },
-    "YTMusic 차트 열기" : {
+    "Garak 차트 열기" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusic-Charts öffnen"
+            "value" : "Garak-Charts öffnen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open YTMusic charts"
+            "value" : "Open Garak charts"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abrir listas de YTMusic"
+            "value" : "Abrir listas de Garak"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrir les classements YTMusic"
+            "value" : "Ouvrir les classements Garak"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka tangga lagu YTMusic"
+            "value" : "Buka tangga lagu Garak"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicのチャートを開く"
+            "value" : "Garakのチャートを開く"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abrir paradas do YTMusic"
+            "value" : "Abrir paradas do Garak"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开 YTMusic 排行榜"
+            "value" : "打开 Garak 排行榜"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟 YTMusic 排行榜"
+            "value" : "開啟 Garak 排行榜"
           }
         }
       }
     },
-    "YTMusic에서 다음 곡으로 넘어갑니다." : {
+    "Garak에서 다음 곡으로 넘어갑니다." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Springt in YTMusic zum nächsten Song."
+            "value" : "Springt in Garak zum nächsten Song."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skips to the next song in YTMusic."
+            "value" : "Skips to the next song in Garak."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pasa a la siguiente canción en YTMusic."
+            "value" : "Pasa a la siguiente canción en Garak."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Passe au titre suivant dans YTMusic."
+            "value" : "Passe au titre suivant dans Garak."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lompat ke lagu berikutnya di YTMusic."
+            "value" : "Lompat ke lagu berikutnya di Garak."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicで次の曲にスキップします。"
+            "value" : "Garakで次の曲にスキップします。"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pula para a próxima música no YTMusic."
+            "value" : "Pula para a próxima música no Garak."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 YTMusic 中跳到下一首。"
+            "value" : "在 Garak 中跳到下一首。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 YTMusic 中跳到下一首。"
+            "value" : "在 Garak 中跳到下一首。"
           }
         }
       }
     },
-    "YTMusic에서 이전 곡으로 돌아갑니다." : {
+    "Garak에서 이전 곡으로 돌아갑니다." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geht in YTMusic zum vorherigen Song zurück."
+            "value" : "Geht in Garak zum vorherigen Song zurück."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Goes back to the previous song in YTMusic."
+            "value" : "Goes back to the previous song in Garak."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vuelve a la canción anterior en YTMusic."
+            "value" : "Vuelve a la canción anterior en Garak."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Revient au titre précédent dans YTMusic."
+            "value" : "Revient au titre précédent dans Garak."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kembali ke lagu sebelumnya di YTMusic."
+            "value" : "Kembali ke lagu sebelumnya di Garak."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicで前の曲に戻ります。"
+            "value" : "Garakで前の曲に戻ります。"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volta para a música anterior no YTMusic."
+            "value" : "Volta para a música anterior no Garak."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 YTMusic 中返回上一首。"
+            "value" : "在 Garak 中返回上一首。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 YTMusic 中返回上一首。"
+            "value" : "在 Garak 中返回上一首。"
           }
         }
       }
     },
-    "YTMusic에서 지금 곡을 재생하거나 멈춥니다." : {
+    "Garak에서 지금 곡을 재생하거나 멈춥니다." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spielt den aktuellen Song in YTMusic ab oder pausiert ihn."
+            "value" : "Spielt den aktuellen Song in Garak ab oder pausiert ihn."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plays or pauses the current song in YTMusic."
+            "value" : "Plays or pauses the current song in Garak."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reproduce o pausa la canción actual en YTMusic."
+            "value" : "Reproduce o pausa la canción actual en Garak."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lit ou met en pause le titre en cours dans YTMusic."
+            "value" : "Lit ou met en pause le titre en cours dans Garak."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Memutar atau menjeda lagu saat ini di YTMusic."
+            "value" : "Memutar atau menjeda lagu saat ini di Garak."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicで今の曲を再生または一時停止します。"
+            "value" : "Garakで今の曲を再生または一時停止します。"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toca ou pausa a música atual no YTMusic."
+            "value" : "Toca ou pausa a música atual no Garak."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 YTMusic 中播放或暂停当前歌曲。"
+            "value" : "在 Garak 中播放或暂停当前歌曲。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 YTMusic 中播放或暫停目前的歌曲。"
+            "value" : "在 Garak 中播放或暫停目前的歌曲。"
           }
         }
       }
     },
-    "YTMusic을 한 번 열어 YouTube Music에 연결한 뒤 다시 시도하세요." : {
+    "Garak을 한 번 열어 YouTube Music에 연결한 뒤 다시 시도하세요." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffne YTMusic einmal, um dich mit YouTube Music zu verbinden, und versuche es erneut."
+            "value" : "Öffne Garak einmal, um dich mit YouTube Music zu verbinden, und versuche es erneut."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open YTMusic once to connect to YouTube Music, then try again."
+            "value" : "Open Garak once to connect to YouTube Music, then try again."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre YTMusic una vez para conectarte a YouTube Music e inténtalo de nuevo."
+            "value" : "Abre Garak una vez para conectarte a YouTube Music e inténtalo de nuevo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrez YTMusic une fois pour vous connecter à YouTube Music, puis réessayez."
+            "value" : "Ouvrez Garak une fois pour vous connecter à YouTube Music, puis réessayez."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka YTMusic sekali untuk terhubung ke YouTube Music, lalu coba lagi."
+            "value" : "Buka Garak sekali untuk terhubung ke YouTube Music, lalu coba lagi."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YTMusicを一度開いてYouTube Musicに接続してから、もう一度お試しください。"
+            "value" : "Garakを一度開いてYouTube Musicに接続してから、もう一度お試しください。"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abra o YTMusic uma vez para conectar ao YouTube Music e tente de novo."
+            "value" : "Abra o Garak uma vez para conectar ao YouTube Music e tente de novo."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先打开 YTMusic 连接 YouTube Music，然后重试。"
+            "value" : "请先打开 Garak 连接 YouTube Music，然后重试。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請先開啟 YTMusic 連線 YouTube Music，然後再試一次。"
+            "value" : "請先開啟 Garak 連線 YouTube Music，然後再試一次。"
           }
         }
       }
@@ -17513,60 +17513,60 @@
         }
       }
     },
-    "정한 시간이 지나면 YTMusic 재생을 멈춥니다(마지막 10초는 소리를 줄입니다)." : {
+    "정한 시간이 지나면 Garak 재생을 멈춥니다(마지막 10초는 소리를 줄입니다)." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stoppt YTMusic nach der eingestellten Zeit (in den letzten 10 Sekunden leiser)."
+            "value" : "Stoppt Garak nach der eingestellten Zeit (in den letzten 10 Sekunden leiser)."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stops YTMusic playback after the set time (fading out over the last 10 seconds)."
+            "value" : "Stops Garak playback after the set time (fading out over the last 10 seconds)."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Detiene YTMusic tras el tiempo elegido (baja el volumen en los últimos 10 segundos)."
+            "value" : "Detiene Garak tras el tiempo elegido (baja el volumen en los últimos 10 segundos)."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arrête la lecture YTMusic après le délai choisi (baisse le son pendant les 10 dernières secondes)."
+            "value" : "Arrête la lecture Garak après le délai choisi (baisse le son pendant les 10 dernières secondes)."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menghentikan pemutaran YTMusic setelah waktu yang ditentukan (volume mengecil di 10 detik terakhir)."
+            "value" : "Menghentikan pemutaran Garak setelah waktu yang ditentukan (volume mengecil di 10 detik terakhir)."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "設定した時間が過ぎるとYTMusicの再生を停止します (最後の10秒は音量を下げます)。"
+            "value" : "設定した時間が過ぎるとGarakの再生を停止します (最後の10秒は音量を下げます)。"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Para a reprodução do YTMusic após o tempo definido (baixa o volume nos últimos 10 segundos)."
+            "value" : "Para a reprodução do Garak após o tempo definido (baixa o volume nos últimos 10 segundos)."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到设定时间后停止 YTMusic 播放（最后 10 秒逐渐降低音量）。"
+            "value" : "到设定时间后停止 Garak 播放（最后 10 秒逐渐降低音量）。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到設定時間後停止 YTMusic 播放（最後 10 秒逐漸降低音量）。"
+            "value" : "到設定時間後停止 Garak 播放（最後 10 秒逐漸降低音量）。"
           }
         }
       }

@@ -35,7 +35,7 @@ export interface LyricsQuery {
 }
 
 const LRCLIB = 'https://lrclib.net/api';
-const HEADERS = { 'Lrclib-Client': 'YTMusic 0.2 (personal player)' };
+const HEADERS = { 'Lrclib-Client': 'Garak 0.2 (personal player)' };
 /** 곡 길이 차이가 이 안이면 같은 곡으로 본다(초). */
 const DURATION_TOLERANCE = 4;
 

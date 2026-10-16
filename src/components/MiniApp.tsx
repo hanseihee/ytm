@@ -324,7 +324,7 @@ export function MiniApp() {
     <div className={`mini-app${mac ? ' mini-app--mac' : ''}${queueOpen ? ' is-open' : ''}`} style={{ '--art': artwork ? `url("${artwork}")` : 'none' } as CSSProperties}>
       <div className="mini-app__backdrop" aria-hidden="true" />
       <div className="mini-app__drag" data-tauri-drag-region>
-        <span data-tauri-drag-region>YTMusic</span>
+        <span data-tauri-drag-region>Garak</span>
         <div className="mini-app__top-tools">
           <button
             type="button"

@@ -399,7 +399,7 @@ fn start(processes: &[AudioObjectID], shared: &Arc<Shared>, settings: &EqSetting
     let tap_uuid: Retained<NSUUID> = unsafe {
         let _: () = msg_send![&*desc, setMuteBehavior: MUTED_WHEN_TAPPED];
         let _: () = msg_send![&*desc, setPrivate: Bool::YES];
-        let _: () = msg_send![&*desc, setName: &*ns("YTMusic EQ")];
+        let _: () = msg_send![&*desc, setName: &*ns("Garak EQ")];
         msg_send![&*desc, UUID]
     };
 
@@ -412,7 +412,7 @@ fn start(processes: &[AudioObjectID], shared: &Arc<Shared>, settings: &EqSetting
 
     // 3) 탭 + 기본 출력 장치를 묶은 비공개 집합 장치
     let agg = dict();
-    put(&agg, "name", &ns("YTMusic EQ"));
+    put(&agg, "name", &ns("Garak EQ"));
     put(&agg, "uid", &ns(&NSUUID::new().UUIDString().to_string()));
     put(&agg, "master", &ns(&output_uid));
     put(&agg, "private", &NSNumber::new_bool(true));
@@ -783,7 +783,7 @@ mod tests {
         let uuid: Retained<NSUUID> = unsafe { msg_send![&*desc, UUID] };
         let output_uid = default_output_uid().expect("출력 장치");
         let agg = dict();
-        put(&agg, "name", &ns("YTMusic test"));
+        put(&agg, "name", &ns("Garak test"));
         put(&agg, "uid", &ns(&NSUUID::new().UUIDString().to_string()));
         put(&agg, "master", &ns(&output_uid));
         put(&agg, "private", &NSNumber::new_bool(true));

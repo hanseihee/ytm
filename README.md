@@ -1,17 +1,17 @@
-# YTMusic
+# Garak
 
 **English** · [한국어](#한국어)
 
-An unofficial music player for your YouTube Music account — desktop (macOS · Windows) and iOS, managed in one repository. Formerly called YTM Desktop.
+An unofficial music player for your YouTube Music account — desktop (macOS · Windows) and iOS, managed in one repository. Formerly called YTMusic (and YTM Desktop before that).
 
 **Download**: [Latest release](https://github.com/hanseihee/ytm/releases/latest) — macOS (Apple silicon) `.dmg` and Windows (64-bit) installer. Release notes are in [CHANGELOG.md](CHANGELOG.md) (Korean).
 
-![YTMusic — the Melon TOP 100 chart matched to YouTube Music tracks](docs/screenshot-desktop.png)
+![Garak — the Melon TOP 100 chart matched to YouTube Music tracks](docs/screenshot-desktop.png)
 
 ## English
 
-- **YTMusic** (macOS · Windows): Rust (Tauri 2) + React
-- **YTMusic** (iOS): native SwiftUI screens + the same TypeScript data code as the desktop app (run in JavaScriptCore)
+- **Garak** (macOS · Windows): Rust (Tauri 2) + React
+- **Garak** (iOS): native SwiftUI screens + the same TypeScript data code as the desktop app (run in JavaScriptCore)
 
 The screens are a player built from scratch; the sound comes from the official YouTube Music web player running in a hidden web view.
 Both apps share the same code for parsing YouTube Music responses, matching chart songs, finding lyrics, and the playback engine script.
@@ -91,12 +91,12 @@ open ios/YTM.xcodeproj     # pick your iPhone in Xcode and run (automatic signin
 ### Install
 
 Download from [GitHub Releases](https://github.com/hanseihee/ytm/releases).
-- macOS (Apple silicon): `YTMusic-<version>-mac-arm64.dmg`
-- Windows (64-bit): `YTMusic-<version>-windows-x64-setup.exe`
+- macOS (Apple silicon): `Garak-<version>-mac-arm64.dmg`
+- Windows (64-bit): `Garak-<version>-windows-x64-setup.exe`
 - Verify downloads with `SHA256SUMS.txt`.
 
 The apps are not signed with a paid developer certificate (macOS: ad-hoc signed, not notarized).
-- **macOS**: open the DMG and drag **YTMusic** onto the **Applications** folder next to it (not the disk icon). The first time you open it, macOS says it "could not verify" the app — click **Done**, then go to System Settings → Privacy & Security, scroll down to Security and click **Open Anyway** next to "YTMusic was blocked", and confirm. You only do this once per version. (Terminal alternative: `xattr -dr com.apple.quarantine /Applications/YTMusic.app`)
+- **macOS**: open the DMG and drag **Garak** onto the **Applications** folder next to it (not the disk icon). The first time you open it, macOS says it "could not verify" the app — click **Done**, then go to System Settings → Privacy & Security, scroll down to Security and click **Open Anyway** next to "Garak was blocked", and confirm. You only do this once per version. (Terminal alternative: `xattr -dr com.apple.quarantine /Applications/Garak.app`)
 - **Windows**: if SmartScreen warns you, choose "More info → Run anyway".
 
 On first launch you'll see a "Sign in with your Google account" screen.
@@ -225,12 +225,12 @@ Chart data is read from the public pages of each service (Melon, Genie, Bugs, FL
 
 [English](#english) · **한국어**
 
-YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 데스크톱(맥·윈도우)과 iOS 두 앱을 관리합니다. 예전 이름은 YTM Desktop입니다.
+YouTube Music 계정으로 쓰는 비공식 음악 플레이어입니다. 한 저장소에서 데스크톱(맥·윈도우)과 iOS 두 앱을 관리합니다. 예전 이름은 YTMusic, 그 전에는 YTM Desktop입니다.
 
 **내려받기**: [최신 릴리즈](https://github.com/hanseihee/ytm/releases/latest) — 맥(Apple 실리콘) `.dmg`, 윈도우(64비트) 설치 파일. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md).
 
-- **YTMusic**(맥·윈도우): Rust(Tauri 2) + React
-- **YTMusic**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
+- **Garak**(맥·윈도우): Rust(Tauri 2) + React
+- **Garak**(iOS): SwiftUI 네이티브 화면 + 데스크톱과 같은 TypeScript 데이터 코드(JavaScriptCore)
 
 화면은 직접 만든 플레이어이고, 소리는 숨은 웹 화면에 띄운 공식 YouTube Music 플레이어가 냅니다.
 YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스크립트는 두 앱이 같은 코드를 씁니다.
@@ -312,12 +312,12 @@ open ios/YTM.xcodeproj     # Xcode에서 아이폰을 골라 실행(자동 서�
 ### 설치
 
 [GitHub 릴리즈](https://github.com/hanseihee/ytm/releases)에서 받습니다.
-- 맥(Apple 실리콘): `YTMusic-<버전>-mac-arm64.dmg`
-- 윈도우(64비트): `YTMusic-<버전>-windows-x64-setup.exe`
+- 맥(Apple 실리콘): `Garak-<버전>-mac-arm64.dmg`
+- 윈도우(64비트): `Garak-<버전>-windows-x64-setup.exe`
 - `SHA256SUMS.txt`로 받은 파일을 확인할 수 있습니다.
 
 유료 개발자 인증서로 서명하지 않았습니다(맥은 임시 서명, 공증 없음).
-- **맥**: DMG를 열고 **YTMusic**을 옆의 **Applications** 폴더로 끌어 놓으세요(디스크 아이콘이 아니라 앱을). 처음 열 때 "확인할 수 없습니다" 경고가 뜨면 **완료**를 누르고, 시스템 설정 → 개인정보 보호 및 보안 → 아래쪽 보안 칸의 "YTMusic이(가) 차단되었습니다" 옆 **그래도 열기**를 누른 뒤 확인하세요. 버전마다 한 번만 하면 됩니다. (터미널로 하려면 `xattr -dr com.apple.quarantine /Applications/YTMusic.app`)
+- **맥**: DMG를 열고 **Garak**을 옆의 **Applications** 폴더로 끌어 놓으세요(디스크 아이콘이 아니라 앱을). 처음 열 때 "확인할 수 없습니다" 경고가 뜨면 **완료**를 누르고, 시스템 설정 → 개인정보 보호 및 보안 → 아래쪽 보안 칸의 "Garak이(가) 차단되었습니다" 옆 **그래도 열기**를 누른 뒤 확인하세요. 버전마다 한 번만 하면 됩니다. (터미널로 하려면 `xattr -dr com.apple.quarantine /Applications/Garak.app`)
 - **윈도우**: SmartScreen 경고가 뜨면 "추가 정보 → 실행"을 고르세요.
 
 처음 실행하면 "Google 계정으로 로그인" 화면이 나옵니다.

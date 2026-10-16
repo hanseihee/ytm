@@ -1,6 +1,8 @@
 # Microsoft Store 등록 정보 초안
 
-Partner Center → YTMusic(제품 ID 9NSGBJ9R0WSJ, https://apps.microsoft.com/detail/9NSGBJ9R0WSJ) → 제출 → Store 목록(한국어·English)에 넣을 글. 언어는 MSIX 설명 파일(src-tauri/msix/AppxManifest.xml)의 ko-KR·en-US와 맞춘다.
+Partner Center → Garak(제품 ID 9NSGBJ9R0WSJ, https://apps.microsoft.com/detail/9NSGBJ9R0WSJ) → 제출 → Store 목록(한국어·English)에 넣을 글. 언어는 MSIX 설명 파일(src-tauri/msix/AppxManifest.xml)의 ko-KR·en-US와 맞춘다.
+
+제품 이름은 **Garak**(2026-10-16 예약). 처음 이름 YTMusic은 "10.1.1.1 Inaccurate Representation — 제품 이름에 다른 소프트웨어·서비스 이름이 들어 있음"으로 인증에서 거절됐다(2026-10-15). 이름에는 YouTube·YT 같은 타사 이름을 넣지 않는다. 패키지 ID 이름(realmasse.YTMusic)은 Store가 정한 값이라 그대로다.
 
 ## 공통 값
 
@@ -12,14 +14,14 @@ Partner Center → YTMusic(제품 ID 9NSGBJ9R0WSJ, https://apps.microsoft.com/de
 | 웹 사이트 | https://github.com/hanseihee/ytm |
 | 지원 연락처 | https://github.com/hanseihee/ytm/issues |
 | 저작권 | © 2026 hanseihee |
-| 제한된 기능(runFullTrust) 사유(500자 이하) | YTMusic is a Win32 desktop app built with Tauri (Rust + WebView2) and packaged as MSIX. It needs runFullTrust to run as a regular desktop process: it opens its own windows (main, mini player, video), shows a tray icon, registers optional global shortcuts for playback, uses Windows media controls (SMTC) and hosts WebView2. It installs no drivers or services and changes no system settings. |
+| 제한된 기능(runFullTrust) 사유(500자 이하) | Garak is a Win32 desktop app built with Tauri (Rust + WebView2) and packaged as MSIX. It needs runFullTrust to run as a regular desktop process: it opens its own windows (main, mini player, video), shows a tray icon, registers optional global shortcuts for playback, uses Windows media controls (SMTC) and hosts WebView2. It installs no drivers or services and changes no system settings. |
 | 인증 참고 사항(추가 테스트 정보) | YouTube Music을 쓸 수 있는 Google 계정(무료 가능)으로 로그인. 별도 시험 계정 없음. |
 
 ## 한국어
 
 **설명**
 
-YTMusic은 내 YouTube Music 계정으로 쓰는 비공식 데스크톱 음악 플레이어입니다. 화면은 처음부터 새로 만든 플레이어이고, 소리는 숨은 창에서 공식 YouTube Music 웹 플레이어가 그대로 냅니다. 광고 차단·음원 다운로드·유료 기능 우회는 없습니다.
+Garak은 내 YouTube Music 계정으로 쓰는 비공식 데스크톱 음악 플레이어입니다. 화면은 처음부터 새로 만든 플레이어이고, 소리는 숨은 창에서 공식 YouTube Music 웹 플레이어가 그대로 냅니다. 광고 차단·음원 다운로드·유료 기능 우회는 없습니다.
 
 - 검색·홈·둘러보기·보관함: 노래·앨범·아티스트·플레이리스트, 플레이리스트 만들기·편집·순서 바꾸기
 - 가사: 지금 줄을 따라가는 시간 맞춤 가사, 글자 크기·싱크 조절, 큰 앨범 표지와 음악에 맞춰 움직이는 스펙트럼
@@ -47,7 +49,7 @@ YouTube Music 계정이 필요합니다. Google·YouTube와 관계가 없는 앱
 
 **Description**
 
-YTMusic is an unofficial desktop music player for your own YouTube Music account. The screens are a player built from scratch; the sound comes from the official YouTube Music web player running in a hidden window. There is no ad blocking, audio downloading, or bypassing of paid features.
+Garak is an unofficial desktop music player for your own YouTube Music account. The screens are a player built from scratch; the sound comes from the official YouTube Music web player running in a hidden window. There is no ad blocking, audio downloading, or bypassing of paid features.
 
 - Search, Home, Explore and Library: songs, albums, artists and playlists; create, edit and reorder playlists
 - Lyrics: time-synced lyrics that follow the current line, adjustable size and sync, a large album cover with a spectrum that moves with the music
@@ -73,7 +75,7 @@ Requires a YouTube Music account. This app is not affiliated with Google or YouT
 
 ## 스크린샷
 
-데스크톱 스크린샷은 1366×768 이상 PNG. 윈도우에서 YTMusic 이름이 보이는 화면으로 새로 찍어야 한다(docs/screenshot-desktop.png는 예전 이름이 보인다).
+데스크톱 스크린샷은 1366×768 이상 PNG. 앱 이름이 보이지 않게 찍는다(docs/store/screenshot-charts-ko.png는 사이드바 위 이름 줄을 뺀 것이라 이름을 바꿔도 그대로 쓴다. docs/screenshot-desktop.png는 예전 이름이 보인다).
 
 ## 연령 등급(IARC) 답
 

@@ -1,5 +1,5 @@
 # Microsoft Store용 MSIX 만들기: Actions → "MSIX (Microsoft Store)" → Run workflow (또는 gh workflow run msix.yml)
-# Store용 빌드(GitHub 새 버전 알림 끔)를 scripts/msix.ps1로 묶어 아티팩트 YTMusic-msix로 남긴다.
+# Store용 빌드(GitHub 새 버전 알림 끔)를 scripts/msix.ps1로 묶어 아티팩트 Garak-msix로 남긴다.
 # 제출은 Partner Center 또는 msstore CLI(msstore publish --inputFile <msix> --appId <제품 ID>)로 한다.
 name: MSIX (Microsoft Store)
 
@@ -39,6 +39,6 @@ jobs:
           MSIX_TEST_IDENTITY: ${{ inputs.test_identity && '1' || '0' }}
       - uses: actions/upload-artifact@v4
         with:
-          name: YTMusic-msix
+          name: Garak-msix
           path: release/msix/*.msix
           if-no-files-found: error

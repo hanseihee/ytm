@@ -1,10 +1,10 @@
-# YTMusic Privacy Policy / 개인정보 처리방침
+# Garak Privacy Policy / 개인정보 처리방침
 
 Last updated / 마지막 수정: 2026-10-15
 
 ## English
 
-YTMusic is an unofficial music player (desktop and iPhone) for your own YouTube Music account. It is not affiliated with, endorsed by, or sponsored by Google or YouTube.
+Garak is an unofficial music player (desktop and iPhone) for your own YouTube Music account. It is not affiliated with, endorsed by, or sponsored by Google or YouTube.
 
 **What we collect: nothing.** The developer does not run any server for this app and does not collect, store, sell, or share any personal data. The app has no analytics, advertising, or tracking code.
 
@@ -25,7 +25,7 @@ YTMusic is an unofficial music player (desktop and iPhone) for your own YouTube 
 
 ## 한국어
 
-YTMusic은 본인의 YouTube Music 계정으로 쓰는 비공식 음악 플레이어(데스크톱·아이폰)입니다. Google·YouTube와 관계가 없고, 이들의 승인이나 후원을 받지 않았습니다.
+Garak은 본인의 YouTube Music 계정으로 쓰는 비공식 음악 플레이어(데스크톱·아이폰)입니다. Google·YouTube와 관계가 없고, 이들의 승인이나 후원을 받지 않았습니다.
 
 **수집하는 정보: 없음.** 개발자는 이 앱을 위한 서버를 운영하지 않으며, 어떤 개인정보도 수집·보관·판매·공유하지 않습니다. 분석·광고·추적 코드도 없습니다.
 
