@@ -1,14 +1,61 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { t } from '../i18n';
 import * as ytm from '../lib/ytm/client';
+import { parseLink, type LinkTarget } from '../lib/ytm/links';
 import type { Suggestions } from '../lib/ytm/types';
-import { playTrack } from '../state/library';
+import { playEndpoint, playTrack } from '../state/library';
 import { back, forward, go, replace, routeForBrowse, useCanGo, useRoute } from '../state/nav';
+import { toast } from '../state/ui';
 import { Cover } from './Cover';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 /** 다른 곳(메뉴·단축키)에서 검색창에 초점을 줄 때 쓴다. */
 export const focusSearch = () => document.querySelector<HTMLInputElement>('#search-input')?.focus();
+
+/** 붙여 넣은 링크로 할 일(검색창 아래에 보여 주는 이름과 아이콘) */
+function linkAction(link: LinkTarget): { icon: IconName; label: string } {
+  switch (link.kind) {
+    case 'track':
+      return { icon: 'play', label: t('링크의 곡 재생') };
+    case 'playlist':
+      // 앨범 공유 링크(OLAK5uy_…)는 목록 화면이 앨범 화면으로 바꿔 연다(CollectionView).
+      if (link.browseId.startsWith('VLOLAK5uy_')) return { icon: 'note', label: t('앨범 열기') };
+      return { icon: 'queue', label: link.browseId === 'VLLM' ? t('좋아요 표시한 곡 열기') : t('플레이리스트 열기') };
+    case 'album':
+      return { icon: 'note', label: t('앨범 열기') };
+    case 'artist':
+      return { icon: 'radio', label: t('아티스트 열기') };
+    case 'browse':
+      return { icon: 'link', label: t('링크 열기') };
+    case 'search':
+      return { icon: 'search', label: t('{query} 검색', { query: link.query }) };
+    case 'spotify':
+      return { icon: 'chart', label: t('Spotify 플레이리스트 열기') };
+  }
+}
+
+/** 링크 열기: 곡은 바로 재생(목록 링크면 그 목록 안에서, 아니면 그 곡의 믹스로), 나머지는 그 화면으로. */
+function openLink(link: LinkTarget) {
+  switch (link.kind) {
+    case 'track': {
+      const watch: Record<string, unknown> = link.playlistId
+        ? { videoId: link.videoId, playlistId: link.playlistId }
+        : { videoId: link.videoId, playlistId: `RDAMVM${link.videoId}`, params: 'wAEB' };
+      if (link.start) watch.startTimeSeconds = link.start;
+      toast(t('링크의 곡을 재생합니다'));
+      void playEndpoint({ watchEndpoint: watch });
+      return;
+    }
+    case 'search':
+      go({ name: 'search', query: link.query });
+      return;
+    case 'spotify':
+      go({ name: 'spotify', id: link.playlistId });
+      return;
+    default:
+      go(routeForBrowse(link.browseId));
+  }
+}
 
 function SearchBox() {
   const route = useRoute();
@@ -20,10 +67,12 @@ function SearchBox() {
   const timer = useRef(0);
 
   useEffect(() => setValue(routeQuery), [routeQuery]);
+  // 붙여 넣은 YouTube Music·YouTube·Spotify 링크면 검색 대신 그 곡·목록을 연다.
+  const link = useMemo(() => parseLink(value), [value]);
   useEffect(() => {
     clearTimeout(timer.current);
     const q = value.trim();
-    if (!q || q === routeQuery) {
+    if (!q || q === routeQuery || link) {
       setSugg(null);
       return;
     }
@@ -31,7 +80,7 @@ function SearchBox() {
       ytm.suggestions(q).then(setSugg, () => setSugg(null));
     }, 180);
     return () => clearTimeout(timer.current);
-  }, [value, routeQuery]);
+  }, [value, routeQuery, link]);
 
   const submit = (q: string) => {
     const query = q.trim();
@@ -40,6 +89,15 @@ function SearchBox() {
     setValue(query);
     if (route.name === 'search' && !route.query) replace({ name: 'search', query });
     else go({ name: 'search', query });
+  };
+
+  const followLink = (target: LinkTarget, input: HTMLInputElement | null) => {
+    setOpen(false);
+    setCursor(-1);
+    // 검색 화면에 있었으면 그 검색어로 되돌린다(다른 화면으로 옮기면 검색어가 비워진다).
+    setValue(routeQuery);
+    input?.blur();
+    openLink(target);
   };
 
   const queries = sugg?.queries.slice(0, 6) ?? [];
@@ -52,6 +110,11 @@ function SearchBox() {
       e.preventDefault();
       setCursor((c) => Math.max(-1, c - 1));
     } else if (e.key === 'Enter') {
+      if (link) {
+        e.preventDefault();
+        followLink(link, e.currentTarget);
+        return;
+      }
       submit(cursor >= 0 && queries[cursor] ? queries[cursor] : value);
       setCursor(-1);
     } else if (e.key === 'Escape') {
@@ -61,6 +124,7 @@ function SearchBox() {
   };
 
   const showDrop = open && sugg && (queries.length || sugg.tracks.length || sugg.cards.length);
+  const action = link ? linkAction(link) : undefined;
   return (
     <div className="searchbox" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
       <Icon name="search" size={18} className="searchbox__icon" />
@@ -79,10 +143,27 @@ function SearchBox() {
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKey}
-        aria-expanded={!!showDrop}
+        aria-expanded={!!showDrop || (open && !!link)}
         aria-controls="search-suggestions"
       />
-      {showDrop ? (
+      {open && link && action ? (
+        <div className="suggest" id="search-suggestions" role="listbox">
+          <button
+            type="button"
+            role="option"
+            aria-selected="true"
+            className="suggest__item suggest__link is-on"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => followLink(link, document.querySelector<HTMLInputElement>('#search-input'))}
+          >
+            <span className="suggest__link-icon" aria-hidden="true"><Icon name={action.icon} size={18} /></span>
+            <span>
+              <b>{action.label}</b>
+              <small>{t('Enter를 누르면 앱에서 엽니다')}</small>
+            </span>
+          </button>
+        </div>
+      ) : showDrop ? (
         <div className="suggest" id="search-suggestions" role="listbox">
           {queries.map((q, i) => (
             <button key={q} type="button" role="option" aria-selected={i === cursor} className={`suggest__query${i === cursor ? ' is-on' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => submit(q)}>

@@ -6,10 +6,12 @@ import type { Card, Track } from '../lib/ytm/types';
 import {
   addTracksToPlaylist,
   enqueue,
+  isDisliked,
   libraryStore,
   playEndpoint,
   playTrack,
   removeTracksFromPlaylist,
+  toggleDislike,
   toggleLike,
 } from '../state/library';
 import { go, routeForBrowse } from '../state/nav';
@@ -63,17 +65,21 @@ export interface TrackMenuContext {
   /** 내가 만든 플레이리스트 화면이면 그 id(곡 빼기 가능) */
   editablePlaylistId?: string;
   onRemoved?: (track: Track) => void;
+  /** 재생 바의 지금 곡 메뉴(이미 재생 중이라 "재생"은 뺀다) */
+  current?: boolean;
 }
 
 export function trackMenu(track: Track, ctx: TrackMenuContext = {}): MenuEntry[] {
   const liked = libraryStore.get().liked.has(track.videoId);
+  const disliked = isDisliked(track.videoId);
   const entries: MenuEntry[] = [
-    { label: t('재생'), action: () => playTrack(track), disabled: !track.available },
+    ...(ctx.current ? [] : [{ label: t('재생'), action: () => playTrack(track), disabled: !track.available }]),
     { label: t('다음에 재생'), action: () => enqueue({ videoId: track.videoId }, track.title, 'next') },
     { label: t('대기열 끝에 추가'), action: () => enqueue({ videoId: track.videoId }, track.title, 'end') },
     { label: t('이 곡으로 믹스 시작'), action: () => playEndpoint({ watchEndpoint: { videoId: track.videoId, playlistId: `RDAMVM${track.videoId}`, params: 'wAEB' } }, t('믹스를 시작')) },
     { label: '', separator: true },
     { label: liked ? t('좋아요 취소') : t('좋아요'), action: () => toggleLike(track) },
+    { label: disliked ? t('싫어요 취소') : t('싫어요'), action: () => toggleDislike(track) },
     addToPlaylistEntry([track]),
     { label: t('링크 복사'), action: () => copyLink(trackUrl(track.videoId)) },
   ];

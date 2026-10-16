@@ -75,6 +75,8 @@ export const onMenuAction = (fn: (action: string) => void): Promise<UnlistenFn> 
 export interface Prefs {
   notifications: boolean;
   globalShortcuts: boolean;
+  /** 전역 음량 단축키(⌃⌥↑↓). 다른 앱과 겹치기 쉬워 기본은 꺼짐 */
+  volumeShortcuts: boolean;
   videoOnTop: boolean;
 }
 export const videoWindow = (open: boolean) => invoke<void>('video_window', { open });

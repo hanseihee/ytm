@@ -34,10 +34,14 @@ import { ExploreView, MoodView } from './views/ExploreView';
 import { StatsView } from './views/StatsView';
 import { onVideoWindow } from './lib/tauri';
 import { startPrefsSync } from './state/prefs';
+import { startNowTrackSync } from './state/nowTrack';
+import { stepVolume, toggleMute, VOLUME_STEP } from './state/volume';
 import { toggleLike } from './state/library';
 import { layoutStore } from './state/ui';
 import { startAlbumTheme } from './lib/theme';
 
+// 같은 종류 화면 사이를 옮길 때(앨범 → 다른 앨범) 앞 화면의 상태(보관함 저장 표시·구독 단추·목록 찾기 글자 등)가
+// 남지 않게 화면마다 key를 준다.
 function View({ route }: { route: Route }) {
   switch (route.name) {
     case 'home':
@@ -45,25 +49,25 @@ function View({ route }: { route: Route }) {
     case 'search':
       return <SearchView query={route.query} params={route.params} />;
     case 'album':
-      return <CollectionView kind="album" id={route.id} />;
+      return <CollectionView key={`album:${route.id}`} kind="album" id={route.id} />;
     case 'playlist':
-      return <CollectionView kind="playlist" id={route.id} />;
+      return <CollectionView key={`playlist:${route.id}`} kind="playlist" id={route.id} />;
     case 'liked':
-      return <CollectionView kind="liked" />;
+      return <CollectionView key="liked" kind="liked" />;
     case 'artist':
-      return <ArtistView id={route.id} />;
+      return <ArtistView key={`artist:${route.id}`} id={route.id} />;
     case 'browse':
-      return <BrowseView id={route.id} params={route.params} title={route.title} />;
+      return <BrowseView key={`browse:${route.id}:${route.params ?? ''}`} id={route.id} params={route.params} title={route.title} />;
     case 'library':
       return <LibraryView tab={route.tab} />;
     case 'explore':
       return <ExploreView />;
     case 'mood':
-      return <MoodView params={route.params} title={route.title} />;
+      return <MoodView key={`mood:${route.params}`} params={route.params} title={route.title} />;
     case 'stats':
       return <StatsView />;
     case 'spotify':
-      return <SpotifyView id={route.id} />;
+      return <SpotifyView key={`spotify:${route.id}`} id={route.id} />;
     case 'settings':
       return <SettingsView />;
   }
@@ -72,14 +76,24 @@ function View({ route }: { route: Route }) {
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
-/** 화면 단축키: 스페이스(재생/일시정지), ⌘/Ctrl+←→(이전·다음 곡), ⌘/Ctrl+F(검색) 등. 입력 중에는 쓰지 않는다. */
+/**
+ * 화면 단축키: 스페이스(재생/일시정지), ⌘/Ctrl+←→(이전·다음 곡), ⌘/Ctrl+↑↓(음량), M(음소거), ⌘/Ctrl+F(검색) 등.
+ * 입력 중에는 쓰지 않는다.
+ */
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
       const run = (p: Promise<unknown>) => p.catch((err) => toastError(err));
-      if (e.code === 'Space' && !mod) {
+      if (mod && !e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        stepVolume(e.key === 'ArrowUp' ? VOLUME_STEP : -VOLUME_STEP);
+      } else if (e.code === 'KeyM' && !mod && !e.altKey && !e.shiftKey && !e.repeat) {
+        // 글자 대신 자판 위치(e.code)로 본다: 한글 입력 상태에서는 e.key가 'ㅡ'다.
+        e.preventDefault();
+        toggleMute({ announce: true });
+      } else if (e.code === 'Space' && !mod) {
         e.preventDefault();
         patchPlayer({ playing: !playerStore.get().playing });
         void run(ytm.control('toggle'));
@@ -145,6 +159,7 @@ export function App() {
       startEqSync((reason) => toast(describeEqFailure(reason), 'error')),
       onVideoWindow((open) => layoutStore.set((s) => ({ ...s, video: open }))),
       Promise.resolve(startAlbumTheme(() => playerStore.get().artwork, (fn) => playerStore.subscribe(fn))),
+      Promise.resolve(startNowTrackSync()),
     ];
     startPrefsSync();
     stops.push(

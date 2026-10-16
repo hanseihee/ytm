@@ -11,6 +11,9 @@
   "'{query}' 찾는 중…": [
     "src/views/SearchView.tsx"
   ],
+  "'{title}' 싫어요를 취소했습니다": [
+    "src/state/library.ts"
+  ],
   "'{title}' 좋아요를 취소했습니다": [
     "src/state/library.ts"
   ],
@@ -45,6 +48,9 @@
     "src/components/PlayerBar.tsx",
     "src/views/StatsView.tsx"
   ],
+  "{keys}로 음량을 바꿉니다. 창 정리 앱처럼 같은 키를 쓰는 앱이 있으면 그 앱의 단축키가 듣지 않아 기본은 꺼 두었습니다.": [
+    "src/views/SettingsView.tsx"
+  ],
   "{m}분": [
     "src/components/PlayerBar.tsx",
     "src/views/StatsView.tsx"
@@ -58,6 +64,12 @@
   ],
   "{n}곡 이상": [
     "src/views/LibraryView.tsx"
+  ],
+  "{n}곡 찾음": [
+    "src/views/CollectionView.tsx"
+  ],
+  "{n}곡을 이 순서대로 재생합니다": [
+    "src/state/library.ts"
   ],
   "{n}곡을 플레이리스트에서 뺐습니다": [
     "src/state/library.ts"
@@ -83,6 +95,12 @@
   "{name}을(를) 구독했습니다": [
     "src/views/ArtistView.tsx"
   ],
+  "{query} 검색": [
+    "src/components/TopBar.tsx"
+  ],
+  "{query|와} 맞는 곡이 없습니다": [
+    "src/views/CollectionView.tsx"
+  ],
   "{source} 차트 형식이 바뀌어 곡 목록을 읽지 못했습니다.": [
     "src/lib/charts/index.ts"
   ],
@@ -90,6 +108,9 @@
     "src/lib/charts/bugs.ts",
     "src/lib/charts/genie.ts",
     "src/lib/melon.ts"
+  ],
+  "{title} — 앨범으로 이동": [
+    "src/components/PlayerBar.tsx"
   ],
   "{title} (이미 있음)": [
     "src/components/menus.ts"
@@ -121,6 +142,12 @@
   "{title|을} 삭제합니다. 되돌릴 수 없습니다.": [
     "src/views/CollectionView.tsx"
   ],
+  "{title|을} 싫어요 표시하고 다음 곡으로 넘겼습니다": [
+    "src/state/library.ts"
+  ],
+  "{title|을} 싫어요 표시했습니다. 비슷한 곡이 덜 추천됩니다": [
+    "src/state/library.ts"
+  ],
   "{title|을} 좋아요 표시한 곡에 추가했습니다": [
     "src/state/library.ts"
   ],
@@ -145,6 +172,7 @@
   ],
   "가사": [
     "src/components/LyricsView.tsx",
+    "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx",
     "src/i18n/rust.ts"
   ],
@@ -234,6 +262,7 @@
     "src/components/LyricsView.tsx"
   ],
   "곡을 재생하면 다음에 나올 곡이 여기에 쌓입니다.": [
+    "src/components/MiniApp.tsx",
     "src/components/QueuePanel.tsx"
   ],
   "곡을 재생하면 댓글이 여기에 나옵니다.": [
@@ -317,6 +346,9 @@
   "기본": [
     "src/lib/eq.ts"
   ],
+  "기본 순서": [
+    "src/views/CollectionView.tsx"
+  ],
   "기본 크기로": [
     "src/views/SettingsView.tsx"
   ],
@@ -326,11 +358,17 @@
   "기타 가리기": [
     "src/i18n/rust.ts"
   ],
+  "길이순": [
+    "src/views/CollectionView.tsx"
+  ],
   "끌어서 순서 바꾸기": [
     "src/components/TrackList.tsx"
   ],
   "나만 볼 수 있습니다": [
     "src/components/Dialogs.tsx"
+  ],
+  "나머지 곡을 불러오는 중…": [
+    "src/views/CollectionView.tsx"
   ],
   "나중에": [
     "src/components/UpdateBanner.tsx"
@@ -401,6 +439,9 @@
   "다른 곡 보기": [
     "src/views/CollectionView.tsx"
   ],
+  "다른 낱말로 찾거나 초성(ㅂㅍㅈ)으로 찾아보세요.": [
+    "src/views/CollectionView.tsx"
+  ],
   "다른 앱을 쓰는 중에도 됩니다.": [
     "src/views/SettingsView.tsx"
   ],
@@ -435,6 +476,7 @@
     "src/components/PlayerBar.tsx"
   ],
   "다음 트랙": [
+    "src/components/MiniApp.tsx",
     "src/components/QueuePanel.tsx"
   ],
   "다음에 재생": [
@@ -469,6 +511,7 @@
     "src/views/SpotifyView.tsx"
   ],
   "대기열을 읽지 못했습니다.": [
+    "src/components/MiniApp.tsx",
     "src/components/QueuePanel.tsx"
   ],
   "댄스": [
@@ -547,6 +590,9 @@
   "링크 복사": [
     "src/components/menus.ts"
   ],
+  "링크 열기": [
+    "src/components/TopBar.tsx"
+  ],
   "링크가 있는 사람만 볼 수 있습니다": [
     "src/components/Dialogs.tsx"
   ],
@@ -555,6 +601,12 @@
   ],
   "링크를 복사했습니다": [
     "src/components/menus.ts"
+  ],
+  "링크의 곡 재생": [
+    "src/components/TopBar.tsx"
+  ],
+  "링크의 곡을 재생합니다": [
+    "src/components/TopBar.tsx"
   ],
   "만든 플레이리스트가 없습니다": [
     "src/components/menus.ts"
@@ -620,6 +672,9 @@
   ],
   "목록": [
     "src/views/BrowseView.tsx"
+  ],
+  "목록에서 찾기": [
+    "src/views/CollectionView.tsx"
   ],
   "목록을 끝까지 불러온 뒤 맨 끝으로 옮길 수 있습니다": [
     "src/views/CollectionView.tsx"
@@ -727,6 +782,7 @@
   ],
   "불러오는 중…": [
     "src/components/ContextMenu.tsx",
+    "src/components/MiniApp.tsx",
     "src/components/QueuePanel.tsx",
     "src/views/common.tsx"
   ],
@@ -809,6 +865,9 @@
   "소리 켜기": [
     "src/components/PlayerBar.tsx"
   ],
+  "소리 켜기 (M)": [
+    "src/components/PlayerBar.tsx"
+  ],
   "소리를 받을 권한이 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음에서 Garak을 허용한 뒤 다시 켜세요.": [
     "src/lib/eq.ts"
   ],
@@ -856,6 +915,15 @@
   "실행 취소": [
     "src/i18n/rust.ts"
   ],
+  "싫어요": [
+    "src/components/menus.ts"
+  ],
+  "싫어요 취소": [
+    "src/components/menus.ts"
+  ],
+  "싫어요를 바꾸지 못했습니다": [
+    "src/state/library.ts"
+  ],
   "싱글": [
     "src/components/Cards.tsx"
   ],
@@ -887,8 +955,14 @@
   "아티스트": [
     "src/components/Cards.tsx"
   ],
+  "아티스트 열기": [
+    "src/components/TopBar.tsx"
+  ],
   "아티스트@보관함 탭": [
     "src/views/LibraryView.tsx"
+  ],
+  "아티스트순": [
+    "src/views/CollectionView.tsx"
   ],
   "앞으로": [
     "src/components/TopBar.tsx",
@@ -902,11 +976,17 @@
     "src/i18n/rust.ts",
     "src/lib/theme.ts"
   ],
+  "앨범 열기": [
+    "src/components/TopBar.tsx"
+  ],
   "앨범 표지": [
     "src/components/LyricsView.tsx"
   ],
   "앨범@보관함 탭": [
     "src/views/LibraryView.tsx"
+  ],
+  "앨범순": [
+    "src/views/CollectionView.tsx"
   ],
   "앨범으로 이동": [
     "src/components/menus.ts"
@@ -971,14 +1051,31 @@
   "음량": [
     "src/components/PlayerBar.tsx"
   ],
+  "음량 {n}%": [
+    "src/components/PlayerBar.tsx",
+    "src/state/volume.ts"
+  ],
+  "음량 작게": [
+    "src/state/prefs.ts"
+  ],
+  "음량 크게": [
+    "src/state/prefs.ts"
+  ],
+  "음량도 전역 단축키로": [
+    "src/views/SettingsView.tsx"
+  ],
   "음량을 바꾸지 못했습니다": [
-    "src/components/PlayerBar.tsx"
+    "src/state/volume.ts"
   ],
   "음소거": [
+    "src/components/PlayerBar.tsx",
+    "src/state/volume.ts"
+  ],
+  "음소거 (M)": [
     "src/components/PlayerBar.tsx"
   ],
   "음소거를 바꾸지 못했습니다": [
-    "src/components/PlayerBar.tsx"
+    "src/state/volume.ts"
   ],
   "음악은 내 YouTube Music 계정으로 재생되고, 좋아요와 플레이리스트도 그 계정에 저장됩니다. 로그인은 Google 화면에서 하며, 이 앱은 비밀번호를 보거나 저장하지 않습니다.": [
     "src/components/LoginGate.tsx"
@@ -1007,6 +1104,9 @@
   "이 밤 그날의 반딧불을": [
     "src/views/SettingsView.tsx"
   ],
+  "이 순서대로 재생하지 못했습니다": [
+    "src/state/library.ts"
+  ],
   "이 앱이 읽지 않는 사이트입니다.": [
     "src/lib/spotify.ts"
   ],
@@ -1027,12 +1127,14 @@
   ],
   "이동하지 못했습니다": [
     "src/components/LyricsView.tsx",
+    "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx"
   ],
   "이름": [
     "src/components/Dialogs.tsx"
   ],
   "이어서 자동 재생": [
+    "src/components/MiniApp.tsx",
     "src/components/QueuePanel.tsx"
   ],
   "이전": [
@@ -1114,6 +1216,7 @@
     "src/components/PlayerBar.tsx"
   ],
   "재생 위치": [
+    "src/components/MiniApp.tsx",
     "src/components/PlayerBar.tsx"
   ],
   "재생 중": [
@@ -1199,7 +1302,13 @@
   "접기": [
     "src/views/SpotifyView.tsx"
   ],
+  "정렬": [
+    "src/views/CollectionView.tsx"
+  ],
   "정보 바꾸기…": [
+    "src/views/CollectionView.tsx"
+  ],
+  "제목순": [
     "src/views/CollectionView.tsx"
   ],
   "종교음악": [
@@ -1229,6 +1338,9 @@
     "src/views/CollectionView.tsx",
     "src/views/LibraryView.tsx"
   ],
+  "좋아요 표시한 곡 열기": [
+    "src/components/TopBar.tsx"
+  ],
   "좋아요를 바꾸지 못했습니다": [
     "src/state/library.ts"
   ],
@@ -1240,6 +1352,9 @@
   ],
   "지금 곡": [
     "src/components/QueuePanel.tsx"
+  ],
+  "지금 곡 메뉴": [
+    "src/components/PlayerBar.tsx"
   ],
   "지금 곡이 끝나면": [
     "src/components/PlayerBar.tsx"
@@ -1255,6 +1370,9 @@
   ],
   "지금 재생 중": [
     "src/components/QueuePanel.tsx"
+  ],
+  "지금 재생 중인 곡": [
+    "src/views/CollectionView.tsx"
   ],
   "지니": [
     "src/lib/charts/index.ts"
@@ -1424,6 +1542,9 @@
     "src/components/Sidebar.tsx",
     "src/views/CollectionView.tsx"
   ],
+  "플레이리스트 열기": [
+    "src/components/TopBar.tsx"
+  ],
   "플레이리스트 정보 바꾸기": [
     "src/components/Dialogs.tsx"
   ],
@@ -1490,6 +1611,9 @@
   "Billboard 주간": [
     "src/lib/charts/billboard.ts"
   ],
+  "Enter를 누르면 앱에서 엽니다": [
+    "src/components/TopBar.tsx"
+  ],
   "FLO 차트": [
     "src/lib/charts/flo.ts",
     "src/lib/charts/index.ts",
@@ -1497,6 +1621,21 @@
   ],
   "FLO 최근 24시간": [
     "src/lib/charts/flo.ts"
+  ],
+  "Garak 가리기": [
+    "src/i18n/rust.ts"
+  ],
+  "Garak 미니 플레이어": [
+    "src/i18n/rust.ts"
+  ],
+  "Garak 영상": [
+    "src/i18n/rust.ts"
+  ],
+  "Garak 종료": [
+    "src/i18n/rust.ts"
+  ],
+  "Garak에 관하여": [
+    "src/i18n/rust.ts"
   ],
   "Google 계정으로 로그인": [
     "src/components/LoginGate.tsx",
@@ -1516,6 +1655,9 @@
   ],
   "Spotify 플레이리스트 링크를 붙여 넣으세요 (open.spotify.com/playlist/…)": [
     "src/views/SpotifyView.tsx"
+  ],
+  "Spotify 플레이리스트 열기": [
+    "src/components/TopBar.tsx"
   ],
   "Spotify에 연결하지 못했습니다. 인터넷 연결을 확인하세요.": [
     "src/lib/spotify.ts"
@@ -1597,20 +1739,5 @@
   ],
   "YouTube Music이 응답하지 않습니다. 인터넷 연결을 확인하세요.": [
     "src/lib/tauri.ts"
-  ],
-  "Garak 가리기": [
-    "src/i18n/rust.ts"
-  ],
-  "Garak 미니 플레이어": [
-    "src/i18n/rust.ts"
-  ],
-  "Garak 영상": [
-    "src/i18n/rust.ts"
-  ],
-  "Garak 종료": [
-    "src/i18n/rust.ts"
-  ],
-  "Garak에 관하여": [
-    "src/i18n/rust.ts"
   ]
 }

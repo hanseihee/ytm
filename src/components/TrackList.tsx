@@ -54,9 +54,11 @@ interface RowProps extends TrackMenuContext {
   showAlbum: boolean;
   drag?: DragProps;
   dropTarget?: boolean;
+  /** 재생을 목록이 정한다(정렬한 화면: 보이는 순서대로). 없으면 곡의 원래 맥락으로 재생 */
+  onPlay?: (track: Track, position: number) => void;
 }
 
-const Row = memo(function Row({ track, position, numbered, showCover, showAlbum, editablePlaylistId, onRemoved, drag, dropTarget }: RowProps) {
+const Row = memo(function Row({ track, position, numbered, showCover, showAlbum, editablePlaylistId, onRemoved, drag, dropTarget, onPlay }: RowProps) {
   const isCurrent = usePlayer((s) => s.videoId === track.videoId);
   const isPlaying = usePlayer((s) => s.videoId === track.videoId && s.playing);
   const liked = useLiked(track.videoId);
@@ -67,11 +69,12 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
     openMenu(e.clientX, e.clientY, trackMenu(track, { editablePlaylistId, onRemoved }));
   };
   const lead = numbered ? (track.index ?? position + 1) : null;
+  const play = () => (onPlay ? onPlay(track, position) : void playTrack(track));
   return (
     <div
       className={`track${isCurrent ? ' is-current' : ''}${track.available ? '' : ' is-unavailable'}${drag ? ' is-draggable' : ''}${dropTarget ? ' is-drop-target' : ''}`}
       role="row"
-      onDoubleClick={() => playTrack(track)}
+      onDoubleClick={play}
       onContextMenu={menu}
       {...drag}
     >
@@ -79,7 +82,7 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
       <div className="track__lead" role="cell">
         {showCover && <Cover src={track.thumbnail} size={40} />}
         {lead !== null && !showCover && <span className="track__num">{isPlaying ? <Bars /> : lead}</span>}
-        <button type="button" className="track__play" aria-label={t('{title} 재생', { title: track.title })} onClick={() => playTrack(track)} disabled={!track.available}>
+        <button type="button" className="track__play" aria-label={t('{title} 재생', { title: track.title })} onClick={play} disabled={!track.available}>
           <Icon name="play" size={16} />
         </button>
         {showCover && isPlaying && <span className="track__cover-bars"><Bars /></span>}
@@ -121,6 +124,8 @@ const Row = memo(function Row({ track, position, numbered, showCover, showAlbum,
 
 interface Props extends TrackMenuContext {
   tracks: Track[];
+  /** 재생을 목록이 정한다(정렬한 화면). 없으면 곡의 원래 맥락으로 재생 */
+  onPlay?: (track: Track, position: number) => void;
   /** 내 재생목록: 끌어서 순서 바꾸기(from 자리 곡을 to 자리로) */
   onReorder?: (from: number, to: number) => void;
   /** 앨범처럼 수록 순서가 의미 있을 때 번호를 보인다 */
@@ -130,7 +135,7 @@ interface Props extends TrackMenuContext {
   limit?: number;
 }
 
-export function TrackList({ tracks, numbered = false, showCover = true, showAlbum = true, limit, editablePlaylistId, onRemoved, onReorder }: Props) {
+export function TrackList({ tracks, numbered = false, showCover = true, showAlbum = true, limit, editablePlaylistId, onRemoved, onReorder, onPlay }: Props) {
   const list = limit ? tracks.slice(0, limit) : tracks;
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
   const dragProps = (i: number): DragProps | undefined =>
@@ -169,6 +174,7 @@ export function TrackList({ tracks, numbered = false, showCover = true, showAlbu
           onRemoved={onRemoved}
           drag={dragProps(i)}
           dropTarget={!!drag && drag.over === i && drag.from !== i}
+          onPlay={onPlay}
         />
       ))}
     </div>

@@ -421,7 +421,15 @@ async fn debug_desktop(app: &AppHandle, args: &Value) -> Result<Value, String> {
         }
         "shortcut" => {
             use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
-            let code = match args["key"].as_str().unwrap_or("P") { "N" => Code::KeyN, "B" => Code::KeyB, "L" => Code::KeyL, "M" => Code::KeyM, _ => Code::KeyP };
+            let code = match args["key"].as_str().unwrap_or("P") {
+                "N" => Code::KeyN,
+                "B" => Code::KeyB,
+                "L" => Code::KeyL,
+                "M" => Code::KeyM,
+                "Up" => Code::ArrowUp,
+                "Down" => Code::ArrowDown,
+                _ => Code::KeyP,
+            };
             crate::desktop::on_shortcut(app, &Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), code), ShortcutState::Pressed);
             Ok(Value::Bool(true))
         }

@@ -5,7 +5,7 @@ import { useStore } from '../lib/store';
 import { closeMenu, menuStore, toastStore, toastError, type MenuEntry } from '../state/ui';
 import { Icon } from './Icon';
 
-function MenuList({ entries, x, y, onDone }: { entries: MenuEntry[]; x: number; y: number; onDone: () => void }) {
+function MenuList({ entries, x, y, above = false, onDone }: { entries: MenuEntry[]; x: number; y: number; above?: boolean; onDone: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
   const [open, setOpen] = useState<{ index: number; entries: MenuEntry[] | 'loading'; x: number; y: number } | null>(null);
@@ -15,12 +15,13 @@ function MenuList({ entries, x, y, onDone }: { entries: MenuEntry[]; x: number; 
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
+    const top = above ? y - r.height : y;
     setPos({
       x: Math.max(8, Math.min(x, window.innerWidth - r.width - 8)),
-      y: Math.max(8, Math.min(y, window.innerHeight - r.height - 8)),
+      y: Math.max(8, Math.min(top, window.innerHeight - r.height - 8)),
     });
     el.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-  }, [x, y, entries]);
+  }, [x, y, above, entries]);
 
   const openSub = async (index: number, entry: MenuEntry, target: HTMLElement) => {
     const r = target.getBoundingClientRect();
@@ -104,7 +105,7 @@ export function ContextMenuHost() {
     };
   }, [menu]);
   if (!menu) return null;
-  return <MenuList key={`${menu.x},${menu.y}`} entries={menu.entries} x={menu.x} y={menu.y} onDone={closeMenu} />;
+  return <MenuList key={`${menu.x},${menu.y}`} entries={menu.entries} x={menu.x} y={menu.y} above={menu.above} onDone={closeMenu} />;
 }
 
 export function Toasts() {

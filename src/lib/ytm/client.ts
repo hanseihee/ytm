@@ -130,6 +130,10 @@ export const account = async () => parseAccount(await api('account/account_menu'
 export const setTrackLiked = (videoId: string, liked: boolean) =>
   api(liked ? 'like/like' : 'like/removelike', { target: { videoId } });
 
+/** 곡 싫어요 / 취소(취소는 좋아요 취소와 같은 removelike: 좋아요도 싫어요도 아닌 상태로) */
+export const setTrackDisliked = (videoId: string, disliked: boolean) =>
+  api(disliked ? 'like/dislike' : 'like/removelike', { target: { videoId } });
+
 /** 앨범·플레이리스트 보관함 저장 / 빼기 */
 export const setCollectionSaved = (playlistId: string, saved: boolean) =>
   api(saved ? 'like/like' : 'like/removelike', { target: { playlistId } });

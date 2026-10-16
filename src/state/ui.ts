@@ -11,8 +11,23 @@ export interface Toast {
 }
 export const toastStore = createStore<Toast[]>([]);
 let toastId = 0;
+/** 같은 이름(key)으로 띄운 알림: 새로 쌓지 않고 글자만 바꾼다(음량처럼 빠르게 이어지는 알림). */
+const keyedToasts = new Map<string, { id: number; timer: number }>();
 
-export function toast(text: string, tone: Toast['tone'] = 'info') {
+export function toast(text: string, tone: Toast['tone'] = 'info', key?: string) {
+  if (key) {
+    const prev = keyedToasts.get(key);
+    if (prev) clearTimeout(prev.timer);
+    const alive = !!prev && toastStore.get().some((t) => t.id === prev.id);
+    const id = alive ? prev!.id : ++toastId;
+    toastStore.set((list) => (alive ? list.map((t) => (t.id === id ? { ...t, text, tone } : t)) : [...list.slice(-2), { id, text, tone }]));
+    const timer = window.setTimeout(() => {
+      keyedToasts.delete(key);
+      toastStore.set((list) => list.filter((t) => t.id !== id));
+    }, 1600);
+    keyedToasts.set(key, { id, timer });
+    return;
+  }
   const id = ++toastId;
   toastStore.set((list) => [...list.slice(-2), { id, text, tone }]);
   setTimeout(() => toastStore.set((list) => list.filter((t) => t.id !== id)), tone === 'error' ? 6000 : 3200);
@@ -38,9 +53,12 @@ export interface MenuState {
   x: number;
   y: number;
   entries: MenuEntry[];
+  /** y를 메뉴 아래 끝으로 삼아 위로 펼친다(재생 바의 단추처럼 화면 아래에서 열 때) */
+  above?: boolean;
 }
 export const menuStore = createStore<MenuState | null>(null);
-export const openMenu = (x: number, y: number, entries: MenuEntry[]) => menuStore.set({ x, y, entries });
+export const openMenu = (x: number, y: number, entries: MenuEntry[], opts: { above?: boolean } = {}) =>
+  menuStore.set({ x, y, entries, above: opts.above });
 export const closeMenu = () => menuStore.set(null);
 
 // ── 대화상자 ───────────────────────────────────────────────────────────────

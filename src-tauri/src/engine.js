@@ -861,6 +861,13 @@
         if (volume > 0) callPlayer('unMute');
         break;
       }
+      case 'volumeBy': {
+        // 전역 음량 단축키: 지금 들리는 음량(음소거면 0)에서 더하거나 뺀다.
+        const delta = Number(value);
+        if (!Number.isFinite(delta)) throw new Error('bad_value');
+        const s = readState();
+        return control('volume', (s.muted ? 0 : s.volume) + delta);
+      }
       case 'mute':
         done = callPlayer('mute');
         break;
@@ -1018,6 +1025,78 @@
     }, 40);
   }
 
+  // ── 7.6 자리 비움 확인("계속 들으시겠습니까?") ─────────────────────────────
+  // YouTube Music은 마지막 사용자 입력 시각(window._lact, 키·마우스·터치·스크롤 때 갱신)으로 자리를 비웠는지 본다
+  // (2026-10-16 분석, WEB_REMIX 1.20261013.15.00):
+  // - 플레이어는 /player 요청에 lactMilliseconds = Date.now() - _lact를 보낸다.
+  // - 응답의 youThereRenderer(configData.youThereData)가 오면 곡의 promptDelaySec 지점에서
+  //   Date.now() - _lact ≥ lactThresholdMs인지 보고, 넘었으면 알림을 띄운 뒤 playbackPauseDelayMs 뒤에
+  //   <ytmusic-you-there-renderer> 확인창을 열어 재생을 멈춘다. 확인창이 닫히면 다시 재생한다.
+  // 앱은 이 숨은 창을 직접 만지지 않아서(화면은 main 창) 앱을 계속 쓰는 중에도 _lact가 페이지를 연 시각에 머문다.
+  // 그래서 앱이 살아 있는 동안 활동 시각을 이어서 갱신하고, 그래도 확인창이 뜨면 대신 확인을 눌러 재생을 잇는다.
+  const ACTIVE_EVERY_MS = 30000;
+  const idle = { lastMark: 0, confirmed: 0, confirmedAt: 0, resumeTimer: 0 };
+
+  /**
+   * 사용자가 움직인 것처럼 활동 시각을 갱신한다(YouTube Music의 입력 처리와 같은 일: _lact + 활동 알림).
+   * 앱 요청(handle)마다 앞에서 부르므로 어떤 경우에도 예외를 밖으로 내보내지 않는다(요청이 멈추지 않게).
+   */
+  function markActive(force) {
+    try {
+      const now = Date.now();
+      if (!force && now - idle.lastMark < ACTIVE_EVERY_MS) return;
+      // 아직 YouTube Music이 활동 추적을 시작하지 않았으면(_lact 없음) 건드리지 않는다.
+      // 먼저 값을 넣으면 YouTube Music이 입력 감시를 붙이지 않는다(웹 화면을 열었을 때 직접 쓰는 입력이 안 잡힌다).
+      if (typeof window._lact !== 'number') return;
+      idle.lastMark = now;
+      window._lact = now;
+      // 알림이 떠 있는 동안 이 신호가 오면 YouTube Music이 확인창 예약을 취소한다.
+      const notify = window.ytglobal && window.ytglobal.ytUtilActivityCallback_;
+      if (typeof notify === 'function') notify();
+    } catch (err) {
+      console.warn('[ytm-engine] 활동 시각 갱신 실패', err);
+    }
+  }
+
+  /** 열려 있는 자리 비움 확인창이 있으면 "예"를 누른다. 누르면 true. */
+  function confirmYouThere() {
+    const renderer = document.querySelector('ytmusic-you-there-renderer');
+    if (!renderer) return false;
+    const dialog = renderer.closest('tp-yt-paper-dialog');
+    const open = dialog
+      ? dialog.opened === true || (dialog.style.display !== 'none' && dialog.getAttribute('aria-hidden') !== 'true')
+      : renderer.getClientRects().length > 0;
+    // 방금 누른 창이 닫히는 중이면 다시 누르지 않는다.
+    if (!open || Date.now() - idle.confirmedAt < 3000) return false;
+    idle.confirmedAt = Date.now();
+    markActive(true);
+    const confirm = renderer.querySelector('[dialog-confirm]');
+    const button = (confirm && confirm.querySelector('button')) || confirm || renderer.querySelector('button');
+    if (button) button.click();
+    // 확인 단추를 찾지 못했거나 눌러도 닫히지 않으면 창을 직접 닫는다(닫히면 YouTube Music이 재생을 다시 건다).
+    setTimeout(() => {
+      if (dialog && dialog.opened === true && typeof dialog.close === 'function') dialog.close();
+    }, 400);
+    idle.confirmed += 1;
+    console.warn('[ytm-engine] 자리 비움 확인창을 대신 확인했습니다');
+    // 확인창은 재생 중일 때만 뜨므로, 닫은 뒤에도 멈춰 있으면 이어서 재생한다.
+    clearTimeout(idle.resumeTimer);
+    idle.resumeTimer = setTimeout(() => {
+      if (!readState().playing) runHandler('play') || callPlayer('playVideo');
+      schedule();
+    }, 1500);
+    return true;
+  }
+
+  function watchIdle() {
+    markActive(false);
+    try {
+      confirmYouThere();
+    } catch (err) {
+      console.warn('[ytm-engine] 자리 비움 확인창 처리 실패', err);
+    }
+  }
+
   // ── 8. 앱 화면 요청 처리 ───────────────────────────────────────────────
   const methods = {
     api,
@@ -1036,6 +1115,8 @@
   };
 
   async function handle(id, method, args) {
+    // 앱에서 온 요청은 사용자가 앱을 쓰고 있다는 뜻이다(재생·검색 등). 활동 시각을 이어 준다(30초에 한 번).
+    markActive(false);
     try {
       const fn = methods[method];
       if (!fn) throw new Error(`unknown_method ${method}`);
@@ -1059,6 +1140,7 @@
     document.addEventListener(type, schedule, true);
   }
   setInterval(report, 1000);
+  if (ON_MUSIC) setInterval(watchIdle, 1000);
 
   function announce() {
     emit('status', status());

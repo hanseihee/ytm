@@ -7,7 +7,7 @@ import { useLangSetting } from '../i18n/react';
 import { setTheme, THEMES, useTheme, type ThemeInfo } from '../lib/theme';
 import { miniWindow, showEngine } from '../lib/tauri';
 import { useStore } from '../lib/store';
-import { SHORTCUT_LIST, shortcutFailures, updatePrefs, usePrefs } from '../state/prefs';
+import { SHORTCUT_LIST, shortcutFailures, updatePrefs, usePrefs, VOLUME_SHORTCUT_LIST } from '../state/prefs';
 import { useLibrary } from '../state/library';
 import { LYRIC_SCALES, stepLyricScale, toastError, useLyricScale } from '../state/ui';
 import { Icon } from '../components/Icon';
@@ -59,13 +59,21 @@ function DesktopPrefs() {
       <Toggle on={prefs.videoOnTop} label={t('영상 창을 늘 위에')} onChange={(v) => updatePrefs({ videoOnTop: v })} />
       <Toggle on={prefs.globalShortcuts} label={t('전역 단축키')} hint={t('다른 앱을 쓰는 중에도 됩니다.')} onChange={(v) => updatePrefs({ globalShortcuts: v })} />
       {prefs.globalShortcuts && (
-        <ul className="shortcut-list">
-          {SHORTCUT_LIST.map((k) => (
-            <li key={k.key} className={failed.includes(k.label) ? 'is-failed' : ''}>
-              <kbd>{mod}{k.key}</kbd> {t(k.label)}{failed.includes(k.label) ? ` — ${t('다른 앱이 쓰고 있어 등록하지 못했습니다')}` : ''}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="shortcut-list">
+            {[...SHORTCUT_LIST, ...(prefs.volumeShortcuts ? VOLUME_SHORTCUT_LIST : [])].map((k) => (
+              <li key={k.key} className={failed.includes(k.label) ? 'is-failed' : ''}>
+                <kbd>{mod}{k.key}</kbd> {t(k.label)}{failed.includes(k.label) ? ` — ${t('다른 앱이 쓰고 있어 등록하지 못했습니다')}` : ''}
+              </li>
+            ))}
+          </ul>
+          <Toggle
+            on={prefs.volumeShortcuts}
+            label={t('음량도 전역 단축키로')}
+            hint={t('{keys}로 음량을 바꿉니다. 창 정리 앱처럼 같은 키를 쓰는 앱이 있으면 그 앱의 단축키가 듣지 않아 기본은 꺼 두었습니다.', { keys: `${mod}↑ ${mod}↓` })}
+            onChange={(v) => updatePrefs({ volumeShortcuts: v })}
+          />
+        </>
       )}
       <div className="settings__actions">
         <button type="button" className="btn btn--quiet" onClick={() => void miniWindow(true).catch((err) => toastError(err))}>{t('미니 플레이어 열기')}</button>

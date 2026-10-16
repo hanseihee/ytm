@@ -29,13 +29,15 @@ pub struct Prefs {
     /// 앱 창을 보고 있지 않을 때 곡이 바뀌면 알림
     pub notifications: bool,
     pub global_shortcuts: bool,
+    /// 전역 음량 단축키(⌃⌥↑↓). 창 정리 앱과 겹치기 쉬워 사용자가 켤 때만 등록한다.
+    pub volume_shortcuts: bool,
     /// 영상 창을 늘 위에
     pub video_on_top: bool,
 }
 
 impl Default for Prefs {
     fn default() -> Self {
-        Self { notifications: true, global_shortcuts: true, video_on_top: false }
+        Self { notifications: true, global_shortcuts: true, volume_shortcuts: false, video_on_top: false }
     }
 }
 
@@ -242,6 +244,15 @@ const SHORTCUTS: &[(Code, &str, &str)] = &[
     (Code::KeyM, "mini", "미니 플레이어"),
 ];
 
+/// 전역 음량 단축키(⌃⌥↑↓). 맥 창 정리 앱(Rectangle·Magnet 기본값)과 윈도우 그래픽 드라이버의 화면 회전 키와 겹칠 수 있어
+/// 설정에서 켤 때만 등록한다(Prefs.volume_shortcuts).
+const VOLUME_SHORTCUTS: &[(Code, &str, &str)] = &[
+    (Code::ArrowUp, "volume-up", "음량 크게"),
+    (Code::ArrowDown, "volume-down", "음량 작게"),
+];
+/// 음량 단축키 한 번에 바뀌는 음량(%). 화면 단축키(⌘/Ctrl+↑↓)와 같다.
+const VOLUME_STEP: f64 = 5.0;
+
 fn shortcut(code: Code) -> Shortcut {
     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), code)
 }
@@ -257,8 +268,10 @@ pub fn set_prefs(app: AppHandle, prefs: Prefs) -> Result<Value, String> {
     let manager = app.global_shortcut();
     warn("전역 단축키 해제", manager.unregister_all());
     let mut failed = Vec::new();
-    if prefs.global_shortcuts {
-        for (code, _, label) in SHORTCUTS {
+    // 나란히 시험 모드(개발 빌드)에서는 배포판의 전역 단축키를 빼앗지 않는다.
+    if prefs.global_shortcuts && !crate::parallel() {
+        let volume: &[(Code, &str, &str)] = if prefs.volume_shortcuts { VOLUME_SHORTCUTS } else { &[] };
+        for (code, _, label) in SHORTCUTS.iter().chain(volume) {
             if let Err(err) = manager.register(shortcut(*code)) {
                 eprintln!("[ytm-desktop] 전역 단축키 등록 실패({label}): {err}");
                 failed.push(*label);
@@ -273,13 +286,15 @@ pub fn on_shortcut(app: &AppHandle, pressed: &Shortcut, state: ShortcutState) {
     if state != ShortcutState::Pressed {
         return;
     }
-    let Some((_, action, _)) = SHORTCUTS.iter().find(|(code, _, _)| *pressed == shortcut(*code)) else {
+    let Some((_, action, _)) = SHORTCUTS.iter().chain(VOLUME_SHORTCUTS).find(|(code, _, _)| *pressed == shortcut(*code)) else {
         return;
     };
     match *action {
         "toggle" => send_command(app, Command::Toggle),
         "next" => send_command(app, Command::Next),
         "previous" => send_command(app, Command::Previous),
+        "volume-up" => send_command(app, Command::VolumeBy(VOLUME_STEP)),
+        "volume-down" => send_command(app, Command::VolumeBy(-VOLUME_STEP)),
         // 좋아요는 화면의 보관함 상태와 같이 바뀌어야 해서 화면에 맡긴다.
         "like" => crate::emit_to_main(app, "menu-action", "like-current"),
         "mini" => {

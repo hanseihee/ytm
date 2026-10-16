@@ -19,17 +19,22 @@ Both apps share the same code for parsing YouTube Music responses, matching char
 ### Features
 
 - **Search**: songs, albums, artists, and playlists, with suggestions and type filters that keep loading more results.
+  - Paste a YouTube Music, YouTube, or Spotify link into the search box and press Enter to open it in the app: songs play right away (within the linked list, from the `t=` time if present); playlists, albums, and artists open their page. YouTube Music album share links (`playlist?list=OLAK…`) open the album, and channel aliases (`@name`) search for that name.
 - **Home**: YouTube Music recommendation shelves, loading more as you scroll.
 - **Explore**: new releases, YouTube Music charts (14 countries including Korea, global, US, and Japan), and moods & genres. Album, artist, and playlist pages; artist pages show top songs, albums, singles, videos, and similar artists, and you can subscribe or unsubscribe.
 - **Library**: Playlists · Albums · Artists · Subscriptions · Recently played (your account history).
   - Create playlists (with privacy), rename, edit the description, delete, add and remove songs, and drag to reorder.
+  - Find in list and sort: type above a playlist or Liked songs to show only matching songs (title, artist, album; spacing doesn't matter, Korean initial consonants like ㅂㅍㅈ work), or sort by title, artist, album, or duration; in a sorted list, playing a song continues in the order shown. Songs not loaded yet are loaded so the whole list is searched or sorted, and a button jumps to the song that's playing.
   - YouTube Music's suggested songs appear under your own playlists; add them with +.
   - Save albums and playlists to your library.
 - **Playback**
   - Picking a song starts its mix; songs in an album or playlist play within that list.
   - Play next and add to queue (whole albums too).
+  - Current song menu in the player bar (⋯ or right-click): play next, start mix, like, dislike, add to playlist, copy link, go to album or artist. Click the title to open the album and an artist name to open the artist.
+  - Dislike: from any song menu. Disliking the current song skips to the next one, like the YouTube Music web player.
   - Now-playing tabs: Up next (queue and autoplay), Related, and Comments (20 at a time).
-  - Shuffle, repeat, volume, seeking, a sleep timer (5 minutes–2 hours or end of the current song, fading out over the last 10 seconds), and link sharing.
+  - Shuffle, repeat, volume (⌘/Ctrl+↑↓, M to mute, or the wheel over the volume control), seeking, a sleep timer (5 minutes–2 hours or end of the current song, fading out over the last 10 seconds), and link sharing.
+  - Long sessions keep playing: the app tells YouTube Music it is in use and confirms the "Are you still there?" prompt if it appears (the hidden YouTube Music window never sees your clicks, so the prompt could otherwise pause playback).
 - **Song ↔ video**: songs that have a music-video counterpart switch with `[Song | Video]`. YouTube Music aligns the two versions (e.g. the "Through the Night" music video starts 24 seconds later), and the lyrics carry over without reloading.
   - Desktop: a video window (rounded video on a dark backdrop with an ambient glow in the video's colors, optional always-on-top).
   - iOS: the cover and the video cross-fade in the same spot on the now-playing screen, and the background follows the video's colors. Landscape full screen (button or rotate the phone) and Picture in Picture.
@@ -53,9 +58,9 @@ Both apps share the same code for parsing YouTube Music responses, matching char
   - Tray menu; music keeps playing when the window is closed. Korean menus on macOS.
   - Mini player window (always on top): two lines of the current lyrics next to the cover, an up-next list that expands below (click a song to jump to it; drag the handle to change its height), and a seekable progress bar. A notification when the song changes while you're not looking at the app, and the album-color theme.
 
-Shortcuts: Space (play/pause), ⌘/Ctrl+←→ (previous/next song), Shift+←→ (±10 s), ⌘/Ctrl+F (search), ⌘/Ctrl+L (lyrics), ⌘U (queue), ⌘/Ctrl+E (equalizer), ⌘/Ctrl+[ ] (back/forward)
+Shortcuts: Space (play/pause), ⌘/Ctrl+←→ (previous/next song), Shift+←→ (±10 s), ⌘/Ctrl+↑↓ (volume ±5%), M (mute), ⌘/Ctrl+F (search), ⌘/Ctrl+L (lyrics), ⌘U (queue), ⌘/Ctrl+E (equalizer), ⌘/Ctrl+[ ] (back/forward)
 
-Global shortcuts (work while using other apps; can be turned off in Settings): ⌃⌥ / Ctrl+Alt + P play/pause, N next, B previous, L like, M mini player
+Global shortcuts (work while using other apps; can be turned off in Settings): ⌃⌥ / Ctrl+Alt + P play/pause, N next, B previous, L like, M mini player, and ↑↓ volume (off by default because window managers such as Rectangle use the same keys; turn it on in Settings)
 
 There is no ad blocking, audio downloading, or bypassing of paid features. The app never extracts stream URLs; it uses the official player as is.
 
@@ -172,6 +177,7 @@ ios/                      iOS app (SwiftUI). project.yml → xcodegen
    - Matching first tries the "All" search results; if unsure, it searches again with that response's "Songs" filter (the filter value differs per query).
    - "Songs" results include durations, which separate songs whose English and Korean titles differ.
 7. **Lyrics**: YouTube Music's web lyrics (browse `MPLY…`) carry no timing, even when signed in, so time-synced lyrics come from LRCLIB and from Bugs synced lyrics (`/search/track?q=` → `/player/lyrics/T/<trackId>`, fetched through the app's allow-listed fetch). A synced result is used only if at least 55% of its character trigrams also appear in YouTube's lyrics (`lyricsOverlap`); on 200 songs from a real listening history the same song mostly scored 0.8 or more and mismatched pairs at most 0.44.
+8. **"Are you still there?"**: YouTube Music decides you are away from `window._lact`, the time of the last key, mouse, touch, or scroll in its page. The player sends `lactMilliseconds` with each `/player` request, and when a response carries `youThereRenderer`, the page checks the idle time at the song's `promptDelaySec` and, past `lactThresholdMs`, opens `<ytmusic-you-there-renderer>` and pauses. The app never touches the hidden page, so the engine refreshes `_lact` (and YouTube Music's activity callback) every 30 seconds and clicks the confirm button if the dialog still opens (analyzed 2026-10-16).
 
 ### Build
 
@@ -190,6 +196,7 @@ cd src-tauri && cargo test --lib       # EQ filter and Spotify parsing unit test
 Test hooks in development builds only (not in releases):
 - `YTM_SELFTEST=<list.json>`: sends engine requests in order after launch and writes the responses to files.
 - `YTM_DEBUG_DIR=<folder>`: runs `in/*.json` requests and writes answers to `out/`; `debugEval` can inspect the page.
+- `YTM_PARALLEL=1`: runs the full app next to an installed release build without touching it (no single-instance handoff, saved window position, media keys/Now Playing, tray, or global shortcuts).
 
 ### Release process
 
@@ -238,17 +245,22 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
 ### 할 수 있는 것
 
 - **검색**: 노래·앨범·아티스트·재생목록을 찾습니다. 검색어를 추천하고, 종류별 필터를 고르면 결과를 이어서 더 불러옵니다.
+  - 검색창에 YouTube Music·YouTube·Spotify 링크를 붙여 넣고 Enter를 누르면 앱에서 엽니다. 곡은 바로 재생하고(목록 링크면 그 목록 안에서, `t=`가 있으면 그 위치부터), 재생목록·앨범·아티스트는 그 화면을 엽니다. YouTube Music 앨범 공유 링크(`playlist?list=OLAK…`)는 앨범 화면으로, 채널 별칭(`@이름`)은 그 이름으로 검색합니다.
 - **홈**: YouTube Music 추천 묶음이 나오고, 내리면 더 불러옵니다.
 - **둘러보기**: 최신 음악, YouTube Music 차트(한국·전 세계·미국·일본 등 14곳), 분위기·장르(색 띠 단추)가 있습니다. 앨범·아티스트·플레이리스트 상세 화면이 있고, 아티스트는 인기곡·앨범·싱글·영상·비슷한 아티스트를 보여 주며 구독·구독 취소가 됩니다.
 - **보관함**: 재생목록 · 앨범 · 아티스트 · 구독 · 최근 재생(계정 재생 기록) 탭이 있습니다.
   - 플레이리스트 만들기(공개 범위 선택), 이름·설명 바꾸기, 삭제, 곡 넣고 빼기, 끌어서 순서 바꾸기가 됩니다.
+  - 목록에서 찾기·정렬: 플레이리스트·좋아요 표시한 곡 위 찾기 칸에 쓰면 맞는 곡만 보입니다(제목·가수·앨범, 띄어쓰기 무관, ㅂㅍㅈ 같은 초성도). 제목·아티스트·앨범·길이 순으로 정렬할 수 있고, 정렬한 화면에서 곡을 누르면 보이는 순서대로 재생합니다. 아직 안 불러온 곡은 마저 불러와 목록 전체에서 찾거나 정렬하고, 지금 재생 중인 곡으로 바로 가는 단추가 있습니다.
   - 내 플레이리스트 아래에 YouTube Music이 고른 "추천 곡"이 나오고 +로 바로 넣습니다.
   - 앨범·플레이리스트를 보관함에 저장할 수 있습니다.
 - **재생**
   - 곡을 고르면 그 곡의 믹스로 재생하고, 앨범·플레이리스트 곡은 그 목록 안에서 재생합니다.
   - 다음에 재생, 대기열 끝에 추가가 됩니다(앨범 통째로도 가능).
+  - 재생 바의 지금 곡 메뉴(⋯ 또는 우클릭): 다음에 재생, 믹스 시작, 좋아요, 싫어요, 플레이리스트에 추가, 링크 복사, 앨범·아티스트로 이동. 곡 이름을 누르면 앨범, 가수 이름을 누르면 아티스트 페이지로 갑니다.
+  - 싫어요: 곡 메뉴에서 고릅니다. 지금 곡에 누르면 YouTube Music 웹처럼 다음 곡으로 넘어갑니다.
   - 지금 곡 탭: 다음 트랙(대기열·자동 재생), 관련 항목, 댓글(20개씩 이어 읽기).
-  - 셔플, 반복, 음량, 탐색, 수면 타이머(5분~2시간·지금 곡이 끝나면, 마지막 10초는 소리를 줄임), 링크 공유가 됩니다.
+  - 셔플, 반복, 음량(⌘/Ctrl+↑↓, M 음소거, 음량 위에서 휠), 탐색, 수면 타이머(5분~2시간·지금 곡이 끝나면, 마지막 10초는 소리를 줄임), 링크 공유가 됩니다.
+  - 오래 틀어 두어도 멈추지 않습니다: 앱이 YouTube Music에 사용 중이라고 알리고, "계속 들으시겠습니까?" 창이 뜨면 대신 확인합니다(숨은 YouTube Music 창은 사용자의 클릭을 받지 않아 이 창이 재생을 멈출 수 있었습니다).
 - **노래 ↔ 영상**: 뮤직비디오 짝이 있는 곡은 `[노래 | 영상]`으로 바꿉니다. 두 버전의 시간 차이(예: 밤편지 뮤직비디오는 24초 늦게 시작)를 YouTube Music이 맞춰 주고, 가사도 끊기지 않고 옮겨 씁니다.
   - 데스크톱: 영상 창(어두운 바탕 위 둥근 영상 + 영상 색이 번지는 앰비언트 빛, 늘 위 설정).
   - iOS: 지금 재생 화면의 표지 자리에서 표지와 영상을 겹쳐 바꾸고, 배경색이 영상 색을 따라갑니다. 가로 전체 화면(단추 또는 폰을 눕히기)과 화면 속 화면이 됩니다.
@@ -272,9 +284,9 @@ YouTube Music 응답 해석, 차트 짝짓기, 가사 찾기, 재생 엔진 스�
   - 트레이 메뉴가 있고, 창을 닫아도 음악은 계속 재생됩니다. 맥에는 한국어 메뉴가 있습니다.
   - 미니 플레이어 창(늘 위): 표지 옆에 지금 부르는 가사 두 줄, 아래로 펼치는 다음 트랙 목록(누르면 그 곡으로, 손잡이를 끌어 높이 조절), 눌러서·끌어서 옮기는 진행 막대. 앱을 보고 있지 않을 때 곡이 바뀌면 알림, 앨범 색 테마.
 
-단축키: 스페이스(재생/일시정지), ⌘/Ctrl+←→(이전·다음 곡), Shift+←→(10초 이동), ⌘/Ctrl+F(검색), ⌘/Ctrl+L(가사), ⌘U(대기열), ⌘/Ctrl+E(이퀄라이저), ⌘/Ctrl+[ ](뒤로·앞으로)
+단축키: 스페이스(재생/일시정지), ⌘/Ctrl+←→(이전·다음 곡), Shift+←→(10초 이동), ⌘/Ctrl+↑↓(음량 5%씩), M(음소거), ⌘/Ctrl+F(검색), ⌘/Ctrl+L(가사), ⌘U(대기열), ⌘/Ctrl+E(이퀄라이저), ⌘/Ctrl+[ ](뒤로·앞으로)
 
-전역 단축키(다른 앱을 쓰는 중에도, 설정에서 끔): ⌃⌥P 재생/일시정지, ⌃⌥N 다음, ⌃⌥B 이전, ⌃⌥L 좋아요, ⌃⌥M 미니 플레이어
+전역 단축키(다른 앱을 쓰는 중에도, 설정에서 끔): ⌃⌥P 재생/일시정지, ⌃⌥N 다음, ⌃⌥B 이전, ⌃⌥L 좋아요, ⌃⌥M 미니 플레이어, ⌃⌥↑↓ 음량(창 정리 앱 Rectangle 등과 같은 키라 기본은 꺼짐, 설정에서 켬)
 
 광고 차단, 음원 내려받기, 유료 기능 우회는 넣지 않았습니다. 음원 주소를 직접 뽑아 재생하지 않고, 공식 플레이어를 그대로 씁니다.
 
@@ -393,6 +405,7 @@ ios/                      iOS 앱(SwiftUI). project.yml → xcodegen
    - 짝짓기는 "전체" 검색 결과로 먼저 시도합니다. 확실하지 않으면 그 응답의 "노래" 필터로 다시 찾습니다. 이 필터 값은 검색어마다 다릅니다.
    - "노래" 결과에는 곡 길이가 있어서, 영문↔한글 표기가 다른 곡도 길이로 가려냅니다.
 7. **가사**: YouTube Music 웹 가사(browse `MPLY…`)에는 로그인해도 시간 정보가 없어서, 시간 맞춤 가사는 LRCLIB와 벅스 싱크 가사(`/search/track?q=` → `/player/lyrics/T/<곡 번호>`, 앱의 허용 사이트 통로로 받음)에서 가져옵니다. 시간 맞춤 가사는 글자 3개 묶음의 55% 이상이 YouTube 가사에도 있을 때만 씁니다(`lyricsOverlap`). 실제 재생 기록 200곡에서 같은 곡은 대부분 0.8 이상, 엇갈린 짝은 가장 높아야 0.44였습니다.
+8. **"계속 들으시겠습니까?"**: YouTube Music은 페이지에서 마지막으로 키·마우스·터치·스크롤이 있었던 시각(`window._lact`)으로 자리를 비웠는지 봅니다. 플레이어는 `/player` 요청마다 `lactMilliseconds`를 보내고, 응답에 `youThereRenderer`가 오면 곡의 `promptDelaySec` 지점에서 비운 시간이 `lactThresholdMs`를 넘었는지 보고 `<ytmusic-you-there-renderer>` 창을 열어 재생을 멈춥니다. 앱은 숨은 페이지를 직접 만지지 않아서, 엔진이 30초마다 `_lact`(와 YouTube Music의 활동 알림)를 갱신하고 그래도 창이 뜨면 확인 단추를 누릅니다(2026-10-16 분석).
 
 ### 빌드
 
@@ -411,6 +424,7 @@ cd src-tauri && cargo test --lib       # EQ 필터·Spotify 해석 단위 시험
 개발 빌드 전용 시험 장치(배포판에는 없음):
 - `YTM_SELFTEST=<목록.json>`: 시작 후 엔진 요청을 차례로 보내고 응답을 파일로 남깁니다.
 - `YTM_DEBUG_DIR=<폴더>`: `in/*.json` 요청을 실행하고 `out/`에 답을 씁니다. `debugEval`로 페이지 내부도 조사할 수 있습니다.
+- `YTM_PARALLEL=1`: 설치한 배포판과 나란히 화면까지 띄웁니다. 배포판을 건드리지 않도록 하나만 실행·창 위치 기억·미디어 키(지금 재생)·트레이·전역 단축키는 쓰지 않습니다.
 
 ### 확인한 것 / 못한 것 (2026-10-14)
 

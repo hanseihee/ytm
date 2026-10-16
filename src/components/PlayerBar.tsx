@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import { t, tk } from '../i18n';
 import * as ytm from '../lib/ytm/client';
 import { toggleLike, useLiked } from '../state/library';
-import { formatTime, patchPlayer, usePlayer, usePosition } from '../state/player';
+import { go } from '../state/nav';
+import { nowPlayingTrack, useNowTrack } from '../state/nowTrack';
+import { formatTime, patchPlayer, playerStore, usePlayer, usePosition } from '../state/player';
 import { openMenu, toastError, togglePanel, toggleLyrics, useLayout, type MenuEntry } from '../state/ui';
 import { cancelSleep, SLEEP_MINUTES, sleepLabel, startSleep, startSleepAfterTrack, useSleep } from '../state/sleep';
+import { setVolume, shownVolume, toggleMute, usePendingVolume, VOLUME_STEP } from '../state/volume';
 import { miniWindow, videoWindow } from '../lib/tauri';
 import { useEq } from '../lib/eq';
 import { Cover } from './Cover';
 import { Icon } from './Icon';
+import { trackMenu } from './menus';
+import { ArtistLinks } from './TrackList';
 
 const run = (p: Promise<unknown>, what: string) => p.catch((err) => toastError(err, what));
 
@@ -49,32 +54,62 @@ function Seek() {
   );
 }
 
+/** 휠 한 동작(멈췄다 다시 굴리기)마다 한 칸, 이어 굴리면 이만큼 움직일 때마다 한 칸(트랙패드는 잘게 나뉘어 온다) */
+const WHEEL_PX_PER_STEP = 60;
+const WHEEL_GESTURE_GAP_MS = 140;
+
 function Volume() {
   const volume = usePlayer((s) => s.volume);
   const muted = usePlayer((s) => s.muted);
-  const [local, setLocal] = useState<number | null>(null);
-  const timer = useRef(0);
-  const shown = muted ? 0 : (local ?? volume);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  const change = (v: number) => {
-    setLocal(v);
-    clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      void run(ytm.control('volume', v), t('음량을 바꾸지 못했습니다')).finally(() => setLocal(null));
-    }, 120);
-  };
+  const pending = usePendingVolume();
+  const shown = pending ?? (muted ? 0 : volume);
+  const box = useRef<HTMLDivElement>(null);
+  const range = useRef<HTMLInputElement>(null);
+
+  // 음량 위에서 휠: 위로 굴리면 크게. 막대가 숨은 좁은 창에서는 알림으로 값을 보여 준다.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    let acc = 0;
+    let lastAt = 0;
+    const onWheel = (e: WheelEvent) => {
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      if (!dy) return;
+      // 페이지 스크롤로 넘어가지 않게(React onWheel은 수동 수신이라 막지 못해 직접 붙인다)
+      e.preventDefault();
+      const now = performance.now();
+      let steps: number;
+      if (now - lastAt > WHEEL_GESTURE_GAP_MS) {
+        acc = 0;
+        steps = Math.sign(dy);
+      } else {
+        acc += dy;
+        steps = Math.trunc(acc / WHEEL_PX_PER_STEP);
+        acc -= steps * WHEEL_PX_PER_STEP;
+      }
+      lastAt = now;
+      if (!steps) return;
+      const hidden = !range.current || range.current.offsetParent === null;
+      setVolume(shownVolume() - steps * VOLUME_STEP, { announce: hidden });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   const style = { '--fill': `${shown}%` } as CSSProperties;
   return (
-    <div className="volume">
+    <div className="volume" ref={box}>
       <button
         type="button"
         className="icon-btn"
         aria-label={muted || shown === 0 ? t('소리 켜기') : t('음소거')}
-        onClick={() => run(ytm.control(muted ? 'unmute' : 'mute'), t('음소거를 바꾸지 못했습니다'))}
+        title={muted || shown === 0 ? t('소리 켜기 (M)') : t('음소거 (M)')}
+        onClick={() => toggleMute()}
       >
         <Icon name={muted || shown === 0 ? 'mute' : 'volume'} size={19} />
       </button>
       <input
+        ref={range}
         type="range"
         className="range volume__range"
         min={0}
@@ -83,7 +118,8 @@ function Volume() {
         value={shown}
         style={style}
         aria-label={t('음량')}
-        onChange={(e) => change(Number(e.target.value))}
+        title={t('음량 {n}%', { n: shown })}
+        onChange={(e) => setVolume(Number(e.target.value))}
       />
     </div>
   );
@@ -134,7 +170,7 @@ function SleepButton() {
     const entries: MenuEntry[] = SLEEP_MINUTES.map((m) => ({ label: minutesLabel(m), action: () => startSleep(m) }));
     entries.push({ label: t('지금 곡이 끝나면'), action: startSleepAfterTrack, disabled: !has });
     if (on) entries.push({ label: '', separator: true }, { label: t('수면 타이머 끄기'), action: () => cancelSleep() });
-    openMenu(r.left - 120, r.top - 10 - entries.length * 36, entries);
+    openMenu(r.left - 120, r.top - 10, entries, { above: true });
   };
   return (
     <button type="button" className={`icon-btn sleep-btn${on ? ' is-on' : ''}`} aria-label={on ? t('수면 타이머 {left}', { left: sleepLabel(sleep) }) : t('수면 타이머')} title={t('수면 타이머')} onClick={menu}>
@@ -164,6 +200,28 @@ export function PlayerBar() {
   const picture = usePlayer((s) => !!s.avVideo || !!s.hasPicture || !!s.avAvailable);
   const has = !!videoId;
   const repeatLabel = REPEAT_LABEL[repeat] ? t(REPEAT_LABEL[repeat]) : repeat;
+  const found = useNowTrack();
+  const nowTrack = has && !ad && found.id === videoId ? found.track : undefined;
+  const albumId = nowTrack?.album?.id;
+  const artistRefs = nowTrack?.artists.length ? nowTrack.artists : [];
+
+  /** 지금 곡 메뉴(우클릭·⋯): 다른 목록의 곡 메뉴와 같고, 이미 재생 중이라 "재생"만 뺀다. */
+  const nowMenu = (x: number, y: number) => {
+    const track = nowPlayingTrack(playerStore.get(), found);
+    if (!track) return;
+    openMenu(x, y, trackMenu(track, { current: true }));
+  };
+  const onNowContext = (e: MouseEvent) => {
+    if (!has || ad) return;
+    e.preventDefault();
+    nowMenu(e.clientX, e.clientY);
+  };
+  const onMore = (e: MouseEvent<HTMLButtonElement>) => {
+    const track = nowPlayingTrack(playerStore.get(), found);
+    if (!track) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    openMenu(r.left, r.top - 6, trackMenu(track, { current: true }), { above: true });
+  };
 
   const toggle = () => {
     patchPlayer({ playing: !playing });
@@ -172,27 +230,41 @@ export function PlayerBar() {
 
   return (
     <footer className="player" aria-label={t('재생 바')}>
-      <div className="player__now">
+      <div className="player__now" onContextMenu={onNowContext}>
         {has ? (
           <>
             <button type="button" className="player__art" aria-label={t('가사 보기')} onClick={() => toggleLyrics()}>
               <Cover src={artwork} size={56} />
             </button>
             <div className="player__meta">
-              <div className="player__title" title={title}>{ad ? t('광고') : title}</div>
-              <div className="player__artist" title={artist}>{ad ? 'YouTube Music' : artist}</div>
+              {albumId ? (
+                <button type="button" className="player__title link" title={t('{title} — 앨범으로 이동', { title })} onClick={() => go({ name: 'album', id: albumId })}>
+                  {title}
+                </button>
+              ) : (
+                <div className="player__title" title={title}>{ad ? t('광고') : title}</div>
+              )}
+              <div className="player__artist" title={artist}>
+                {ad ? 'YouTube Music' : artistRefs.some((a) => a.id) ? <ArtistLinks artists={artistRefs} /> : artist}
+              </div>
               <AvToggle compact />
             </div>
-            <button
-              type="button"
-              className={`icon-btn player__like${liked ? ' is-on' : ''}`}
-              aria-label={liked ? t('좋아요 취소') : t('좋아요')}
-              aria-pressed={liked}
-              disabled={ad}
-              onClick={() => toggleLike({ videoId, title })}
-            >
-              <Icon name="heart" size={19} filled={liked} />
-            </button>
+            {/* 좋아요와 ⋯는 위아래로 쌓아 곡 이름 칸을 좁히지 않는다(좁은 창에서 노래·영상 단추가 눌리지 않게). */}
+            <div className="player__acts">
+              <button
+                type="button"
+                className={`icon-btn player__like${liked ? ' is-on' : ''}`}
+                aria-label={liked ? t('좋아요 취소') : t('좋아요')}
+                aria-pressed={liked}
+                disabled={ad}
+                onClick={() => toggleLike({ videoId, title })}
+              >
+                <Icon name="heart" size={19} filled={liked} />
+              </button>
+              <button type="button" className="icon-btn player__more" aria-label={t('지금 곡 메뉴')} title={t('지금 곡 메뉴')} disabled={ad} onClick={onMore}>
+                <Icon name="more" size={18} />
+              </button>
+            </div>
           </>
         ) : (
           <div className="player__idle">{t('곡을 고르면 여기에서 재생됩니다')}</div>

@@ -4,7 +4,7 @@ import { createStore, useStore } from '../lib/store';
 import { sendPrefs, type Prefs } from '../lib/tauri';
 
 const KEY = 'ytm-desktop:prefs:v1';
-const DEFAULT: Prefs = { notifications: true, globalShortcuts: true, videoOnTop: false };
+const DEFAULT: Prefs = { notifications: true, globalShortcuts: true, volumeShortcuts: false, videoOnTop: false };
 
 function load(): Prefs {
   try {
@@ -50,4 +50,10 @@ export const SHORTCUT_LIST: { key: string; label: string }[] = [
   { key: 'B', label: tk('이전 곡') },
   { key: 'L', label: tk('좋아요') },
   { key: 'M', label: tk('미니 플레이어') },
+];
+
+/** 설정에서 켤 때만 쓰는 전역 음량 단축키(desktop.rs VOLUME_SHORTCUTS와 같다) */
+export const VOLUME_SHORTCUT_LIST: { key: string; label: string }[] = [
+  { key: '↑', label: tk('음량 크게') },
+  { key: '↓', label: tk('음량 작게') },
 ];

@@ -268,6 +268,8 @@ pub(crate) enum Command {
     Seek(f64),
     /// 현재 위치에서 더하거나 뺄 시간(초)
     SeekBy(f64),
+    /// 지금 음량(음소거면 0)에서 더하거나 뺄 음량(%)
+    VolumeBy(f64),
 }
 
 impl Command {
@@ -280,6 +282,7 @@ impl Command {
             Command::Previous => ("previous", None),
             Command::Seek(secs) => ("seek", Some(secs)),
             Command::SeekBy(secs) => ("seekBy", Some(secs)),
+            Command::VolumeBy(delta) => ("volumeBy", Some(delta)),
         };
         let value = value
             .filter(|v| v.is_finite())
@@ -661,10 +664,17 @@ fn headless() -> bool {
     cfg!(debug_assertions) && std::env::var_os("YTM_HEADLESS").is_some()
 }
 
+/// 개발 빌드 전용 "나란히" 시험 모드(`YTM_PARALLEL=1`): 화면은 그대로 띄우되, 사용자가 쓰는 배포판과 겹치는
+/// 하나만 실행·창 위치 기억·운영체제 미디어 컨트롤(맥 지금 재생·미디어 키)·트레이·전역 단축키는 끈다.
+/// 배포판이 음악을 트는 동안에도 그 재생과 이어폰 단추를 건드리지 않고 화면을 시험하려는 용도다.
+pub(crate) fn parallel() -> bool {
+    cfg!(debug_assertions) && std::env::var_os("YTM_PARALLEL").is_some()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
-    if !headless() {
+    if !headless() && !parallel() {
         builder = builder
             // 두 번째로 실행하면 새로 띄우지 않고 있던 창을 앞으로 가져온다(반드시 첫 플러그인).
             .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
@@ -748,11 +758,15 @@ pub fn run() {
             build_engine_window(handle)?;
             #[cfg(target_os = "macos")]
             mac_tap::init(handle);
-            if let Err(err) = media::init(handle, &main) {
-                eprintln!("[ytm-desktop] 운영체제 미디어 컨트롤 연결 실패: {err}");
+            if parallel() {
+                eprintln!("[ytm-desktop] 나란히 시험 모드: 미디어 컨트롤·트레이·전역 단축키를 쓰지 않습니다");
+            } else {
+                if let Err(err) = media::init(handle, &main) {
+                    eprintln!("[ytm-desktop] 운영체제 미디어 컨트롤 연결 실패: {err}");
+                }
+                let items = build_tray(handle)?;
+                *lock(&app.state::<AppState>().tray_items) = Some(items);
             }
-            let items = build_tray(handle)?;
-            *lock(&app.state::<AppState>().tray_items) = Some(items);
             #[cfg(debug_assertions)]
             {
                 engine::spawn_selftest(handle);
